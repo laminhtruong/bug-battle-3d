@@ -1,4 +1,5 @@
-import Peer, { type DataConnection } from 'peerjs'
+import type Peer from 'peerjs'
+import type { DataConnection } from 'peerjs'
 
 const ROOM_PREFIX = 'bb3d-'
 const CODE_ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789'
@@ -17,9 +18,11 @@ export function toPeerId(code: string): string {
   return `${ROOM_PREFIX}${code.trim().toLowerCase()}`
 }
 
-export function openPeer(id?: string): Promise<Peer> {
+export async function openPeer(id?: string): Promise<Peer> {
+  // peerjs is only needed for online play, so it is fetched on demand.
+  const { default: peerClient } = await import('peerjs')
   return new Promise((resolve, reject) => {
-    const peer = id ? new Peer(id) : new Peer()
+    const peer = id ? new peerClient(id) : new peerClient()
     const onOpen = (): void => {
       peer.off('error', onError)
       resolve(peer)
