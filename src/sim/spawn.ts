@@ -44,6 +44,7 @@ function makeSegments(headId: string, bodyIds: readonly string[]): Segment[] {
       slot,
       hp: part.hp,
       maxHp: part.hp,
+      dead: false,
       x: 0,
       z: 0,
       angle: 0,

@@ -10,6 +10,12 @@ export const BALANCE = {
   /** Radians per second. High enough to feel direct, low enough to avoid snapping. */
   turnRate: 16,
   bodySpacing: 0.3,
+  /**
+   * Distance from the head to the first body segment. The head model is longer
+   * than a body, so a plain body spacing would hide the first segment inside
+   * it.
+   */
+  headSpacing: 0.6,
   maxSegments: 48,
   segmentRadius: { head: 0.45, body: 0.34 },
   projectileRadius: 0.18,

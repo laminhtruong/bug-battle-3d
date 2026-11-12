@@ -20,6 +20,7 @@ export function createSnapshot(world: World, sfx: SoundEvent[] = []): Snapshot {
       segments: snake.segments.map((segment) => ({
         partId: segment.partId,
         slot: segment.slot,
+        dead: segment.dead,
         x: segment.x,
         z: segment.z,
         angle: segment.angle,

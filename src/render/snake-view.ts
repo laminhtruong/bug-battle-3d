@@ -13,6 +13,10 @@ const BODY_GEOMETRY = new THREE.IcosahedronGeometry(0.3, 0)
 const RING_GEOMETRY = new THREE.RingGeometry(0.34, 0.46, 24)
 RING_GEOMETRY.rotateX(-Math.PI / 2)
 
+/** Stands in for the bones the original leaves behind when a part is lost. */
+const BONES_GEOMETRY = new THREE.SphereGeometry(0.26, 10, 6)
+const BONES_MATERIAL = new THREE.MeshBasicMaterial({ color: '#e8e0cc' })
+
 const materialCache = new Map<string, THREE.MeshToonMaterial>()
 
 /** Placeholder colour, used until the real model for a part has loaded. */
@@ -32,6 +36,8 @@ export function getPartMaterial(slot: PartDef['slot'], id: string): THREE.MeshTo
 interface SegmentView {
   key: string
   node: THREE.Object3D
+  /** Remains of a lost part, shown in place of the model. */
+  bones: THREE.Mesh
   shadow: THREE.Mesh
   height: number
   model: boolean
@@ -45,12 +51,16 @@ interface SnakeView {
 
 function createSegment(slot: PartDef['slot'], id: string): SegmentView {
   const head = slot === 'head'
+  const bones = new THREE.Mesh(BONES_GEOMETRY, BONES_MATERIAL)
+  bones.scale.setScalar(head ? 1.5 : 1)
+  bones.visible = false
   const model = clonePartModel(slot, id)
   if (model) {
     // Models are normalised so their feet sit on the group origin.
     return {
       key: `${slot}:${id}`,
       node: model,
+      bones,
       shadow: createShadow(head ? 1 : 0.8),
       height: 0,
       model: true,
@@ -63,6 +73,7 @@ function createSegment(slot: PartDef['slot'], id: string): SegmentView {
   return {
     key: `${slot}:${id}`,
     node: mesh,
+    bones,
     shadow: createShadow(head ? 1 : 0.8),
     height: head ? 0.55 : 0.4,
     model: false,
@@ -118,17 +129,21 @@ export function createSnakeViewer(scene: THREE.Scene) {
           if (entry?.key !== key || upgraded) {
             if (entry) {
               view.group.remove(entry.node)
+              view.group.remove(entry.bones)
               view.group.remove(entry.shadow)
             }
             // Models load asynchronously, so a segment can swap from primitive to model.
             entry = createSegment(segment.slot, segment.partId)
             view.segments[index] = entry
             view.group.add(entry.node)
+            view.group.add(entry.bones)
             view.group.add(entry.shadow)
           }
-          entry.node.visible = true
+          entry.node.visible = !segment.dead
           entry.node.position.set(segment.x, entry.height, segment.z)
           entry.node.rotation.y = segment.angle
+          entry.bones.visible = segment.dead
+          entry.bones.position.set(segment.x, entry.height + 0.12, segment.z)
           entry.shadow.visible = true
           entry.shadow.position.set(segment.x, 0.02, segment.z)
         }
@@ -137,6 +152,7 @@ export function createSnakeViewer(scene: THREE.Scene) {
           const entry = view.segments[index]
           if (entry) {
             entry.node.visible = false
+            entry.bones.visible = false
             entry.shadow.visible = false
           }
         }

@@ -21,10 +21,19 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- The rules follow the original game again:
+  - the snake only moves while the stick is pushed and stops when it is
+    released, a light push moves slower;
+  - losing the head is not fatal while a body can still attack, the round only
+    ends when no part can attack anymore;
+  - a destroyed part keeps its place in the chain and shows its bones, and
+    picking up a head brings a lost head back.
+- The first body segment sits behind the head instead of inside it.
 - Sound effects are tagged with the snake they belong to, so a player only hears
   what happens to their own snake. The same effect played again within 150 ms is
   dropped, which keeps combat from turning into noise.
 - Wire protocol version 2: the sound list of a snapshot carries the owner id.
+- Wire protocol version 3: a snapshot segment carries the destroyed flag.
 
 ## [0.1.0] - 2026-11-12
 

@@ -27,7 +27,8 @@ can be deployed to GitHub Pages, Netlify or any static host.
 | ------ | ------------------ | ------------------------ |
 | Move   | WASD or arrow keys | Drag the on-screen stick |
 
-The snake always moves forward; steering changes its heading.
+The snake moves while the stick is pushed and stops when it is released, like
+the original game. A light push moves slower.
 
 ## Online play
 

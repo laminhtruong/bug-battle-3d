@@ -4,6 +4,8 @@ import type { Slot } from '@/content/define'
 export interface RenderSegment {
   partId: string
   slot: Slot
+  /** Destroyed parts keep their place in the chain. */
+  dead: boolean
   x: number
   z: number
   angle: number

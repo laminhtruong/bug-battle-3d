@@ -6,15 +6,23 @@ import { appendTrail, sampleTrail } from './chain'
 import type { Snake } from './types'
 
 /** Extra trail kept so a fully grown snake can still be sampled smoothly. */
-export const TRAIL_MAX_DISTANCE = BALANCE.maxSegments * BALANCE.bodySpacing + 2
+export const TRAIL_MAX_DISTANCE = BALANCE.maxSegments * BALANCE.bodySpacing + BALANCE.headSpacing + 2
 
 export function segmentRadius(index: number): number {
   return index === 0 ? BALANCE.segmentRadius.head : BALANCE.segmentRadius.body
 }
 
+/** Distance behind the head where a segment sits. */
+export function segmentDistance(index: number): number {
+  if (index <= 0) {
+    return 0
+  }
+  return BALANCE.headSpacing + (index - 1) * BALANCE.bodySpacing
+}
+
 /**
  * Moves the head, records the path and rebuilds every segment from it.
- * The head always moves forward; steering only changes its heading.
+ * The snake only moves while the player pushes the stick, like the original.
  */
 export function updateMovement(
   snake: Snake,
@@ -22,7 +30,8 @@ export function updateMovement(
   halfDepth: number,
   dt: number,
 ): void {
-  if (Math.hypot(snake.steerX, snake.steerZ) > 1e-4) {
+  const push = Math.hypot(snake.steerX, snake.steerZ)
+  if (push > 1e-4) {
     const targetAngle = angleFromDirection(snake.steerX, snake.steerZ)
     const maxTurn = BALANCE.turnRate * dt
     snake.angle += clamp(shortestAngleDelta(snake.angle, targetAngle), -maxTurn, maxTurn)
@@ -30,8 +39,10 @@ export function updateMovement(
 
   const direction = directionFromAngle(snake.angle)
   const margin = BALANCE.segmentRadius.head
-  snake.x = clamp(snake.x + direction.x * snake.speed * dt, -halfWidth + margin, halfWidth - margin)
-  snake.z = clamp(snake.z + direction.z * snake.speed * dt, -halfDepth + margin, halfDepth - margin)
+  // A light push moves slower, exactly like the joystick of the original.
+  const speed = snake.speed * Math.min(1, push)
+  snake.x = clamp(snake.x + direction.x * speed * dt, -halfWidth + margin, halfWidth - margin)
+  snake.z = clamp(snake.z + direction.z * speed * dt, -halfDepth + margin, halfDepth - margin)
 
   appendTrail(snake.trail, snake.x, snake.z, TRAIL_MAX_DISTANCE)
   syncSegments(snake)
@@ -53,7 +64,7 @@ export function syncSegments(snake: Snake): void {
     if (!segment) {
       break
     }
-    const point = sampleTrail(snake.trail, index * BALANCE.bodySpacing)
+    const point = sampleTrail(snake.trail, segmentDistance(index))
     segment.x = point.x
     segment.z = point.z
     // Body parts face the head, which matches the direction of travel.
@@ -76,6 +87,7 @@ export function growSnake(snake: Snake, partId = 'normal'): boolean {
     slot,
     hp: part.hp,
     maxHp: part.hp,
+    dead: false,
     x: snake.x,
     z: snake.z,
     angle: snake.angle,
@@ -88,6 +100,8 @@ export function growSnake(snake: Snake, partId = 'normal'): boolean {
 
 export function healSnake(snake: Snake): void {
   for (const segment of snake.segments) {
-    segment.hp = segment.maxHp
+    if (!segment.dead) {
+      segment.hp = segment.maxHp
+    }
   }
 }

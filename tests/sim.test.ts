@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { BALANCE } from '@/data/balance'
+import { DEFAULT_HEAD_ID } from '@/content'
 import { createWorld } from '@/sim/world'
 import { classicArena } from '@/content/arenas/classic'
 import { damageSegment, updateAreas, updateContact, updateProjectiles } from '@/sim/combat'
@@ -93,6 +94,89 @@ describe('world', () => {
 
     expect(player.alive).toBe(true)
     expect(player.segments.length).toBe(BALANCE.food.startSegments)
+  })
+
+  it('only moves while the stick is pushed', () => {
+    const world = createWorld({
+      seed: 21,
+      arena: classicArena,
+      players: [{ id: 'you', name: 'You', control: 'human', slot: 0, headId: DEFAULT_HEAD_ID }],
+    })
+    const player = getSnake(world, 'you')
+    const startX = player.x
+    const startZ = player.z
+
+    tickWorld(world, STEP)
+    expect(player.x).toBeCloseTo(startX, 5)
+    expect(player.z).toBeCloseTo(startZ, 5)
+
+    player.steerX = 1
+    player.steerZ = 0
+    tickWorld(world, STEP)
+    expect(player.x).not.toBeCloseTo(startX, 5)
+  })
+
+  it('keeps the first body segment outside the head', () => {
+    const world = createWorld({
+      seed: 22,
+      arena: classicArena,
+      players: [{ id: 'you', name: 'You', control: 'human', slot: 0, headId: DEFAULT_HEAD_ID }],
+    })
+    const player = getSnake(world, 'you')
+    const head = player.segments[0]
+    const body = player.segments[1]
+    expect(head).toBeDefined()
+    expect(body).toBeDefined()
+    if (!head || !body) {
+      return
+    }
+    expect(Math.hypot(head.x - body.x, head.z - body.z)).toBeCloseTo(BALANCE.headSpacing, 5)
+  })
+})
+
+describe('survival', () => {
+  it('keeps fighting after the head is lost', () => {
+    const world = createWorld({ seed: 23, arena: classicArena })
+    const player = getSnake(world, 'bot-1')
+    // Give the snake a body that can fight back.
+    player.segments[1]!.partId = 'spike01'
+
+    damageSegment(world, player, 0, 99, undefined, world.time)
+
+    expect(player.alive).toBe(true)
+    expect(player.segments[0]?.dead).toBe(true)
+    expect(player.segments[1]?.dead).toBe(false)
+  })
+
+  it('dies once nothing can attack anymore', () => {
+    const world = createWorld({ seed: 24, arena: classicArena })
+    const player = getSnake(world, 'bot-1')
+
+    damageSegment(world, player, 0, 99, undefined, world.time)
+
+    expect(player.alive).toBe(false)
+    expect(player.segments).toHaveLength(0)
+  })
+
+  it('brings the head back when a head is collected', () => {
+    const world = createWorld({ seed: 25, arena: classicArena })
+    const player = getSnake(world, 'bot-1')
+    player.segments[1]!.partId = 'spike01'
+    damageSegment(world, player, 0, 99, undefined, world.time)
+    expect(player.alive).toBe(true)
+
+    world.pickups.push({
+      id: 'head-drop',
+      kind: 'head',
+      partId: 'gun',
+      x: player.x,
+      z: player.z,
+      expireAt: world.time + 10,
+    })
+    tickWorld(world, STEP)
+
+    expect(player.segments[0]?.dead).toBe(false)
+    expect(player.segments[0]?.partId).toBe('gun')
   })
 })
 

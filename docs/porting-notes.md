@@ -46,6 +46,18 @@ line port; the rules were re-derived from prefabs, scripts and playtests.
 - Sound effects are per player. The host tags every effect with the snake it
   belongs to and each client keeps the ones of its own snake, so the arena of
   bots stays silent.
+- A destroyed part keeps its place in the chain and shows a small bone
+  placeholder. The original renders its own bone mesh, which still needs to be
+  converted from `head_00.fbx` and `body_00.fbx`.
+
+## Rules taken from the original
+
+| Original                                   | This version                                  |
+| ------------------------------------------ | --------------------------------------------- |
+| Joystick pushes the bug, releasing stops it | The snake only moves while the stick is pushed |
+| A lost head does not end the round          | The round ends when no part can attack anymore |
+| Exploded parts leave their bones behind     | Destroyed parts stay in the chain              |
+| A collected head revives a headless bug      | Picking up a head revives the head             |
 
 ## Where to look
 

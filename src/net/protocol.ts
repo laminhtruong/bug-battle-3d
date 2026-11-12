@@ -5,7 +5,7 @@ import { SOUND_NAMES } from '@/data/sounds'
  * Wire protocol. Bump the version when the message shape changes; hosts and
  * guests with different versions refuse to start instead of desyncing.
  */
-export const PROTOCOL_VERSION = 2
+export const PROTOCOL_VERSION = 3
 
 const MAX_CLIENT_MESSAGE = 4096
 const MAX_HOST_MESSAGE = 200_000
@@ -45,6 +45,7 @@ export type ClientMessage = z.infer<typeof clientMessageSchema>
 const segmentSchema = z.object({
   partId: z.string().min(1),
   slot: z.enum(['head', 'body']),
+  dead: z.boolean(),
   x: z.number(),
   z: z.number(),
   angle: z.number(),

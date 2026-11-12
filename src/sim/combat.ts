@@ -12,6 +12,24 @@ interface AttackContext {
   attack: AttackDef
 }
 
+/** A part can fight when it shoots, stings or claws. */
+function partCanAttack(part: ReturnType<typeof requirePart>): boolean {
+  return part.attack !== undefined || part.contact.damage > 0
+}
+
+/**
+ * A snake keeps playing as long as one of its parts can attack. Losing the
+ * head is not fatal, as long as a body still fights back.
+ */
+export function canAttack(snake: Snake): boolean {
+  return snake.segments.some((segment) => {
+    if (segment.dead) {
+      return false
+    }
+    return partCanAttack(requirePart(segment.slot, segment.partId))
+  })
+}
+
 /** Applies damage to one segment. Returns true when the segment was destroyed. */
 export function damageSegment(
   world: World,
@@ -25,7 +43,7 @@ export function damageSegment(
     return false
   }
   const segment = target.segments[index]
-  if (!segment || now < segment.hurtUntil) {
+  if (!segment || segment.dead || now < segment.hurtUntil) {
     return false
   }
 
@@ -45,7 +63,8 @@ export function damageSegment(
     return false
   }
 
-  target.segments.splice(index, 1)
+  // The destroyed part keeps its place in the chain, only its bones remain.
+  segment.dead = true
   world.events.push({
     type: 'destroyed',
     targetId: target.id,
@@ -59,7 +78,7 @@ export function damageSegment(
     attacker.score += part.score
   }
 
-  if (index === 0 || target.segments.length === 0) {
+  if (!canAttack(target)) {
     killSnake(world, target)
   }
   return true
@@ -79,10 +98,12 @@ export function killSnake(world: World, snake: Snake): void {
     z: snake.z,
   })
 
-  const remaining = snake.segments.map((segment) => ({
-    slot: segment.slot,
-    partId: segment.partId,
-  }))
+  const remaining = snake.segments
+    .filter((segment) => !segment.dead)
+    .map((segment) => ({
+      slot: segment.slot,
+      partId: segment.partId,
+    }))
   snake.segments = []
   spawnDrops(world, snake.x, snake.z, remaining)
 
@@ -142,7 +163,7 @@ function fireCone(world: World, context: AttackContext): void {
     }
     for (let index = target.segments.length - 1; index >= 0; index -= 1) {
       const other = target.segments[index]
-      if (!other) {
+      if (!other || other.dead) {
         continue
       }
       const dx = other.x - segment.x
@@ -190,6 +211,9 @@ export function fireAttacks(world: World, dt: number): void {
     }
     const cooldownScale = snake.control === 'enemy' ? BALANCE.enemyCooldownScale : 1
     for (const segment of snake.segments) {
+      if (segment.dead) {
+        continue
+      }
       const part = requirePart(segment.slot, segment.partId)
       if (!part.attack) {
         continue
@@ -214,7 +238,7 @@ function findProjectileHit(
     }
     for (let index = 0; index < snake.segments.length; index += 1) {
       const segment = snake.segments[index]
-      if (!segment) {
+      if (!segment || segment.dead) {
         continue
       }
       const reach = segmentRadius(index) + BALANCE.projectileRadius
@@ -307,7 +331,7 @@ export function updateAreas(world: World, dt: number): void {
       }
       for (let index = snake.segments.length - 1; index >= 0; index -= 1) {
         const segment = snake.segments[index]
-        if (!segment) {
+        if (!segment || segment.dead) {
           continue
         }
         const reach = area.radius + segmentRadius(index)
@@ -348,7 +372,7 @@ export function updateContact(world: World): void {
     }
     for (let index = 0; index < snake.segments.length; index += 1) {
       const segment = snake.segments[index]
-      if (!segment) {
+      if (!segment || segment.dead) {
         continue
       }
       entries.push({
