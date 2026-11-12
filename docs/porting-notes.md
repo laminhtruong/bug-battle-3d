@@ -41,6 +41,8 @@ line port; the rules were re-derived from prefabs, scripts and playtests.
   hash before a match starts.
 - Part models are static (no animation clips are played) and share one palette
   texture; placeholder primitives show only if a model fails to load.
+- The original legs were animated with inverse kinematics. The models ship with
+  the legs in their rest pose, so the bodies do not walk yet.
 
 ## Where to look
 

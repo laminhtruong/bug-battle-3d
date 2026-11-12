@@ -75,6 +75,13 @@ The part file can carry a `model` key; it defaults to the part id. The asset che
 expects `models/parts/head/<model>.glb` or `models/parts/body/<model>.glb`. A part
 without a model file still plays; the renderer falls back to a colored primitive.
 
+`src/render/models.ts` loads every registered model in the background, recenters
+it on the ground and scales it to arena units. Body models are skinned, so they
+are copied with `SkeletonUtils.clone`; a plain `clone` would leave them bound to
+the template bones and they would never draw under the snake. Models must keep
+their first UV set: the parts share one palette texture and take their colors
+from it.
+
 ## Balance
 
 Gameplay constants live in `src/data/balance.ts`. A part file should only hold
