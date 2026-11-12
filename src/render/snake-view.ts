@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { fnv1a } from '@/core/rng'
 import type { PartDef } from '@/content/define'
-import type { World } from '@/sim/types'
+import type { RenderState } from './state'
 
 const SLOT_COLORS = ['#ff6b6b', '#4dabf7', '#ffd43b', '#b197fc']
 
@@ -53,7 +53,7 @@ export function createSnakeViewer(scene: THREE.Scene) {
   const views = new Map<string, SnakeView>()
 
   return {
-    sync(world: World): void {
+    sync(world: RenderState): void {
       const alive = new Set<string>()
       for (const snake of world.snakes) {
         alive.add(snake.id)

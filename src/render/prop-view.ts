@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { BALANCE } from '@/data/balance'
-import type { Pickup, World } from '@/sim/types'
+import type { RenderPickup, RenderState } from './state'
 import { getPartMaterial } from './snake-view'
 
 const SHOT_COLORS: Record<string, string> = {
@@ -51,7 +51,7 @@ function areaMaterial(partId: string): THREE.MeshBasicMaterial {
   return material
 }
 
-function pickupMaterial(pickup: Pickup): THREE.Material {
+function pickupMaterial(pickup: RenderPickup): THREE.Material {
   const key = `${pickup.kind}:${pickup.partId ?? ''}`
   const cached = pickupMaterials.get(key)
   if (cached) {
@@ -67,7 +67,7 @@ function pickupMaterial(pickup: Pickup): THREE.Material {
   return material
 }
 
-function pickupGeometry(pickup: Pickup): THREE.BufferGeometry {
+function pickupGeometry(pickup: RenderPickup): THREE.BufferGeometry {
   return pickup.kind === 'apple' ? appleGeometry : dropGeometry
 }
 
@@ -77,7 +77,7 @@ export function createPropViewer(scene: THREE.Scene) {
   const pickups = new Map<string, THREE.Mesh>()
 
   return {
-    sync(world: World): void {
+    sync(world: RenderState): void {
       const seenShots = new Set<string>()
       for (const projectile of world.projectiles) {
         seenShots.add(projectile.id)

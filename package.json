@@ -23,6 +23,7 @@
     "check": "npm run lint && npm run typecheck && npm run check:ascii && npm run check:assets && npm run test"
   },
   "dependencies": {
+    "peerjs": "^1.5.5",
     "three": "^0.187.0",
     "zod": "^4.6.7"
   },

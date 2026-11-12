@@ -1,0 +1,27 @@
+name: Feature request
+description: Suggest a gameplay, content or tooling improvement.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What is missing or awkward today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What should change? Keep it inside the v1 scope when possible.
+    validations:
+      required: true
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope check
+      options:
+        - label: This keeps one arena and short rounds.
+          required: false
+        - label: This does not add accounts, progression or a game server.
+          required: false
