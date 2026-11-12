@@ -1,0 +1,14 @@
+import { defineBody } from '../define'
+
+export default defineBody({
+  id: 'fire',
+  name: 'Fire Body',
+  hp: 1,
+  score: 50,
+  contact: { damage: 0 },
+  attack: {
+    kind: 'cone',
+    cooldown: 1.5,
+    cone: { range: 3, halfAngleDeg: 25, duration: 0.3 },
+  },
+})

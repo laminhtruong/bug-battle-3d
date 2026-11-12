@@ -1,0 +1,177 @@
+import { describe, expect, it } from 'vitest'
+import { BALANCE } from '@/data/balance'
+import { createWorld } from '@/sim/world'
+import { classicArena } from '@/content/arenas/classic'
+import { damageSegment, updateAreas, updateContact, updateProjectiles } from '@/sim/combat'
+import { tickWorld } from '@/sim/tick'
+import type { Projectile, Snake, World } from '@/sim/types'
+
+const STEP = 1 / BALANCE.tickRate
+
+function getSnake(world: World, id: string): Snake {
+  const snake = world.snakes.find((candidate) => candidate.id === id)
+  if (!snake) {
+    throw new Error(`missing snake ${id}`)
+  }
+  return snake
+}
+
+function placeHead(snake: Snake, x: number, z: number): void {
+  snake.x = x
+  snake.z = z
+  const head = snake.segments[0]
+  if (head) {
+    head.x = x
+    head.z = z
+  }
+}
+
+describe('world', () => {
+  it('fills four player slots with bots', () => {
+    const world = createWorld({ seed: 1, arena: classicArena })
+    const players = world.snakes.filter((snake) => snake.control !== 'enemy')
+    expect(players).toHaveLength(BALANCE.maxPlayers)
+    expect(players.map((snake) => snake.slot)).toEqual([0, 1, 2, 3])
+    expect(world.snakes.filter((snake) => snake.control === 'enemy')).toHaveLength(
+      classicArena.enemyCap,
+    )
+    expect(world.pickups.length).toBeGreaterThanOrEqual(classicArena.appleTarget)
+  })
+
+  it('is deterministic for a seed', () => {
+    const first = createWorld({ seed: 42, arena: classicArena })
+    const second = createWorld({ seed: 42, arena: classicArena })
+    for (let index = 0; index < 300; index += 1) {
+      tickWorld(first, STEP)
+      tickWorld(second, STEP)
+    }
+    expect(JSON.stringify(first.snakes)).toBe(JSON.stringify(second.snakes))
+    expect(JSON.stringify(first.pickups)).toBe(JSON.stringify(second.pickups))
+    expect(JSON.stringify(first.projectiles)).toBe(JSON.stringify(second.projectiles))
+  })
+
+  it('keeps snakes inside the arena', () => {
+    const world = createWorld({ seed: 3, arena: classicArena })
+    for (let index = 0; index < 600; index += 1) {
+      tickWorld(world, STEP)
+    }
+    for (const snake of world.snakes) {
+      expect(Math.abs(snake.x)).toBeLessThanOrEqual(classicArena.width / 2)
+      expect(Math.abs(snake.z)).toBeLessThanOrEqual(classicArena.depth / 2)
+    }
+  })
+
+  it('grows after eating the required apples', () => {
+    const world = createWorld({ seed: 5, arena: classicArena })
+    const player = getSnake(world, 'bot-1')
+    const startSegments = player.segments.length
+
+    for (let eaten = 0; eaten < BALANCE.food.applesToGrow; eaten += 1) {
+      const apple = world.pickups.find((pickup) => pickup.kind === 'apple')
+      if (!apple) {
+        throw new Error('expected an apple')
+      }
+      placeHead(player, apple.x, apple.z)
+      tickWorld(world, STEP)
+    }
+
+    expect(player.segments.length).toBe(startSegments + 1)
+    expect(player.food).toBe(0)
+    expect(player.score).toBe(BALANCE.food.applesToGrow * BALANCE.food.scorePerApple)
+  })
+
+  it('respawns a player after the death delay', () => {
+    const world = createWorld({ seed: 8, arena: classicArena })
+    const player = getSnake(world, 'bot-1')
+    damageSegment(world, player, 0, 99, undefined, world.time)
+    expect(player.alive).toBe(false)
+    expect(player.segments).toHaveLength(0)
+
+    for (let index = 0; index <= BALANCE.respawnDelaySec * BALANCE.tickRate; index += 1) {
+      tickWorld(world, STEP)
+    }
+
+    expect(player.alive).toBe(true)
+    expect(player.segments.length).toBe(BALANCE.food.startSegments)
+  })
+})
+
+describe('combat', () => {
+  it('applies contact damage both ways', () => {
+    const world = createWorld({ seed: 11, arena: classicArena })
+    const first = getSnake(world, 'bot-1')
+    const second = getSnake(world, 'bot-2')
+    placeHead(first, 0, 0)
+    placeHead(second, 0, 0)
+    const firstHp = first.segments[0]?.hp ?? 0
+    const secondHp = second.segments[0]?.hp ?? 0
+
+    updateContact(world)
+
+    expect(first.segments[0]?.hp).toBeLessThan(firstHp)
+    expect(second.segments[0]?.hp).toBeLessThan(secondHp)
+  })
+
+  it('hits a segment with a projectile', () => {
+    const world = createWorld({ seed: 12, arena: classicArena })
+    const target = getSnake(world, 'bot-1')
+    const shooter = getSnake(world, 'bot-2')
+    placeHead(target, 0, 0)
+    const hp = target.segments[0]?.hp ?? 0
+    const projectile: Projectile = {
+      id: 'test-shot',
+      ownerId: shooter.id,
+      partId: 'gun',
+      visual: 'bullet',
+      x: 0,
+      z: 0,
+      vx: 0,
+      vz: 0,
+      damage: 1,
+      age: 0,
+      ttl: 1,
+      landed: false,
+      delayLeft: 0,
+    }
+    world.projectiles.push(projectile)
+
+    updateProjectiles(world, STEP)
+
+    expect(target.segments[0]?.hp).toBe(hp - 1)
+    expect(world.projectiles).toHaveLength(0)
+  })
+
+  it('damages segments inside an area', () => {
+    const world = createWorld({ seed: 13, arena: classicArena })
+    const target = getSnake(world, 'bot-1')
+    placeHead(target, 0, 0)
+    const hp = target.segments[0]?.hp ?? 0
+    world.areas.push({
+      id: 'test-area',
+      ownerId: 'bot-2',
+      partId: 'poison',
+      x: 0,
+      z: 0,
+      radius: 1,
+      damage: 1,
+      duration: 1,
+      age: 0,
+    })
+
+    updateAreas(world, STEP)
+
+    expect(target.segments[0]?.hp).toBe(hp - 1)
+  })
+
+  it('respects the hurt cooldown', () => {
+    const world = createWorld({ seed: 14, arena: classicArena })
+    const target = getSnake(world, 'bot-1')
+    const attacker = getSnake(world, 'bot-2')
+    const hp = target.segments[0]?.hp ?? 0
+
+    damageSegment(world, target, 0, 1, attacker, 0)
+    damageSegment(world, target, 0, 1, attacker, 0)
+
+    expect(target.segments[0]?.hp).toBe(hp - 1)
+  })
+})

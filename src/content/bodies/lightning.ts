@@ -1,0 +1,20 @@
+import { defineBody } from '../define'
+
+export default defineBody({
+  id: 'lightning',
+  name: 'Lightning Body',
+  hp: 1,
+  score: 50,
+  contact: { damage: 0 },
+  attack: {
+    kind: 'projectile',
+    cooldown: 2,
+    mount: 'sides',
+    projectile: {
+      speed: 3,
+      ttl: 0.5,
+      visual: 'lightning',
+      onLand: { delay: 0.5, duration: 0.5, radius: 1.5 },
+    },
+  },
+})
