@@ -1,8 +1,9 @@
 import { PROTOCOL_VERSION, type Snapshot } from './protocol'
 import type { RenderState } from '@/render/state'
 import type { World } from '@/sim/types'
+import type { SoundName } from '@/data/sounds'
 
-export function createSnapshot(world: World): Snapshot {
+export function createSnapshot(world: World, sfx: SoundName[] = []): Snapshot {
   return {
     v: PROTOCOL_VERSION,
     t: 'snap',
@@ -49,6 +50,7 @@ export function createSnapshot(world: World): Snapshot {
       }
       return entry
     }),
+    sfx,
   }
 }
 

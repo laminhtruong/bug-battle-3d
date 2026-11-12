@@ -1,4 +1,5 @@
 import { CONTENT_HASH } from '@/content'
+import type { SoundName } from '@/data/sounds'
 import type { RenderState } from '@/render/state'
 import { connectToHost, openPeer, waitForConnection } from './peer'
 import {
@@ -17,6 +18,8 @@ export interface ClientHandlers {
   onLobby(players: LobbyPlayer[]): void
   onStart(): void
   onSnapshot(state: RenderState): void
+  /** Sound effects reported by the host. */
+  onSound(name: SoundName): void
   onResults(results: ResultRow[]): void
   onError(message: string): void
   onClosed(message: string): void
@@ -83,6 +86,9 @@ export async function joinRoom(options: ClientOptions): Promise<ClientSession> {
         options.handlers.onStart()
         return
       case 'snap':
+        for (const sound of message.sfx ?? []) {
+          options.handlers.onSound(sound)
+        }
         options.handlers.onSnapshot(toRenderState(message))
         return
       case 'end':

@@ -14,6 +14,8 @@ All notable changes to this project are documented here. The format follows
 - Protocol and snapshot tests.
 - Part models and the arena floor texture converted from the original Unity art,
   rendered in place of the placeholder primitives.
+- Sound effects for apples, pickups, hits, deaths and the result screen, copied
+  from the original Unity audio and played from the simulation events.
 
 ## [0.1.0] - 2026-11-12
 

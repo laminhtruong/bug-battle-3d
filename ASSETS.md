@@ -24,6 +24,7 @@ public/assets/
   models/parts/body/<id>.glb
   textures/parts/bug-atlas.png
   textures/arenas/classic/floor-base.png
+  audio/sfx/<name>.mp3
 ```
 
 Sound effects are planned under `audio/sfx/` but are not shipped yet.
@@ -54,6 +55,20 @@ Verified from the Unity prefabs to their mesh GUIDs.
 | ---------------- | ---------------------------------------- |
 | `bug.png`        | `textures/parts/bug-atlas.png`           |
 | `floor02a`       | `textures/arenas/classic/floor-base.png` |
+
+| Original sound | Target                     |
+| -------------- | -------------------------- |
+| `eat_apple`    | `audio/sfx/eat-apple.mp3`  |
+| `pop`          | `audio/sfx/pop.mp3`        |
+| `bite`         | `audio/sfx/bite.mp3`       |
+| `power_up`     | `audio/sfx/power-up.mp3`   |
+| `win`          | `audio/sfx/win.mp3`        |
+| `lose`         | `audio/sfx/lose.mp3`       |
+| `button_tap`   | `audio/sfx/click.mp3`      |
+
+The sounds are copied from the Unity project unchanged, so no audio tooling is
+needed. `quest_completed` and `popup_show` are left out with the rest of the
+quest and shop systems.
 
 ## Conversion
 

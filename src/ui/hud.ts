@@ -1,3 +1,4 @@
+import { playSound } from '@/audio/sfx'
 import { EN } from '@/i18n/en'
 import type { RenderState } from '@/render/state'
 import type { LobbyPlayer, ResultRow } from '@/net/protocol'
@@ -110,18 +111,27 @@ export function createHud(handlers: HudHandlers): Hud {
 
   const getPlayerName = (): string => nameInput.value.trim().slice(0, 16) || EN.you
 
-  root.querySelector('[data-action="local"]')?.addEventListener('click', handlers.onLocal)
+  const click = (action: () => void): void => {
+    action()
+    playSound('click')
+  }
+
+  root.querySelector('[data-action="local"]')?.addEventListener('click', () =>
+    click(handlers.onLocal),
+  )
   root.querySelector('[data-action="create"]')?.addEventListener('click', () => {
-    handlers.onCreate(getPlayerName())
+    click(() => handlers.onCreate(getPlayerName()))
   })
   root.querySelector('[data-action="join"]')?.addEventListener('click', () => {
-    handlers.onJoin(codeInput.value.trim(), getPlayerName())
+    click(() => handlers.onJoin(codeInput.value.trim(), getPlayerName()))
   })
-  startButton.addEventListener('click', handlers.onStart)
-  root.querySelector('[data-action="cancel"]')?.addEventListener('click', handlers.onCancel)
-  againButton.addEventListener('click', handlers.onAgain)
+  startButton.addEventListener('click', () => click(handlers.onStart))
+  root.querySelector('[data-action="cancel"]')?.addEventListener('click', () =>
+    click(handlers.onCancel),
+  )
+  againButton.addEventListener('click', () => click(handlers.onAgain))
   root.querySelector('[data-action="menu"]')?.addEventListener('click', () => {
-    handlers.onCancel()
+    click(handlers.onCancel)
   })
 
   const showScreen = (screen: 'menu' | 'lobby' | 'results' | 'none'): void => {

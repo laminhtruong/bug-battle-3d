@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { SOUND_NAMES } from '@/data/sounds'
 
 /**
  * Wire protocol. Bump the version when the message shape changes; hosts and
@@ -92,6 +93,8 @@ export const snapshotSchema = z.object({
   projectiles: z.array(projectileSchema),
   areas: z.array(areaSchema),
   pickups: z.array(pickupSchema),
+  /** Sound effects that happened since the previous snapshot. */
+  sfx: z.array(z.enum(SOUND_NAMES)).max(8).optional(),
 })
 
 export type Snapshot = z.infer<typeof snapshotSchema>

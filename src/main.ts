@@ -1,4 +1,5 @@
 import './style.css'
+import { playSound, soundForEvent } from '@/audio/sfx'
 import { startLoop } from '@/core/loop'
 import { DEFAULT_HEAD_ID, classicArena } from '@/content'
 import { BALANCE } from '@/data/balance'
@@ -38,6 +39,7 @@ let host: HostSession | undefined
 let client: ClientSession | undefined
 let renderState: RenderState | undefined
 let playerId = 'you'
+let playerName = ''
 let resultsShown = false
 let focusX = 0
 let focusZ = 0
@@ -83,17 +85,19 @@ function resetSession(): void {
 function showResults(rows: { name: string; score: number }[], canRestart: boolean): void {
   resultsShown = true
   hud.showResults(rows, canRestart)
+  playSound(rows[0]?.name === playerName ? 'win' : 'lose')
 }
 
 function startLocal(): void {
   resetSession()
+  playerName = hud.getPlayerName()
   world = createWorld({
     seed: randomSeed(),
     arena: classicArena,
     players: [
       {
         id: 'you',
-        name: hud.getPlayerName(),
+        name: playerName,
         control: 'human',
         slot: 0,
         headId: DEFAULT_HEAD_ID,
@@ -109,6 +113,7 @@ function startLocal(): void {
 
 async function createRoom(name: string): Promise<void> {
   resetSession()
+  playerName = name
   try {
     const session = await startHost({
       playerName: name,
@@ -144,6 +149,7 @@ async function joinMatch(code: string, name: string): Promise<void> {
     return
   }
   resetSession()
+  playerName = name
   const handlers: ClientHandlers = {
     onLobby: (players) => hud.showLobby(roomCode, players, false),
     onStart: () => {
@@ -154,6 +160,7 @@ async function joinMatch(code: string, name: string): Promise<void> {
     onSnapshot: (state) => {
       renderState = state
     },
+    onSound: (name) => playSound(name),
     onResults: (rows) => showResults(rows, false),
     onError: (message) => hud.flash(message),
     onClosed: (message) => {
@@ -203,6 +210,12 @@ startLoop({
       }
       if (!world.ended) {
         tickWorld(world, STEP)
+        for (const event of world.events) {
+          const sound = soundForEvent(event)
+          if (sound) {
+            playSound(sound)
+          }
+        }
       } else if (!resultsShown) {
         showResults(
           playerSnakes(world).map((snake) => ({ name: snake.name, score: snake.score })),
@@ -215,6 +228,9 @@ startLoop({
     if (mode === 'host' && host) {
       host.setInput(move.x, move.z)
       host.update(STEP)
+      for (const sound of host.drainSounds()) {
+        playSound(sound)
+      }
       return
     }
 

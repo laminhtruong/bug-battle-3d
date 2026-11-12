@@ -65,4 +65,14 @@ describe('protocol', () => {
     expect(state.pickups.length).toBe(world.pickups.length)
     expect(state.time).toBe(world.time)
   })
+
+  it('carries sound effects and drops unknown names', () => {
+    const world = createWorld({ seed: 21, arena: classicArena })
+    const snapshot = createSnapshot(world, ['eat-apple', 'pop'])
+    const decoded = parseHostMessage(encodeMessage(snapshot))
+    expect(decoded?.t === 'snap' && decoded.sfx).toEqual(['eat-apple', 'pop'])
+
+    const broken = { ...snapshot, sfx: ['not-a-sound'] }
+    expect(parseHostMessage(encodeMessage(broken))).toBeUndefined()
+  })
 })
