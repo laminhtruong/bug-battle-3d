@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { fnv1a } from '@/core/rng'
 import type { PartDef } from '@/content/define'
 import { getPartModel, clonePartModel } from './models'
+import { createShadow } from './shadow'
 import type { RenderState } from './state'
 
 const SLOT_COLORS = ['#ff6b6b', '#4dabf7', '#ffd43b', '#b197fc']
@@ -31,6 +32,7 @@ export function getPartMaterial(slot: PartDef['slot'], id: string): THREE.MeshTo
 interface SegmentView {
   key: string
   node: THREE.Object3D
+  shadow: THREE.Mesh
   height: number
   model: boolean
 }
@@ -42,17 +44,29 @@ interface SnakeView {
 }
 
 function createSegment(slot: PartDef['slot'], id: string): SegmentView {
+  const head = slot === 'head'
   const model = clonePartModel(slot, id)
   if (model) {
     // Models are normalised so their feet sit on the group origin.
-    return { key: `${slot}:${id}`, node: model, height: 0, model: true }
+    return {
+      key: `${slot}:${id}`,
+      node: model,
+      shadow: createShadow(head ? 1 : 0.8),
+      height: 0,
+      model: true,
+    }
   }
-  const head = slot === 'head'
   const mesh = new THREE.Mesh(head ? HEAD_GEOMETRY : BODY_GEOMETRY, getPartMaterial(slot, id))
   if (!head) {
     mesh.scale.set(1, 0.85, 1.1)
   }
-  return { key: `${slot}:${id}`, node: mesh, height: head ? 0.55 : 0.4, model: false }
+  return {
+    key: `${slot}:${id}`,
+    node: mesh,
+    shadow: createShadow(head ? 1 : 0.8),
+    height: head ? 0.55 : 0.4,
+    model: false,
+  }
 }
 
 function createSnakeView(slot: number): SnakeView {
@@ -104,21 +118,26 @@ export function createSnakeViewer(scene: THREE.Scene) {
           if (entry?.key !== key || upgraded) {
             if (entry) {
               view.group.remove(entry.node)
+              view.group.remove(entry.shadow)
             }
             // Models load asynchronously, so a segment can swap from primitive to model.
             entry = createSegment(segment.slot, segment.partId)
             view.segments[index] = entry
             view.group.add(entry.node)
+            view.group.add(entry.shadow)
           }
           entry.node.visible = true
           entry.node.position.set(segment.x, entry.height, segment.z)
           entry.node.rotation.y = segment.angle
+          entry.shadow.visible = true
+          entry.shadow.position.set(segment.x, 0.02, segment.z)
         }
 
         for (let index = snake.segments.length; index < view.segments.length; index += 1) {
           const entry = view.segments[index]
           if (entry) {
             entry.node.visible = false
+            entry.shadow.visible = false
           }
         }
 

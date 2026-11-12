@@ -87,9 +87,10 @@ with zod. See [docs/adding-parts.md](docs/adding-parts.md).
 ## Assets
 
 The original Unity art belongs to the project author and ships with the game as
-converted GLB models and PNG textures. The renderer falls back to placeholder
-primitives while a model loads. File naming rules, the source rename map and the
-conversion steps are documented in [ASSETS.md](ASSETS.md).
+converted GLB models, PNG textures and MP3 sound effects. The renderer falls
+back to placeholder primitives while a model loads. File naming rules, the
+source rename map and the conversion steps are documented in
+[ASSETS.md](ASSETS.md).
 
 ## Status
 

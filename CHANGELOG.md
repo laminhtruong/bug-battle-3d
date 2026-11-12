@@ -16,6 +16,8 @@ All notable changes to this project are documented here. The format follows
   rendered in place of the placeholder primitives.
 - Sound effects for apples, pickups, hits, deaths and the result screen, copied
   from the original Unity audio and played from the simulation events.
+- Blob shadows under the segments and name labels above the players, like the
+  flags in the original game.
 
 ## [0.1.0] - 2026-11-12
 

@@ -305,3 +305,30 @@ input {
   background: rgba(255, 255, 255, 0.88);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
 }
+
+.name-tags {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.name-tag {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--panel);
+  color: #f8f9fa;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
+}
+
+.name-tag-self {
+  background: var(--accent);
+  color: #16222c;
+  text-shadow: none;
+}

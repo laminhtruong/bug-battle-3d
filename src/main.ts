@@ -15,6 +15,7 @@ import type { World } from '@/sim/types'
 import { createWorld, playerSnakes } from '@/sim/world'
 import { createHud } from '@/ui/hud'
 import { createInput } from '@/ui/input'
+import { createNameTags } from '@/ui/name-tags'
 
 type Mode = 'idle' | 'local' | 'host' | 'guest'
 
@@ -29,6 +30,7 @@ const view = createView(canvas)
 const snakeViewer = createSnakeViewer(view.scene)
 const propViewer = createPropViewer(view.scene)
 const input = createInput()
+const nameTags = createNameTags()
 
 // Art loads in the background; matches still start on placeholder primitives.
 preloadPartModels()
@@ -80,6 +82,7 @@ function resetSession(): void {
   renderState = undefined
   resultsShown = false
   mode = 'idle'
+  nameTags.clear()
 }
 
 function showResults(rows: { name: string; score: number }[], canRestart: boolean): void {
@@ -252,6 +255,7 @@ startLoop({
       view.updateCamera(focusX, focusZ, dt)
       if (mode !== 'idle') {
         hud.update(renderState, playerId)
+        nameTags.sync(renderState, view.camera, playerId)
       }
     }
     view.render()
