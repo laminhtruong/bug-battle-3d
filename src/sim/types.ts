@@ -106,8 +106,27 @@ export type WorldEvent =
       z: number
       angle: number
     }
-  | { type: 'hit'; x: number; z: number; damage: number }
-  | { type: 'destroyed'; x: number; z: number; partId: string; slot: Slot }
+  | {
+      type: 'hit'
+      /** Snake that took the damage. */
+      targetId: string
+      /** Snake that caused the damage, when there is one. */
+      attackerId?: string
+      x: number
+      z: number
+      damage: number
+    }
+  | {
+      type: 'destroyed'
+      /** Snake that lost the part. */
+      targetId: string
+      /** Snake that destroyed the part, when there is one. */
+      attackerId?: string
+      x: number
+      z: number
+      partId: string
+      slot: Slot
+    }
   | { type: 'death'; snakeId: string; control: SnakeControl; x: number; z: number }
   | { type: 'spawn'; snakeId: string; x: number; z: number }
   | { type: 'pickup'; snakeId: string; pickupId: string; kind: PickupKind; x: number; z: number }

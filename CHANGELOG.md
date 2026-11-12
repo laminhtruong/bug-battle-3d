@@ -19,6 +19,13 @@ All notable changes to this project are documented here. The format follows
 - Blob shadows under the segments and name labels above the players, like the
   flags in the original game.
 
+### Changed
+
+- Sound effects are tagged with the snake they belong to, so a player only hears
+  what happens to their own snake. The same effect played again within 150 ms is
+  dropped, which keeps combat from turning into noise.
+- Wire protocol version 2: the sound list of a snapshot carries the owner id.
+
 ## [0.1.0] - 2026-11-12
 
 ### Added

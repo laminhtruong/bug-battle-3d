@@ -68,11 +68,17 @@ describe('protocol', () => {
 
   it('carries sound effects and drops unknown names', () => {
     const world = createWorld({ seed: 21, arena: classicArena })
-    const snapshot = createSnapshot(world, ['eat-apple', 'pop'])
+    const snapshot = createSnapshot(world, [
+      { by: 'you', name: 'eat-apple' },
+      { by: 'bot-1', name: 'pop' },
+    ])
     const decoded = parseHostMessage(encodeMessage(snapshot))
-    expect(decoded?.t === 'snap' && decoded.sfx).toEqual(['eat-apple', 'pop'])
+    expect(decoded?.t === 'snap' && decoded.sfx).toEqual([
+      { by: 'you', name: 'eat-apple' },
+      { by: 'bot-1', name: 'pop' },
+    ])
 
-    const broken = { ...snapshot, sfx: ['not-a-sound'] }
+    const broken = { ...snapshot, sfx: [{ by: 'you', name: 'not-a-sound' }] }
     expect(parseHostMessage(encodeMessage(broken))).toBeUndefined()
   })
 })

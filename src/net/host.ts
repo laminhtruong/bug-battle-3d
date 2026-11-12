@@ -1,9 +1,9 @@
 import type { DataConnection } from 'peerjs'
 import { CONTENT_HASH, DEFAULT_HEAD_ID, classicArena } from '@/content'
 import { BALANCE } from '@/data/balance'
-import type { SoundName } from '@/data/sounds'
+import type { SoundEvent } from '@/data/sounds'
 import type { RenderState } from '@/render/state'
-import { soundForEvent } from '@/audio/sfx'
+import { soundsForEvent } from '@/audio/sfx'
 import { tickWorld } from '@/sim/tick'
 import type { PlayerSetup } from '@/sim/spawn'
 import type { World } from '@/sim/types'
@@ -42,7 +42,7 @@ export interface HostSession {
   setInput(x: number, z: number): void
   getState(): RenderState | undefined
   /** Sound effects of the events that happened since the last call. */
-  drainSounds(): SoundName[]
+  drainSounds(): SoundEvent[]
   dispose(): void
 }
 
@@ -69,8 +69,8 @@ export async function startHost({ playerName, handlers }: HostOptions): Promise<
   let resultsSent = false
   let snapshotClock = 0
   let disposed = false
-  const pendingSounds: SoundName[] = []
-  const localSounds: SoundName[] = []
+  const pendingSounds: SoundEvent[] = []
+  const localSounds: SoundEvent[] = []
   const hostInput = { x: 0, z: 0 }
 
   const lobbyPlayers = (): LobbyPlayer[] => [
@@ -235,10 +235,7 @@ export async function startHost({ playerName, handlers }: HostOptions): Promise<
       tickWorld(world, dt)
     }
     for (const event of world.events) {
-      const sound = soundForEvent(event)
-      if (sound) {
-        pendingSounds.push(sound)
-      }
+      pendingSounds.push(...soundsForEvent(event))
     }
 
     snapshotClock += dt

@@ -1,5 +1,5 @@
 import type { WorldEvent } from '@/sim/types'
-import type { SoundName } from '@/data/sounds'
+import type { SoundEvent, SoundName } from '@/data/sounds'
 
 const FILES: Record<SoundName, string> = {
   'eat-apple': 'eat-apple.mp3',
@@ -12,6 +12,10 @@ const FILES: Record<SoundName, string> = {
 }
 
 const templates = new Map<SoundName, HTMLAudioElement>()
+const lastPlayed = new Map<SoundName, number>()
+
+/** Same effect played again within this window is dropped. */
+const MIN_GAP_MS = 150
 
 function template(name: SoundName): HTMLAudioElement {
   const cached = templates.get(name)
@@ -27,6 +31,12 @@ function template(name: SoundName): HTMLAudioElement {
 /** Plays a short effect. Audio is optional, so failures stay silent. */
 export function playSound(name: SoundName, volume = 0.5): void {
   try {
+    const now = performance.now()
+    const last = lastPlayed.get(name) ?? Number.NEGATIVE_INFINITY
+    if (now - last < MIN_GAP_MS) {
+      return
+    }
+    lastPlayed.set(name, now)
     const audio = template(name).cloneNode() as HTMLAudioElement
     audio.volume = volume
     void audio.play().catch(() => {})
@@ -35,17 +45,36 @@ export function playSound(name: SoundName, volume = 0.5): void {
   }
 }
 
-/** Maps a simulation event to the effect it should make. */
-export function soundForEvent(event: WorldEvent): SoundName | undefined {
+/**
+ * Maps a simulation event to the effects it makes. Each effect is tagged with
+ * the snake it belongs to, so a player only hears what happens to them.
+ */
+export function soundsForEvent(event: WorldEvent): SoundEvent[] {
+  const sounds: SoundEvent[] = []
   switch (event.type) {
     case 'pickup':
-      return event.kind === 'apple' ? 'eat-apple' : 'power-up'
-    case 'destroyed':
-      return 'pop'
+      sounds.push({
+        by: event.snakeId,
+        name: event.kind === 'apple' ? 'eat-apple' : 'power-up',
+      })
+      break
     case 'hit':
+      sounds.push({ by: event.targetId, name: 'bite' })
+      if (event.attackerId) {
+        sounds.push({ by: event.attackerId, name: 'bite' })
+      }
+      break
+    case 'destroyed':
+      sounds.push({ by: event.targetId, name: 'pop' })
+      if (event.attackerId) {
+        sounds.push({ by: event.attackerId, name: 'pop' })
+      }
+      break
     case 'death':
-      return 'bite'
+      sounds.push({ by: event.snakeId, name: 'bite' })
+      break
     default:
-      return undefined
+      break
   }
+  return sounds
 }

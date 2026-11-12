@@ -1,8 +1,9 @@
 import './style.css'
-import { playSound, soundForEvent } from '@/audio/sfx'
+import { playSound, soundsForEvent } from '@/audio/sfx'
 import { startLoop } from '@/core/loop'
 import { DEFAULT_HEAD_ID, classicArena } from '@/content'
 import { BALANCE } from '@/data/balance'
+import type { SoundEvent } from '@/data/sounds'
 import { joinRoom, type ClientHandlers, type ClientSession } from '@/net/client'
 import { startHost, type HostSession } from '@/net/host'
 import { createPropViewer } from '@/render/prop-view'
@@ -71,6 +72,13 @@ function randomSeed(): number {
 
 function toMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Something went wrong.'
+}
+
+/** Only the effects of the own snake are audible. */
+function playOwned(sound: SoundEvent): void {
+  if (sound.by === playerId) {
+    playSound(sound.name)
+  }
 }
 
 function resetSession(): void {
@@ -214,9 +222,8 @@ startLoop({
       if (!world.ended) {
         tickWorld(world, STEP)
         for (const event of world.events) {
-          const sound = soundForEvent(event)
-          if (sound) {
-            playSound(sound)
+          for (const sound of soundsForEvent(event)) {
+            playOwned(sound)
           }
         }
       } else if (!resultsShown) {
@@ -232,7 +239,7 @@ startLoop({
       host.setInput(move.x, move.z)
       host.update(STEP)
       for (const sound of host.drainSounds()) {
-        playSound(sound)
+        playOwned(sound)
       }
       return
     }

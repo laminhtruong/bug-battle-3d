@@ -43,6 +43,9 @@ line port; the rules were re-derived from prefabs, scripts and playtests.
   texture; placeholder primitives show only if a model fails to load.
 - The original legs were animated with inverse kinematics. The models ship with
   the legs in their rest pose, so the bodies do not walk yet.
+- Sound effects are per player. The host tags every effect with the snake it
+  belongs to and each client keeps the ones of its own snake, so the arena of
+  bots stays silent.
 
 ## Where to look
 

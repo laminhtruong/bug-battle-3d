@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { soundForEvent } from '@/audio/sfx'
+import { soundsForEvent } from '@/audio/sfx'
 import { SOUND_NAMES } from '@/data/sounds'
 import type { WorldEvent } from '@/sim/types'
 
 describe('sound effects', () => {
-  it('maps gameplay events to effects', () => {
+  it('tags every effect with the snake it belongs to', () => {
     const apple: WorldEvent = {
       type: 'pickup',
       snakeId: 'you',
@@ -13,13 +13,26 @@ describe('sound effects', () => {
       x: 0,
       z: 0,
     }
-    expect(soundForEvent(apple)).toBe('eat-apple')
-    expect(soundForEvent({ ...apple, kind: 'head' })).toBe('power-up')
-    expect(soundForEvent({ type: 'destroyed', x: 0, z: 0, partId: 'claw01', slot: 'head' })).toBe(
-      'pop',
-    )
-    expect(soundForEvent({ type: 'hit', x: 0, z: 0, damage: 1 })).toBe('bite')
-    expect(soundForEvent({ type: 'round-end' })).toBeUndefined()
+    expect(soundsForEvent(apple)).toEqual([{ by: 'you', name: 'eat-apple' }])
+    expect(soundsForEvent({ ...apple, kind: 'head' })).toEqual([{ by: 'you', name: 'power-up' }])
+    expect(
+      soundsForEvent({
+        type: 'destroyed',
+        targetId: 'you',
+        attackerId: 'bot-1',
+        x: 0,
+        z: 0,
+        partId: 'claw01',
+        slot: 'head',
+      }),
+    ).toEqual([
+      { by: 'you', name: 'pop' },
+      { by: 'bot-1', name: 'pop' },
+    ])
+    expect(soundsForEvent({ type: 'hit', targetId: 'you', x: 0, z: 0, damage: 1 })).toEqual([
+      { by: 'you', name: 'bite' },
+    ])
+    expect(soundsForEvent({ type: 'round-end' })).toEqual([])
   })
 
   it('keeps the wire names in sync with the shipped files', () => {

@@ -32,7 +32,14 @@ export function damageSegment(
   const part = requirePart(segment.slot, segment.partId)
   segment.hurtUntil = now + BALANCE.hurtCooldownSec
   segment.hp -= damage
-  world.events.push({ type: 'hit', x: segment.x, z: segment.z, damage })
+  world.events.push({
+    type: 'hit',
+    targetId: target.id,
+    ...(attacker ? { attackerId: attacker.id } : {}),
+    x: segment.x,
+    z: segment.z,
+    damage,
+  })
 
   if (segment.hp > 0) {
     return false
@@ -41,6 +48,8 @@ export function damageSegment(
   target.segments.splice(index, 1)
   world.events.push({
     type: 'destroyed',
+    targetId: target.id,
+    ...(attacker ? { attackerId: attacker.id } : {}),
     x: segment.x,
     z: segment.z,
     partId: part.id,

@@ -48,6 +48,7 @@ export async function joinRoom(options: ClientOptions): Promise<ClientSession> {
     throw error
   }
 
+  let playerId = ''
   let resolveWelcome: ((id: string) => void) | undefined
   let rejectWelcome: ((error: Error) => void) | undefined
   const welcome = new Promise<string>((resolve, reject) => {
@@ -65,6 +66,7 @@ export async function joinRoom(options: ClientOptions): Promise<ClientSession> {
     }
     switch (message.t) {
       case 'welcome':
+        playerId = message.playerId
         resolveWelcome?.(message.playerId)
         resolveWelcome = undefined
         return
@@ -87,7 +89,10 @@ export async function joinRoom(options: ClientOptions): Promise<ClientSession> {
         return
       case 'snap':
         for (const sound of message.sfx ?? []) {
-          options.handlers.onSound(sound)
+          // Only the effects of the own snake are audible.
+          if (sound.by === playerId) {
+            options.handlers.onSound(sound.name)
+          }
         }
         options.handlers.onSnapshot(toRenderState(message))
         return
@@ -127,9 +132,8 @@ export async function joinRoom(options: ClientOptions): Promise<ClientSession> {
     }),
   )
 
-  let playerId: string
   try {
-    playerId = await welcome
+    await welcome
   } catch (error) {
     window.clearTimeout(timeout)
     connection.close()

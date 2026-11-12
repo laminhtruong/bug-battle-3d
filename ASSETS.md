@@ -27,7 +27,9 @@ public/assets/
   audio/sfx/<name>.mp3
 ```
 
-Sound effects are planned under `audio/sfx/` but are not shipped yet.
+Sound effects ship under `audio/sfx/`. Each file is played from a simulation
+event and is tagged with the snake it belongs to, so a player only hears the
+effects of their own snake.
 
 ## Rename map
 

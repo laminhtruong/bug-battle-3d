@@ -5,7 +5,7 @@ import { SOUND_NAMES } from '@/data/sounds'
  * Wire protocol. Bump the version when the message shape changes; hosts and
  * guests with different versions refuse to start instead of desyncing.
  */
-export const PROTOCOL_VERSION = 1
+export const PROTOCOL_VERSION = 2
 
 const MAX_CLIENT_MESSAGE = 4096
 const MAX_HOST_MESSAGE = 200_000
@@ -93,8 +93,11 @@ export const snapshotSchema = z.object({
   projectiles: z.array(projectileSchema),
   areas: z.array(areaSchema),
   pickups: z.array(pickupSchema),
-  /** Sound effects that happened since the previous snapshot. */
-  sfx: z.array(z.enum(SOUND_NAMES)).max(8).optional(),
+  /** Sound effects that happened since the previous snapshot, per snake. */
+  sfx: z
+    .array(z.object({ by: z.string().min(1).max(32), name: z.enum(SOUND_NAMES) }))
+    .max(64)
+    .optional(),
 })
 
 export type Snapshot = z.infer<typeof snapshotSchema>
