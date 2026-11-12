@@ -71,9 +71,9 @@ attack: {
 
 ## Models
 
-The part file can carry a `model` key once the art pipeline is wired. The asset
-check expects `models/parts/head/<id>.glb` or `models/parts/body/<id>.glb`. Until
-then the renderer falls back to a colored placeholder.
+The part file can carry a `model` key; it defaults to the part id. The asset check
+expects `models/parts/head/<model>.glb` or `models/parts/body/<model>.glb`. A part
+without a model file still plays; the renderer falls back to a colored primitive.
 
 ## Balance
 

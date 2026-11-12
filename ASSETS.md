@@ -4,8 +4,9 @@ The Unity project this game is ported from ships original art created by the
 project author. The author has confirmed the rights to publish it. No paid Unity
 plugin code or asset is copied into this repository.
 
-The current build runs on placeholder primitives. This document records what the
-art is, where it comes from and how it will be published.
+The current build ships the original part models as GLB plus the floor and palette
+textures. This document records what the art is, where it comes from and how it
+was converted.
 
 ## Naming rules
 
@@ -21,19 +22,11 @@ art is, where it comes from and how it will be published.
 public/assets/
   models/parts/head/<id>.glb
   models/parts/body/<id>.glb
-  textures/parts/bug-atlas.webp
-  textures/arenas/classic/floor-base.webp
-  textures/arenas/classic/floor-accent.webp
-  textures/arenas/classic/floor-decor.webp
-  textures/props/palette.webp
-  audio/sfx/eat-apple.mp3
-  audio/sfx/power-up.mp3
-  audio/sfx/click.mp3
-  audio/sfx/bite.mp3
-  audio/sfx/pop.mp3
-  audio/sfx/win.mp3
-  audio/sfx/lose.mp3
+  textures/parts/bug-atlas.png
+  textures/arenas/classic/floor-base.png
 ```
+
+Sound effects are planned under `audio/sfx/` but are not shipped yet.
 
 ## Rename map
 
@@ -57,29 +50,26 @@ Verified from the Unity prefabs to their mesh GUIDs.
 | `body_09` | `poison`     | body |
 | `body_10` | `lightning`  | body |
 
-| Original texture | Target                                      |
-| ---------------- | ------------------------------------------- |
-| `bug.png`        | `textures/parts/bug-atlas.webp`             |
-| `floor01a`       | `textures/arenas/classic/floor-base.webp`   |
-| `floor01b`       | `textures/arenas/classic/floor-accent.webp` |
-| `floor01_decor`  | `textures/arenas/classic/floor-decor.webp`  |
-| `Colors.png`     | `textures/props/palette.webp`               |
+| Original texture | Target                                   |
+| ---------------- | ---------------------------------------- |
+| `bug.png`        | `textures/parts/bug-atlas.png`           |
+| `floor02a`       | `textures/arenas/classic/floor-base.png` |
 
-## Conversion pipeline (pending)
+## Conversion
 
-Blender is not installed on the development machine, so conversion is not part
-of the build yet. When it is available:
+The part models were converted once from the Unity FBX sources with
+[FBX2glTF](https://github.com/facebookincubator/FBX2glTF) 0.9.7 (BSD-3-Clause),
+keeping only position, normal and the first UV set:
 
-1. Import each source FBX and export GLB with `+Y up`, applied transforms and no
-   cameras or lights.
-2. Bake textures to WebP at the smallest size that stays sharp; keep the atlas
-   for parts instead of one texture per part.
-3. Encode sound effects to MP3 at 96 kbps mono.
-4. Drop files into the target layout above.
-5. Run `npm run check` and confirm every model is referenced by a part file.
+```sh
+FBX2glTF -b -k position -k normal -k uv0 -o public/assets/models/parts/head/claw01.glb head_01.fbx
+```
 
-Until then the renderer keeps using primitives. Do not commit raw FBX, PSD or
-Unity package files.
+The FBX files live outside this repository, so the GLBs are committed instead.
+`src/render/models.ts` recenters each model, applies the shared palette texture
+and scales it to arena units; the source scenes place the parts far from the
+origin at a much larger scale. Placeholder primitives stay as a fallback while a
+model loads. Do not commit raw FBX, PSD or Unity package files.
 
 ## Third-party notices
 

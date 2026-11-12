@@ -12,6 +12,8 @@ All notable changes to this project are documented here. The format follows
 - Lobby, guest handshake, content hash check and disconnect-to-bot fallback.
 - Wire protocol with zod validation, message size limits and input rate limits.
 - Protocol and snapshot tests.
+- Part models and the arena floor texture converted from the original Unity art,
+  rendered in place of the placeholder primitives.
 
 ## [0.1.0] - 2026-11-12
 
@@ -30,6 +32,5 @@ All notable changes to this project are documented here. The format follows
 
 ### Known limits
 
-- Placeholder primitive meshes; the original art pipeline is not wired yet.
 - No host migration and no TURN relay.
 - No progression, shop, quests or accounts.

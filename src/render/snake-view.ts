@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { fnv1a } from '@/core/rng'
 import type { PartDef } from '@/content/define'
+import { getPartModel } from './models'
 import type { RenderState } from './state'
 
 const SLOT_COLORS = ['#ff6b6b', '#4dabf7', '#ffd43b', '#b197fc']
@@ -8,11 +9,12 @@ const SLOT_COLORS = ['#ff6b6b', '#4dabf7', '#ffd43b', '#b197fc']
 const HEAD_GEOMETRY = new THREE.ConeGeometry(0.42, 1.05, 12)
 HEAD_GEOMETRY.rotateX(Math.PI / 2)
 const BODY_GEOMETRY = new THREE.IcosahedronGeometry(0.3, 0)
-const RING_GEOMETRY = new THREE.RingGeometry(0.55, 0.72, 24)
+const RING_GEOMETRY = new THREE.RingGeometry(0.42, 0.56, 24)
 RING_GEOMETRY.rotateX(-Math.PI / 2)
 
 const materialCache = new Map<string, THREE.MeshToonMaterial>()
 
+/** Placeholder colour, used until the real model for a part has loaded. */
 export function getPartMaterial(slot: PartDef['slot'], id: string): THREE.MeshToonMaterial {
   const key = `${slot}:${id}`
   const cached = materialCache.get(key)
@@ -26,10 +28,31 @@ export function getPartMaterial(slot: PartDef['slot'], id: string): THREE.MeshTo
   return material
 }
 
+interface SegmentView {
+  key: string
+  node: THREE.Object3D
+  height: number
+  model: boolean
+}
+
 interface SnakeView {
   group: THREE.Group
-  segments: THREE.Mesh[]
+  segments: SegmentView[]
   ring: THREE.Mesh
+}
+
+function createSegment(slot: PartDef['slot'], id: string): SegmentView {
+  const model = getPartModel(slot, id)
+  if (model) {
+    // Models are normalised so their feet sit on the group origin.
+    return { key: `${slot}:${id}`, node: model.clone(), height: 0, model: true }
+  }
+  const head = slot === 'head'
+  const mesh = new THREE.Mesh(head ? HEAD_GEOMETRY : BODY_GEOMETRY, getPartMaterial(slot, id))
+  if (!head) {
+    mesh.scale.set(1, 0.85, 1.1)
+  }
+  return { key: `${slot}:${id}`, node: mesh, height: head ? 0.55 : 0.4, model: false }
 }
 
 function createSnakeView(slot: number): SnakeView {
@@ -48,7 +71,7 @@ function createSnakeView(slot: number): SnakeView {
   return { group, segments: [], ring }
 }
 
-/** Keeps one mesh per visible segment, reusing meshes between ticks. */
+/** Keeps one object per visible segment, reusing them between ticks. */
 export function createSnakeViewer(scene: THREE.Scene) {
   const views = new Map<string, SnakeView>()
 
@@ -75,28 +98,27 @@ export function createSnakeViewer(scene: THREE.Scene) {
           if (!segment) {
             continue
           }
-          let mesh = view.segments[index]
-          if (!mesh) {
-            mesh = new THREE.Mesh(
-              index === 0 ? HEAD_GEOMETRY : BODY_GEOMETRY,
-              getPartMaterial(segment.slot, segment.partId),
-            )
-            if (index > 0) {
-              mesh.scale.set(1, 0.85, 1.1)
+          const key = `${segment.slot}:${segment.partId}`
+          let entry = view.segments[index]
+          const upgraded = !entry?.model && getPartModel(segment.slot, segment.partId)
+          if (entry?.key !== key || upgraded) {
+            if (entry) {
+              view.group.remove(entry.node)
             }
-            view.segments[index] = mesh
-            view.group.add(mesh)
+            // Models load asynchronously, so a segment can swap from primitive to model.
+            entry = createSegment(segment.slot, segment.partId)
+            view.segments[index] = entry
+            view.group.add(entry.node)
           }
-          mesh.visible = true
-          mesh.material = getPartMaterial(segment.slot, segment.partId)
-          mesh.position.set(segment.x, index === 0 ? 0.55 : 0.4, segment.z)
-          mesh.rotation.y = segment.angle
+          entry.node.visible = true
+          entry.node.position.set(segment.x, entry.height, segment.z)
+          entry.node.rotation.y = segment.angle
         }
 
         for (let index = snake.segments.length; index < view.segments.length; index += 1) {
-          const mesh = view.segments[index]
-          if (mesh) {
-            mesh.visible = false
+          const entry = view.segments[index]
+          if (entry) {
+            entry.node.visible = false
           }
         }
 

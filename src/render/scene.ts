@@ -29,16 +29,21 @@ export function createView(canvas: HTMLCanvasElement): View {
   sun.position.set(12, 24, 8)
   scene.add(sun)
 
+  const floorTexture = new THREE.TextureLoader().load(
+    `/assets/textures/arenas/${arena.id}/floor-base.png`,
+  )
+  floorTexture.colorSpace = THREE.SRGBColorSpace
+  floorTexture.wrapS = THREE.RepeatWrapping
+  floorTexture.wrapT = THREE.RepeatWrapping
+  // One texture tile covers four world units, so the paving stones stay readable.
+  floorTexture.repeat.set(arena.width / 4, arena.depth / 4)
+
   const floor = new THREE.Mesh(
     new THREE.PlaneGeometry(arena.width, arena.depth),
-    new THREE.MeshToonMaterial({ color: '#79c47b' }),
+    new THREE.MeshBasicMaterial({ map: floorTexture }),
   )
   floor.rotation.x = -Math.PI / 2
   scene.add(floor)
-
-  const grid = new THREE.GridHelper(arena.width, arena.width / 2, '#5aa86a', '#6cbc7c')
-  grid.position.y = 0.01
-  scene.add(grid)
 
   const wallMaterial = new THREE.MeshToonMaterial({ color: '#3f7d52' })
   const wallHeight = 0.6

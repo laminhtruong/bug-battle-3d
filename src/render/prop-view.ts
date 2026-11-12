@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { BALANCE } from '@/data/balance'
+import { getPartModel } from './models'
 import type { RenderPickup, RenderState } from './state'
 import { getPartMaterial } from './snake-view'
 
@@ -71,10 +72,23 @@ function pickupGeometry(pickup: RenderPickup): THREE.BufferGeometry {
   return pickup.kind === 'apple' ? appleGeometry : dropGeometry
 }
 
+/** Part drops wear their real model once it has loaded; otherwise a placeholder. */
+function pickupObject(pickup: RenderPickup): THREE.Object3D {
+  if (pickup.kind === 'head' || pickup.kind === 'body') {
+    const model = getPartModel(pickup.kind, pickup.partId ?? 'normal')
+    if (model) {
+      const clone = model.clone()
+      clone.scale.multiplyScalar(0.8)
+      return clone
+    }
+  }
+  return new THREE.Mesh(pickupGeometry(pickup), pickupMaterial(pickup))
+}
+
 export function createPropViewer(scene: THREE.Scene) {
   const shots = new Map<string, THREE.Mesh>()
   const areas = new Map<string, THREE.Mesh>()
-  const pickups = new Map<string, THREE.Mesh>()
+  const pickups = new Map<string, THREE.Object3D>()
 
   return {
     sync(world: RenderState): void {
@@ -122,11 +136,10 @@ export function createPropViewer(scene: THREE.Scene) {
         seenPickups.add(pickup.id)
         let mesh = pickups.get(pickup.id)
         if (!mesh) {
-          mesh = new THREE.Mesh(pickupGeometry(pickup), pickupMaterial(pickup))
+          mesh = pickupObject(pickup)
           pickups.set(pickup.id, mesh)
           scene.add(mesh)
         }
-        mesh.material = pickupMaterial(pickup)
         const bob = Math.sin(world.time * 3 + pickup.x + pickup.z) * 0.08
         mesh.position.set(pickup.x, 0.45 + bob, pickup.z)
         mesh.rotation.y = world.time * 2

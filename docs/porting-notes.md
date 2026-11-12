@@ -39,7 +39,8 @@ line port; the rules were re-derived from prefabs, scripts and playtests.
   in its own room by design.
 - Snapshots send part ids, not definitions. Both sides must agree on the content
   hash before a match starts.
-- Placeholder meshes ship until the art pipeline is complete.
+- Part models are static (no animation clips are played) and share one palette
+  texture; placeholder primitives show only if a model fails to load.
 
 ## Where to look
 

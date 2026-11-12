@@ -5,6 +5,7 @@ import { BALANCE } from '@/data/balance'
 import { joinRoom, type ClientHandlers, type ClientSession } from '@/net/client'
 import { startHost, type HostSession } from '@/net/host'
 import { createPropViewer } from '@/render/prop-view'
+import { preloadPartModels } from '@/render/models'
 import { createView } from '@/render/scene'
 import { createSnakeViewer } from '@/render/snake-view'
 import type { RenderState } from '@/render/state'
@@ -27,6 +28,9 @@ const view = createView(canvas)
 const snakeViewer = createSnakeViewer(view.scene)
 const propViewer = createPropViewer(view.scene)
 const input = createInput()
+
+// Art loads in the background; matches still start on placeholder primitives.
+preloadPartModels()
 
 let mode: Mode = 'idle'
 let world: World | undefined

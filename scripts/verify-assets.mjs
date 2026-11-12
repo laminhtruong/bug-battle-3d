@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url'
 const root = fileURLToPath(new URL('..', import.meta.url))
 const assetsRoot = path.join(root, 'public', 'assets')
 const sourceRoot = path.join(root, 'src')
-const namePattern = /^[a-z0-9]+(-[a-z0-9]+)*\.(glb|webp|mp3|woff2)$/
+const namePattern = /^[a-z0-9]+(-[a-z0-9]+)*\.(glb|webp|png|mp3|woff2)$/
 
 const exists = async (target) => {
   try {
