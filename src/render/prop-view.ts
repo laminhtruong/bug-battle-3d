@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { BALANCE } from '@/data/balance'
-import { getPartModel } from './models'
+import { clonePartModel } from './models'
 import type { RenderPickup, RenderState } from './state'
 import { getPartMaterial } from './snake-view'
 
@@ -18,8 +18,8 @@ const AREA_COLORS: Record<string, string> = {
 const shotGeometry = new THREE.SphereGeometry(BALANCE.projectileRadius, 8, 6)
 const areaGeometry = new THREE.CircleGeometry(1, 24)
 areaGeometry.rotateX(-Math.PI / 2)
-const appleGeometry = new THREE.SphereGeometry(0.28, 10, 8)
-const dropGeometry = new THREE.IcosahedronGeometry(0.3, 0)
+const appleGeometry = new THREE.SphereGeometry(0.18, 10, 8)
+const dropGeometry = new THREE.IcosahedronGeometry(0.2, 0)
 
 const shotMaterials = new Map<string, THREE.MeshBasicMaterial>()
 const areaMaterials = new Map<string, THREE.MeshBasicMaterial>()
@@ -75,11 +75,10 @@ function pickupGeometry(pickup: RenderPickup): THREE.BufferGeometry {
 /** Part drops wear their real model once it has loaded; otherwise a placeholder. */
 function pickupObject(pickup: RenderPickup): THREE.Object3D {
   if (pickup.kind === 'head' || pickup.kind === 'body') {
-    const model = getPartModel(pickup.kind, pickup.partId ?? 'normal')
+    const model = clonePartModel(pickup.kind, pickup.partId ?? 'normal')
     if (model) {
-      const clone = model.clone()
-      clone.scale.multiplyScalar(0.8)
-      return clone
+      model.scale.multiplyScalar(0.8)
+      return model
     }
   }
   return new THREE.Mesh(pickupGeometry(pickup), pickupMaterial(pickup))
@@ -141,7 +140,7 @@ export function createPropViewer(scene: THREE.Scene) {
           scene.add(mesh)
         }
         const bob = Math.sin(world.time * 3 + pickup.x + pickup.z) * 0.08
-        mesh.position.set(pickup.x, 0.45 + bob, pickup.z)
+        mesh.position.set(pickup.x, 0.32 + bob, pickup.z)
         mesh.rotation.y = world.time * 2
       }
       for (const [id, mesh] of pickups) {

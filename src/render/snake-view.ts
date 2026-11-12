@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { fnv1a } from '@/core/rng'
 import type { PartDef } from '@/content/define'
-import { getPartModel } from './models'
+import { getPartModel, clonePartModel } from './models'
 import type { RenderState } from './state'
 
 const SLOT_COLORS = ['#ff6b6b', '#4dabf7', '#ffd43b', '#b197fc']
@@ -9,7 +9,7 @@ const SLOT_COLORS = ['#ff6b6b', '#4dabf7', '#ffd43b', '#b197fc']
 const HEAD_GEOMETRY = new THREE.ConeGeometry(0.42, 1.05, 12)
 HEAD_GEOMETRY.rotateX(Math.PI / 2)
 const BODY_GEOMETRY = new THREE.IcosahedronGeometry(0.3, 0)
-const RING_GEOMETRY = new THREE.RingGeometry(0.42, 0.56, 24)
+const RING_GEOMETRY = new THREE.RingGeometry(0.34, 0.46, 24)
 RING_GEOMETRY.rotateX(-Math.PI / 2)
 
 const materialCache = new Map<string, THREE.MeshToonMaterial>()
@@ -42,10 +42,10 @@ interface SnakeView {
 }
 
 function createSegment(slot: PartDef['slot'], id: string): SegmentView {
-  const model = getPartModel(slot, id)
+  const model = clonePartModel(slot, id)
   if (model) {
     // Models are normalised so their feet sit on the group origin.
-    return { key: `${slot}:${id}`, node: model.clone(), height: 0, model: true }
+    return { key: `${slot}:${id}`, node: model, height: 0, model: true }
   }
   const head = slot === 'head'
   const mesh = new THREE.Mesh(head ? HEAD_GEOMETRY : BODY_GEOMETRY, getPartMaterial(slot, id))

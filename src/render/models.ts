@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js'
 import { PARTS, getPart } from '@/content'
 import type { Slot } from '@/content/define'
 
@@ -7,7 +8,7 @@ import type { Slot } from '@/content/define'
  * Source models are authored at roughly four units per bug, while the arena
  * works in one-unit segments. One uniform scale keeps every part in proportion.
  */
-const MODEL_SCALE = 0.4
+const MODEL_SCALE = 0.3
 
 /**
  * Parts share one 32x32 palette texture: their UVs point at flat colour swatches,
@@ -64,6 +65,15 @@ function load(slot: Slot, id: string): Promise<void> {
 /** Returns the loaded model for a part, or undefined while it is still loading. */
 export function getPartModel(slot: Slot, id: string): THREE.Group | undefined {
   return templates.get(modelId(slot, id))
+}
+
+/**
+ * Copies a loaded model for one segment. Bodies are skinned, so they need
+ * SkeletonUtils: a plain clone would keep pointing at the template's bones.
+ */
+export function clonePartModel(slot: Slot, id: string): THREE.Object3D | undefined {
+  const template = getPartModel(slot, id)
+  return template ? cloneSkinned(template) : undefined
 }
 
 /** Starts loading every registered part in the background, once per session. */

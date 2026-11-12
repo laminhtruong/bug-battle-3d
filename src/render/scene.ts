@@ -8,7 +8,7 @@ export interface View {
   updateCamera(x: number, z: number, dt: number): void
 }
 
-const CAMERA_OFFSET = new THREE.Vector3(0, 4, -4.5)
+const CAMERA_OFFSET = new THREE.Vector3(0, 4.2, -4.2)
 
 export function createView(canvas: HTMLCanvasElement): View {
   const arena = classicArena
@@ -19,7 +19,7 @@ export function createView(canvas: HTMLCanvasElement): View {
   scene.background = new THREE.Color('#8ed0f0')
   scene.fog = new THREE.Fog('#8ed0f0', 42, 90)
 
-  const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 200)
+  const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 200)
   camera.position.copy(CAMERA_OFFSET)
   camera.lookAt(0, 0, 0)
 
