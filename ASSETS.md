@@ -22,10 +22,15 @@ was converted.
 public/assets/
   models/parts/head/<id>.glb
   models/parts/body/<id>.glb
+  models/bones/head.glb
+  models/bones/body.glb
   textures/parts/bug-atlas.png
   textures/arenas/classic/floor-base.png
   audio/sfx/<name>.mp3
 ```
+
+The bone models are the remains the original leaves behind when a part
+explodes: a skull for the head and a small bone for the body.
 
 Sound effects ship under `audio/sfx/`. Each file is played from a simulation
 event and is tagged with the snake it belongs to, so a player only hears the
@@ -80,6 +85,8 @@ keeping only position, normal and the first UV set:
 
 ```sh
 FBX2glTF -b -k position -k normal -k uv0 -o public/assets/models/parts/head/claw01.glb head_01.fbx
+FBX2glTF -b -k position -k normal -k uv0 -o public/assets/models/bones/head.glb head_00.fbx
+FBX2glTF -b -k position -k normal -k uv0 -o public/assets/models/bones/body.glb body_00.fbx
 ```
 
 The FBX files live outside this repository, so the GLBs are committed instead.

@@ -29,6 +29,8 @@ All notable changes to this project are documented here. The format follows
   - a destroyed part keeps its place in the chain and shows its bones, and
     picking up a head brings a lost head back.
 - The first body segment sits behind the head instead of inside it.
+- Destroyed parts show the bones of the original, a skull for the head and a
+  small bone for the body, converted from the Unity art.
 - Sound effects are tagged with the snake they belong to, so a player only hears
   what happens to their own snake. The same effect played again within 150 ms is
   dropped, which keeps combat from turning into noise.

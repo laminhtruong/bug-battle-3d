@@ -23,9 +23,30 @@ const partMaterial = new THREE.MeshToonMaterial({ map: atlas })
 const loader = new GLTFLoader()
 const templates = new Map<string, THREE.Group>()
 const requests = new Map<string, Promise<void>>()
+const boneTemplates = new Map<Slot, THREE.Group>()
+const boneRequests = new Map<Slot, Promise<void>>()
 
 function modelId(slot: Slot, id: string): string {
   return `${slot}:${getPart(slot, id)?.model ?? id}`
+}
+
+/** Centers a loaded scene so its feet sit on the group origin. */
+function normalize(root: THREE.Object3D): THREE.Group {
+  root.traverse((node) => {
+    if (node instanceof THREE.Mesh) {
+      node.material = partMaterial
+    }
+  })
+  // Source scenes scatter the parts far from the origin; bring the geometry
+  // back to (0, ground, 0) so the simulation can own every position.
+  const box = new THREE.Box3().setFromObject(root)
+  const center = box.getCenter(new THREE.Vector3())
+  root.position.set(-center.x, -box.min.y, -center.z)
+
+  const holder = new THREE.Group()
+  holder.add(root)
+  holder.scale.setScalar(MODEL_SCALE)
+  return holder
 }
 
 function load(slot: Slot, id: string): Promise<void> {
@@ -38,27 +59,33 @@ function load(slot: Slot, id: string): Promise<void> {
   const request = loader
     .loadAsync(`/assets/models/parts/${slot}/${model}.glb`)
     .then((gltf) => {
-      const root = gltf.scene
-      root.traverse((node) => {
-        if (node instanceof THREE.Mesh) {
-          node.material = partMaterial
-        }
-      })
-      // Source scenes scatter the parts far from the origin; bring the geometry
-      // back to (0, ground, 0) so the simulation can own every position.
-      const box = new THREE.Box3().setFromObject(root)
-      const center = box.getCenter(new THREE.Vector3())
-      root.position.set(-center.x, -box.min.y, -center.z)
-
-      const holder = new THREE.Group()
-      holder.add(root)
-      holder.scale.setScalar(MODEL_SCALE)
-      templates.set(key, holder)
+      templates.set(key, normalize(gltf.scene))
     })
     .catch(() => {
       // A missing model keeps the placeholder primitives instead of breaking the match.
     })
   requests.set(key, request)
+  return request
+}
+
+/**
+ * The bones the original leaves behind when a part explodes: a skull for the
+ * head and a small bone for the body.
+ */
+function loadBones(slot: Slot): Promise<void> {
+  const running = boneRequests.get(slot)
+  if (running) {
+    return running
+  }
+  const request = loader
+    .loadAsync(`/assets/models/bones/${slot}.glb`)
+    .then((gltf) => {
+      boneTemplates.set(slot, normalize(gltf.scene))
+    })
+    .catch(() => {
+      // Without bones the part simply disappears.
+    })
+  boneRequests.set(slot, request)
   return request
 }
 
@@ -81,4 +108,17 @@ export function preloadPartModels(): void {
   for (const part of PARTS) {
     void load(part.slot, part.id)
   }
+  void loadBones('head')
+  void loadBones('body')
+}
+
+/** Returns the bones of a slot, or undefined while they are still loading. */
+export function getBonesModel(slot: Slot): THREE.Group | undefined {
+  return boneTemplates.get(slot)
+}
+
+/** Copies the bones of a slot for one segment. */
+export function cloneBonesModel(slot: Slot): THREE.Object3D | undefined {
+  const template = boneTemplates.get(slot)
+  return template ? cloneSkinned(template) : undefined
 }

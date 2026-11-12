@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { fnv1a } from '@/core/rng'
 import type { PartDef } from '@/content/define'
-import { getPartModel, clonePartModel } from './models'
+import { getPartModel, clonePartModel, getBonesModel, cloneBonesModel } from './models'
 import { createShadow } from './shadow'
 import type { RenderState } from './state'
 
@@ -13,8 +13,8 @@ const BODY_GEOMETRY = new THREE.IcosahedronGeometry(0.3, 0)
 const RING_GEOMETRY = new THREE.RingGeometry(0.34, 0.46, 24)
 RING_GEOMETRY.rotateX(-Math.PI / 2)
 
-/** Stands in for the bones the original leaves behind when a part is lost. */
-const BONES_GEOMETRY = new THREE.SphereGeometry(0.26, 10, 6)
+/** Stands in for the bones until the real bone model has loaded. */
+const BONES_GEOMETRY = new THREE.SphereGeometry(0.2, 10, 6)
 const BONES_MATERIAL = new THREE.MeshBasicMaterial({ color: '#e8e0cc' })
 
 const materialCache = new Map<string, THREE.MeshToonMaterial>()
@@ -37,10 +37,11 @@ interface SegmentView {
   key: string
   node: THREE.Object3D
   /** Remains of a lost part, shown in place of the model. */
-  bones: THREE.Mesh
+  bones: THREE.Object3D
   shadow: THREE.Mesh
   height: number
   model: boolean
+  boneModel: boolean
 }
 
 interface SnakeView {
@@ -51,19 +52,21 @@ interface SnakeView {
 
 function createSegment(slot: PartDef['slot'], id: string): SegmentView {
   const head = slot === 'head'
-  const bones = new THREE.Mesh(BONES_GEOMETRY, BONES_MATERIAL)
-  bones.scale.setScalar(head ? 1.5 : 1)
-  bones.visible = false
+  const bones = cloneBonesModel(slot)
+  const boneModel = bones !== undefined
+  const bonesNode = bones ?? new THREE.Mesh(BONES_GEOMETRY, BONES_MATERIAL)
+  bonesNode.visible = false
   const model = clonePartModel(slot, id)
   if (model) {
     // Models are normalised so their feet sit on the group origin.
     return {
       key: `${slot}:${id}`,
       node: model,
-      bones,
+      bones: bonesNode,
       shadow: createShadow(head ? 1 : 0.8),
       height: 0,
       model: true,
+      boneModel,
     }
   }
   const mesh = new THREE.Mesh(head ? HEAD_GEOMETRY : BODY_GEOMETRY, getPartMaterial(slot, id))
@@ -73,10 +76,11 @@ function createSegment(slot: PartDef['slot'], id: string): SegmentView {
   return {
     key: `${slot}:${id}`,
     node: mesh,
-    bones,
+    bones: bonesNode,
     shadow: createShadow(head ? 1 : 0.8),
     height: head ? 0.55 : 0.4,
     model: false,
+    boneModel,
   }
 }
 
@@ -125,7 +129,10 @@ export function createSnakeViewer(scene: THREE.Scene) {
           }
           const key = `${segment.slot}:${segment.partId}`
           let entry = view.segments[index]
-          const upgraded = !entry?.model && getPartModel(segment.slot, segment.partId)
+          // Models load asynchronously, so a segment can swap from primitive to model.
+          const upgraded =
+            (!entry?.model && getPartModel(segment.slot, segment.partId)) ||
+            (!entry?.boneModel && getBonesModel(segment.slot))
           if (entry?.key !== key || upgraded) {
             if (entry) {
               view.group.remove(entry.node)
@@ -143,7 +150,8 @@ export function createSnakeViewer(scene: THREE.Scene) {
           entry.node.position.set(segment.x, entry.height, segment.z)
           entry.node.rotation.y = segment.angle
           entry.bones.visible = segment.dead
-          entry.bones.position.set(segment.x, entry.height + 0.12, segment.z)
+          entry.bones.position.set(segment.x, entry.model ? 0 : 0.2, segment.z)
+          entry.bones.rotation.y = segment.angle
           entry.shadow.visible = true
           entry.shadow.position.set(segment.x, 0.02, segment.z)
         }
