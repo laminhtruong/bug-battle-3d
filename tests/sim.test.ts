@@ -528,6 +528,57 @@ describe('world', () => {
     expect(Math.abs(boss.steerZ)).toBeLessThan(0.01)
   })
 
+  it('makes the boss eat dropped gear instead of wandering past it', () => {
+    const world = createWorld({ seed: 58, arena: classicArena })
+    const boss = spawnBoss(world)
+    world.snakes = [boss]
+    world.pickups = [createPickup(world, 'body', 0, 18, 'normal')]
+    placeHead(boss, 0, 0)
+
+    updateAi(world, boss)
+
+    expect(boss.steerZ).toBeGreaterThan(0.5)
+  })
+
+  it('lets the boss collect loot and grow from it', () => {
+    const world = createWorld({ seed: 59, arena: classicArena })
+    const boss = spawnBoss(world)
+    world.snakes = [boss]
+    world.pickups = [createPickup(world, 'body', boss.x, boss.z, 'normal')]
+    const before = boss.segments.length
+
+    tickWorld(world, STEP)
+
+    expect(boss.segments).toHaveLength(before + 1)
+  })
+
+  it('makes the boss leave a player alone after a chase run', () => {
+    const world = createWorld({ seed: 57, arena: classicArena })
+    const boss = spawnBoss(world)
+    const player = getSnake(world, 'bot-1')
+    world.snakes = [boss, player]
+    world.pickups = []
+    placeHead(boss, 0, 0)
+    placeHead(player, 0, 12)
+    boss.ai.targetX = 0
+    boss.ai.targetZ = 10
+    boss.ai.retargetAt = world.time + 10
+
+    updateAi(world, boss)
+    expect(boss.ai.chaseUntil).toBeGreaterThan(world.time)
+
+    // The chase run timed out, so the boss goes back to its own route.
+    boss.ai.chaseUntil = world.time
+    boss.ai.chaseRestUntil = world.time + 5
+    boss.ai.targetX = 0
+    boss.ai.targetZ = 10
+    updateAi(world, boss)
+
+    expect(boss.ai.targetX).toBe(0)
+    expect(boss.ai.targetZ).toBe(10)
+    expect(boss.steerZ).toBeGreaterThan(0.5)
+  })
+
   it("holds within a short claw's attack reach and bites", () => {
     const world = createWorld({
       seed: 49,

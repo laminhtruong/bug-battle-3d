@@ -86,7 +86,8 @@ function collectPickups(world: World): void {
     }
     let taken = false
     for (const snake of world.snakes) {
-      if (!snake.alive || !isPlayerControl(snake.control)) {
+      // The boss eats too, so it grows from the loot players leave around.
+      if (!snake.alive || !(isPlayerControl(snake.control) || snake.control === 'boss')) {
         continue
       }
       const head = snake.segments[0]

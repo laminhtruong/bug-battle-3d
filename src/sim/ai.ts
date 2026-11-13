@@ -24,8 +24,13 @@ const BOT_CHASE_REST_SEC = 4
 const BOT_CHASE_LEASH = 30
 /** Bots see a moving target through a short reaction delay, not instantly. */
 const BOT_REACT_RATE = 3.2
-/** The boss looks further and keeps chasing, unlike a bot. */
+/** The boss picks fights from further away than a bot. */
 const BOSS_AGGRO_RANGE = 40
+/** The boss chases one target for a long run, then leaves it alone for a while. */
+const BOSS_CHASE_SEC = 6
+const BOSS_CHASE_REST_SEC = 6
+/** The boss keeps the chase while the prey stays this close. */
+const BOSS_CHASE_LEASH = 50
 /** A ranged boss lines up its shot once its attack is this close to ready. */
 const BOSS_AIM_COOLDOWN = 0.35
 /** Closer than this the boss stops flanking and attacks. */
@@ -90,7 +95,12 @@ function nearestPickup(
   return nearest
 }
 
-function nearestPowerup(world: World, snake: Snake, range: number): Snake | undefined {
+function nearestPowerup(
+  world: World,
+  snake: Snake,
+  range: number,
+  avoidHumans = true,
+): Snake | undefined {
   let nearest: Snake | undefined
   let nearestDistance = range
   for (const candidate of world.snakes) {
@@ -99,7 +109,7 @@ function nearestPowerup(world: World, snake: Snake, range: number): Snake | unde
     }
     // Do not walk up to a crate a human is camping: the bot would just bounce
     // back and forth around the danger radius instead of farming it.
-    if (humanWithin(world, candidate.x, candidate.z, BOT_DANGER_RANGE)) {
+    if (avoidHumans && humanWithin(world, candidate.x, candidate.z, BOT_DANGER_RANGE)) {
       continue
     }
     const distance = Math.hypot(candidate.x - snake.x, candidate.z - snake.z)
@@ -335,38 +345,58 @@ function nearestPlayer(
 
 /**
  * The boss leads its target and weaves to a flank while its attack reloads.
- * It wanders until a player comes close, then keeps the chase for as long as
- * the target stays near.
+ * It chases a player for one long run, then rests before picking a new fight.
+ * With nobody to fight it eats dropped gear and shoots crates.
  */
 function updateBoss(world: World, boss: Snake): void {
-  const target = nearestPlayer(world, boss, BOSS_AGGRO_RANGE)
-  if (!target) {
-    const reach = attackReach(boss)
-    const powerup = reach > 0 ? nearestPowerup(world, boss, BOSS_AGGRO_RANGE) : undefined
-    if (powerup) {
-      holdAtRange(world, boss, powerup.x, powerup.z, reach)
-      return
+  const now = world.time
+  const chasing = now < boss.ai.chaseUntil
+  const target = chasing
+    ? nearestPlayer(world, boss, BOSS_CHASE_LEASH)
+    : now >= boss.ai.chaseRestUntil
+      ? nearestPlayer(world, boss, BOSS_AGGRO_RANGE)
+      : undefined
+  if (target) {
+    if (!chasing) {
+      boss.ai.chaseUntil = now + BOSS_CHASE_SEC
+      boss.ai.chaseRestUntil = boss.ai.chaseUntil + BOSS_CHASE_REST_SEC
     }
-    updateWander(world, boss)
+    const aim = leadPoint(boss, target)
+    const head = boss.segments[0]
+    const linedUp = head !== undefined && !head.dead && head.cooldown <= BOSS_AIM_COOLDOWN
+
+    let aimX = aim.x
+    let aimZ = aim.z
+    if (!linedUp && aim.distance > BOSS_FLANK_RANGE) {
+      const direction = normalize(aim.x - boss.x, aim.z - boss.z)
+      const side = Math.sin(world.time * 0.9 + bossPhase(boss)) * Math.min(16, aim.distance * 0.5)
+      aimX += -direction.z * side
+      aimZ += direction.x * side
+    }
+
+    boss.ai.targetX = aimX
+    boss.ai.targetZ = aimZ
+    steerAway(world, boss, aimX, aimZ)
     return
   }
-
-  const aim = leadPoint(boss, target)
-  const head = boss.segments[0]
-  const linedUp = head !== undefined && !head.dead && head.cooldown <= BOSS_AIM_COOLDOWN
-
-  let aimX = aim.x
-  let aimZ = aim.z
-  if (!linedUp && aim.distance > BOSS_FLANK_RANGE) {
-    const direction = normalize(aim.x - boss.x, aim.z - boss.z)
-    const side = Math.sin(world.time * 0.9 + bossPhase(boss)) * Math.min(16, aim.distance * 0.5)
-    aimX += -direction.z * side
-    aimZ += direction.x * side
+  if (chasing) {
+    // Ran out of prey mid-chase, so start the rest cooldown from here.
+    boss.ai.chaseUntil = now
+    boss.ai.chaseRestUntil = now + BOSS_CHASE_REST_SEC
   }
-
-  boss.ai.targetX = aimX
-  boss.ai.targetZ = aimZ
-  steerAway(world, boss, aimX, aimZ)
+  const gear = nearestPickup(world, boss, BOT_GEAR_RANGE, ['head', 'body', 'heal'])
+  if (gear) {
+    steerAway(world, boss, gear.x, gear.z)
+    return
+  }
+  // Body weapons let a boss farm crates too, not just its head.
+  const reach = attackReach(boss)
+  const powerup = reach > 0 ? nearestPowerup(world, boss, BOSS_AGGRO_RANGE, false) : undefined
+  if (powerup) {
+    holdAtRange(world, boss, powerup.x, powerup.z, reach)
+    return
+  }
+  updateWander(world, boss)
 }
 
 /** Bots and bosses steer themselves; wandering bugs only roam. */
