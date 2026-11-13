@@ -1273,6 +1273,52 @@ describe('combat', () => {
     expect(world.projectiles).toHaveLength(0)
   })
 
+  it('bursts a hazard shot on a crate instead of flying past it', () => {
+    const world = createWorld({ seed: 12, arena: classicArena })
+    const shooter = getSnake(world, 'bot-2')
+    const crate = spawnPowerup(world)
+    world.snakes = [shooter, crate]
+    placeHead(crate, 0, 0)
+    const part = requirePart('head', 'poison')
+    if (part.attack?.kind !== 'projectile' || !part.attack.projectile.onLand) {
+      throw new Error('poison head has no area hazard')
+    }
+    const shot = part.attack.projectile
+    const onLand = shot.onLand
+    if (!onLand) {
+      throw new Error('poison head has no area hazard')
+    }
+    const hp = crate.segments[0]?.hp ?? 0
+    world.projectiles.push({
+      id: 'poison-shot',
+      ownerId: shooter.id,
+      partId: 'poison',
+      visual: 'poison',
+      x: 0,
+      y: 0.5,
+      z: -6,
+      vx: 0,
+      vz: shot.speed,
+      damage: shot.damage,
+      age: 0,
+      ttl: shot.ttl,
+      landed: false,
+      delayLeft: 0,
+      onLand,
+    })
+
+    for (let index = 0; index < 30; index += 1) {
+      updateProjectiles(world, STEP)
+    }
+
+    // The shot burst on the crate, so the puddle covers it.
+    expect(world.projectiles).toHaveLength(0)
+    expect(world.areas).toHaveLength(1)
+    expect(Math.abs(world.areas[0]?.z ?? Number.NaN)).toBeLessThan(onLand.radius)
+    updateAreas(world, STEP)
+    expect(crate.segments[0]?.hp).toBe(hp - shot.damage)
+  })
+
   it('damages segments inside an area', () => {
     const world = createWorld({ seed: 13, arena: classicArena })
     const target = getSnake(world, 'bot-1')

@@ -317,30 +317,33 @@ export function updateProjectiles(world: World, dt: number): void {
     projectile.x += projectile.vx * dt
     projectile.z += projectile.vz * dt
     const outOfBounds = Math.abs(projectile.x) > halfWidth || Math.abs(projectile.z) > halfDepth
-
-    if (projectile.age >= projectile.ttl || outOfBounds) {
-      if (!projectile.onLand) {
-        continue
-      }
-      projectile.landed = true
-      projectile.delayLeft = projectile.onLand.delay
-      if (projectile.delayLeft <= 0) {
-        landProjectile(world, projectile)
-        continue
-      }
-      survivors.push(projectile)
-      continue
-    }
+    const spent = projectile.age >= projectile.ttl || outOfBounds
+    const hit = findProjectileHit(world, projectile)
 
     if (!projectile.onLand) {
-      const hit = findProjectileHit(world, projectile)
       if (hit) {
         const owner = world.snakes.find((snake) => snake.id === projectile.ownerId)
         damageSegment(world, hit.snake, hit.index, projectile.damage, owner, world.time)
         continue
       }
+      if (!spent) {
+        survivors.push(projectile)
+      }
+      continue
     }
 
+    // A hazard shot bursts on the first part it touches, so its puddle covers
+    // the target instead of flying through and landing behind it.
+    if (!spent && !hit) {
+      survivors.push(projectile)
+      continue
+    }
+    projectile.landed = true
+    projectile.delayLeft = projectile.onLand.delay
+    if (projectile.delayLeft <= 0) {
+      landProjectile(world, projectile)
+      continue
+    }
     survivors.push(projectile)
   }
 

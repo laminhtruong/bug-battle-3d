@@ -152,6 +152,9 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- A poison or lightning shot now bursts on the first part it touches, so the
+  puddle or bolt lands on a power-up instead of flying through it and landing
+  behind. A poison bug can break a crate again.
 - Bots steer around a power-up that sits between them and their target, so a
   bug walking to loot past a crate no longer parks against the solid box.
 - The in-game camera now sits 10 units above the head and 3.5 behind it, held at
