@@ -8,7 +8,17 @@ export interface View {
   updateCamera(x: number, z: number, dt: number): void
 }
 
-const CAMERA_OFFSET = new THREE.Vector3(0, 4.2, -4.2)
+/**
+ * The in-game rig of the original: a virtual camera 10 units above the head and
+ * 3.5 behind it, held at a fixed 75 degree pitch with a 60 degree lens. The menu
+ * rig sits lower at 45 degrees, which is what this view used to show.
+ */
+const CAMERA_OFFSET = new THREE.Vector3(0, 10, -3.5)
+const CAMERA_AIM = new THREE.Vector3(
+  0,
+  -Math.sin(THREE.MathUtils.degToRad(75)),
+  Math.cos(THREE.MathUtils.degToRad(75)),
+)
 
 export function createView(canvas: HTMLCanvasElement): View {
   const arena = classicArena
@@ -19,9 +29,10 @@ export function createView(canvas: HTMLCanvasElement): View {
   scene.background = new THREE.Color('#8ed0f0')
   scene.fog = new THREE.Fog('#8ed0f0', 42, 90)
 
-  const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 200)
+  const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 200)
   camera.position.copy(CAMERA_OFFSET)
-  camera.lookAt(0, 0, 0)
+  // The pitch is fixed, so aim once along it instead of at the focus each frame.
+  camera.lookAt(camera.position.clone().add(CAMERA_AIM))
 
   const hemisphere = new THREE.HemisphereLight('#ffffff', '#456b4f', 2)
   scene.add(hemisphere)
@@ -82,7 +93,6 @@ export function createView(canvas: HTMLCanvasElement): View {
       desired.set(x, 0, z)
       focus.lerp(desired, 1 - Math.exp(-12 * dt))
       camera.position.copy(focus).add(CAMERA_OFFSET)
-      camera.lookAt(focus)
     },
   }
 }
