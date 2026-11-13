@@ -27,7 +27,10 @@ All notable changes to this project are documented here. The format follows
     ends when no part can attack anymore;
   - a destroyed part keeps its place in the chain and shows its bones, and
     picking up a head brings a lost head back.
-- The first body segment sits behind the head instead of inside it.
+- The first body segment sits behind the head instead of inside it, at the
+  0.3 distance the original uses between parts.
+- Part models use the 0.25 scale of the Unity prefabs again, so the models match
+  the unit distances of the simulation and their collision radii.
 - Destroyed parts show the bones of the original, a skull for the head and a
   small bone for the body, converted from the Unity art.
 - Bodies play the leg animation that ships with the source models while the

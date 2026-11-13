@@ -5,10 +5,11 @@ import { PARTS, getPart } from '@/content'
 import type { Slot } from '@/content/define'
 
 /**
- * Source models are authored at roughly four units per bug, while the arena
- * works in one-unit segments. One uniform scale keeps every part in proportion.
+ * Source models are authored at roughly four units per bug. The original Unity
+ * prefabs scale their model by 0.25, so the arena units match its gameplay
+ * distances without extra conversion.
  */
-const MODEL_SCALE = 0.3
+const MODEL_SCALE = 0.25
 
 /**
  * Parts share one 32x32 palette texture: their UVs point at flat colour swatches,

@@ -140,7 +140,7 @@ describe('world', () => {
     expect(player.x).not.toBeCloseTo(startX, 5)
   })
 
-  it('keeps the first body segment outside the head', () => {
+  it('places the first body segment at the head spacing', () => {
     const world = createWorld({
       seed: 22,
       arena: classicArena,
