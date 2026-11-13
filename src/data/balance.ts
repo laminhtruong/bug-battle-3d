@@ -13,8 +13,11 @@ export const BALANCE = {
   /** Same distance the original uses between a part and the one in front of it. */
   headSpacing: 0.3,
   maxSegments: 48,
-  segmentRadius: { head: 0.45, body: 0.34 },
+  /** Keeps the snake centre away from the arena wall, like the original NavMesh. */
+  edgeMargin: 0.45,
   projectileRadius: 0.18,
+  /** Distance in front of the part where a shot appears. */
+  projectileSpawnOffset: 0.49,
   hurtCooldownSec: 0.25,
   respawnDelaySec: 3,
   /** Enemy attacks are slower than player attacks, as in the original. */

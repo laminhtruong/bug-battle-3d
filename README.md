@@ -83,7 +83,9 @@ Rules that keep the project maintainable:
 
 A head or a body is a single file under `src/content/heads` or
 `src/content/bodies`. The registry discovers it automatically and validates it
-with zod. See [docs/adding-parts.md](docs/adding-parts.md).
+with zod. Its `boxes` are the trigger BoxColliders copied from the Unity prefab,
+so collision keeps the original claw and body shapes. See
+[docs/adding-parts.md](docs/adding-parts.md).
 
 ## Assets
 

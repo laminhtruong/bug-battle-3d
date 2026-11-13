@@ -42,8 +42,10 @@ See [docs/adding-parts.md](docs/adding-parts.md). In short:
 
 1. Add one file to `src/content/heads` or `src/content/bodies`.
 2. Give it a unique kebab-case id per slot.
-3. Add the model to `public/assets` or let the renderer use its placeholder.
-4. Run `npm run check`.
+3. Copy the trigger BoxColliders from the Unity prefab into `boxes`; mark
+   `Claw` boxes with `hitbox: true`.
+4. Add the model to `public/assets` or let the renderer use its placeholder.
+5. Run `npm run check`.
 
 Never edit the registry to register a part.
 

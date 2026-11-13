@@ -2,15 +2,14 @@ import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js'
 import { PARTS, getPart } from '@/content'
+import { PART_LIFT, PART_SCALE } from '@/content/define'
 import type { Slot } from '@/content/define'
 
 /**
  * Source models are authored at roughly four units per bug. The original Unity
- * prefabs scale their model by 0.25 and lift it 0.125 above the pivot, so the
- * arena units match its gameplay distances without extra conversion.
+ * prefabs scale their model and its collider boxes by the same factor, so the
+ * art and the simulation share one set of arena units.
  */
-const MODEL_SCALE = 0.25
-const MODEL_LIFT = 0.125
 
 /**
  * Parts share one 32x32 palette texture: their UVs point at flat colour swatches,
@@ -53,11 +52,11 @@ function preparePart(root: THREE.Object3D): THREE.Group {
       part.position.set(0, 0, 0)
     }
   }
-  root.position.y = MODEL_LIFT / MODEL_SCALE
+  root.position.y = PART_LIFT / PART_SCALE
 
   const holder = new THREE.Group()
   holder.add(root)
-  holder.scale.setScalar(MODEL_SCALE)
+  holder.scale.setScalar(PART_SCALE)
   return holder
 }
 
@@ -76,7 +75,7 @@ function normalize(root: THREE.Object3D): THREE.Group {
 
   const holder = new THREE.Group()
   holder.add(root)
-  holder.scale.setScalar(MODEL_SCALE)
+  holder.scale.setScalar(PART_SCALE)
   return holder
 }
 

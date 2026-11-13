@@ -20,6 +20,13 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- Part collision now uses the trigger BoxColliders authored in the Unity art
+  prefabs, scaled with the models, instead of one circle per segment. Long claws
+  and sideways spikes hit where the art says they should. Every box is a
+  hurtbox; only boxes copied from a `Claw` collider deal contact damage, so the
+  gun, fire, lightning and poison heads no longer hurt by touching.
+- The content hash now covers part stats and colliders, not only part ids, so
+  mismatched builds are rejected before a match starts.
 - The rules follow the original game again:
   - the snake only moves while the stick is pushed and stops when it is
     released, a light push moves slower;

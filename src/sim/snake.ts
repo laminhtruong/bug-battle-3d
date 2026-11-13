@@ -6,11 +6,8 @@ import { appendTrail, sampleTrail } from './chain'
 import type { Snake } from './types'
 
 /** Extra trail kept so a fully grown snake can still be sampled smoothly. */
-export const TRAIL_MAX_DISTANCE = BALANCE.maxSegments * BALANCE.bodySpacing + BALANCE.headSpacing + 2
-
-export function segmentRadius(index: number): number {
-  return index === 0 ? BALANCE.segmentRadius.head : BALANCE.segmentRadius.body
-}
+export const TRAIL_MAX_DISTANCE =
+  BALANCE.maxSegments * BALANCE.bodySpacing + BALANCE.headSpacing + 2
 
 /** Distance behind the head where a segment sits. */
 export function segmentDistance(index: number): number {
@@ -38,7 +35,7 @@ export function updateMovement(
   }
 
   const direction = directionFromAngle(snake.angle)
-  const margin = BALANCE.segmentRadius.head
+  const margin = BALANCE.edgeMargin
   // A light push moves slower, exactly like the joystick of the original.
   const speed = snake.speed * Math.min(1, push)
   snake.x = clamp(snake.x + direction.x * speed * dt, -halfWidth + margin, halfWidth - margin)

@@ -43,7 +43,12 @@ export function requirePart(slot: Slot, id: string): PartDef {
 export const DEFAULT_HEAD_ID = 'claw01'
 export const DEFAULT_BODY_ID = 'normal'
 
-/** Changes whenever the set of part ids changes. Hosts and guests must match. */
-export const CONTENT_HASH = fnv1a(PARTS.map((part) => `${part.slot}:${part.id}`).join(','))
+/**
+ * Covers the stats and colliders, not only the ids, so a host and a guest with
+ * different part data cannot start a match. `reach` is derived, so it is left
+ * out to avoid platform-dependent float formatting.
+ */
+const signature = PARTS.map(({ collider, ...part }) => ({ ...part, boxes: collider.boxes }))
+export const CONTENT_HASH = fnv1a(JSON.stringify(signature))
 
 export { classicArena } from './arenas/classic'

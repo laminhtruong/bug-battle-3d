@@ -34,6 +34,12 @@ describe('content registry', () => {
       expect(part.hp).toBeGreaterThan(0)
       expect(part.score).toBeGreaterThanOrEqual(0)
       expect(part.contact.damage).toBeGreaterThanOrEqual(0)
+      expect(part.collider.boxes.length).toBeGreaterThan(0)
+      expect(part.collider.reach).toBeGreaterThan(0)
+      // Contact damage can only come from a box copied from a "Claw" collider.
+      if (!part.collider.boxes.some((box) => box.hitbox)) {
+        expect(part.contact.damage).toBe(0)
+      }
       if (part.attack?.kind === 'projectile') {
         expect(part.attack.projectile.speed).toBeGreaterThan(0)
         expect(part.attack.projectile.ttl).toBeGreaterThan(0)

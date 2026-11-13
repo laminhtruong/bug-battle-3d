@@ -3,13 +3,19 @@ import { z } from 'zod'
 /**
  * Content definition for a head or body part.
  *
- * A part is pure data: stats, an optional attack descriptor and an optional
- * model key. Adding a new head or body means adding one file under
- * src/content/heads or src/content/bodies. No engine code changes required.
+ * A part is pure data: stats, an optional attack descriptor, its collider boxes
+ * and an optional model key. Adding a new head or body means adding one file
+ * under src/content/heads or src/content/bodies. No engine code changes needed.
  */
 export type Slot = 'head' | 'body'
 
 export const idPattern = /^[a-z0-9]+(-[a-z0-9]+)*$/
+
+/** The Unity prefabs scale art and collider boxes by this factor. */
+export const PART_SCALE = 0.25
+
+/** The Unity prefabs lift the art above the pivot by this many arena units. */
+export const PART_LIFT = 0.125
 
 const onLandSchema = z.object({
   /** Delay before the area becomes dangerous. */
@@ -45,6 +51,36 @@ const attackSchema = z.discriminatedUnion('kind', [
   }),
 ])
 
+/**
+ * A trigger BoxCollider copied from the Unity part prefab. Values are the raw
+ * prefab units; the definition scales them to arena units. Only the XZ plane
+ * matters for gameplay, so the y component of the Unity values is dropped.
+ */
+const prefabBoxSchema = z.object({
+  center: z.tuple([z.number(), z.number()]),
+  size: z.tuple([z.number().positive(), z.number().positive()]),
+  /**
+   * True for the prefab's "Claw" colliders. Only these boxes deal contact
+   * damage; every box is a hurtbox that projectiles and attacks can hit.
+   */
+  hitbox: z.boolean().default(false),
+})
+
+/** A collider box in part-local arena units, ready for the simulation. */
+export interface ColliderBox {
+  x: number
+  z: number
+  halfWidth: number
+  halfDepth: number
+  hitbox: boolean
+}
+
+export interface PartCollider {
+  boxes: ColliderBox[]
+  /** Farthest corner distance from the pivot, used as a broad-phase radius. */
+  reach: number
+}
+
 const baseSchema = z.object({
   id: z.string().regex(idPattern),
   name: z.string().min(1),
@@ -57,17 +93,58 @@ const baseSchema = z.object({
   attack: attackSchema.optional(),
 })
 
+const inputSchema = baseSchema.extend({
+  boxes: z.array(prefabBoxSchema).min(1),
+})
+
+const colliderSchema = z.object({
+  boxes: z.array(
+    z.object({
+      x: z.number(),
+      z: z.number(),
+      halfWidth: z.number().positive(),
+      halfDepth: z.number().positive(),
+      hitbox: z.boolean(),
+    }),
+  ),
+  reach: z.number().positive(),
+})
+
 const partSchema = baseSchema.extend({
   slot: z.enum(['head', 'body']),
   model: z.string().min(1),
+  collider: colliderSchema,
 })
 
-export type PartInput = z.input<typeof baseSchema>
+export type PartInput = z.input<typeof inputSchema>
 export type AttackDef = z.infer<typeof attackSchema>
 export type PartDef = z.infer<typeof partSchema>
 
+function buildCollider(boxes: z.infer<typeof prefabBoxSchema>[]): PartCollider {
+  const scaled = boxes.map((box) => ({
+    x: box.center[0] * PART_SCALE,
+    z: box.center[1] * PART_SCALE,
+    halfWidth: (box.size[0] * PART_SCALE) / 2,
+    halfDepth: (box.size[1] * PART_SCALE) / 2,
+    hitbox: box.hitbox,
+  }))
+  const reach = scaled.reduce(
+    (max, box) =>
+      Math.max(max, Math.hypot(Math.abs(box.x) + box.halfWidth, Math.abs(box.z) + box.halfDepth)),
+    0,
+  )
+  return { boxes: scaled, reach }
+}
+
 function define(slot: Slot, input: PartInput): PartDef {
-  return partSchema.parse({ ...input, slot, model: input.model ?? input.id })
+  const parsed = inputSchema.parse(input)
+  const { boxes, ...rest } = parsed
+  return partSchema.parse({
+    ...rest,
+    slot,
+    model: parsed.model ?? parsed.id,
+    collider: buildCollider(boxes),
+  })
 }
 
 export const defineHead = (input: PartInput): PartDef => define('head', input)

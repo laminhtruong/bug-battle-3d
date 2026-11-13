@@ -1,8 +1,8 @@
-import { requirePart } from '@/content'
-import type { AttackDef } from '@/content/define'
-import { angleFromDirection, directionFromAngle, shortestAngleDelta } from '@/core/math2d'
+import { PARTS, requirePart } from '@/content'
+import type { AttackDef, PartDef } from '@/content/define'
+import { directionFromAngle } from '@/core/math2d'
 import { BALANCE } from '@/data/balance'
-import { segmentRadius } from './snake'
+import { collidersOverlap, segmentHitsCircle, segmentHitsCone } from './collider'
 import { nextEntityId, spawnDrops } from './spawn'
 import type { Projectile, Segment, Snake, World } from './types'
 
@@ -13,8 +13,11 @@ interface AttackContext {
 }
 
 /** A part can fight when it shoots, stings or claws. */
-function partCanAttack(part: ReturnType<typeof requirePart>): boolean {
-  return part.attack !== undefined || part.contact.damage > 0
+function partCanAttack(part: PartDef): boolean {
+  return (
+    part.attack !== undefined ||
+    (part.contact.damage > 0 && part.collider.boxes.some((box) => box.hitbox))
+  )
 }
 
 /**
@@ -120,7 +123,7 @@ function spawnProjectile(
   attack: Extract<AttackDef, { kind: 'projectile' }>,
 ): void {
   const direction = directionFromAngle(angle)
-  const offset = BALANCE.segmentRadius.body + 0.15
+  const offset = BALANCE.projectileSpawnOffset
   const projectile: Projectile = {
     id: nextEntityId(world, 'shot'),
     ownerId: snake.id,
@@ -166,13 +169,18 @@ function fireCone(world: World, context: AttackContext): void {
       if (!other || other.dead) {
         continue
       }
-      const dx = other.x - segment.x
-      const dz = other.z - segment.z
-      if (Math.hypot(dx, dz) > attack.cone.range + segmentRadius(index)) {
-        continue
-      }
-      const angleTo = angleFromDirection(dx, dz)
-      if (Math.abs(shortestAngleDelta(segment.angle, angleTo)) > halfAngle) {
+      const part = requirePart(other.slot, other.partId)
+      if (
+        !segmentHitsCone(
+          part,
+          other,
+          segment.x,
+          segment.z,
+          segment.angle,
+          attack.cone.range,
+          halfAngle,
+        )
+      ) {
         continue
       }
       damageSegment(world, target, index, 1, snake, world.time)
@@ -241,8 +249,8 @@ function findProjectileHit(
       if (!segment || segment.dead) {
         continue
       }
-      const reach = segmentRadius(index) + BALANCE.projectileRadius
-      if (Math.hypot(segment.x - projectile.x, segment.z - projectile.z) <= reach) {
+      const part = requirePart(segment.slot, segment.partId)
+      if (segmentHitsCircle(part, segment, projectile.x, projectile.z, BALANCE.projectileRadius)) {
         return { snake, index }
       }
     }
@@ -334,8 +342,8 @@ export function updateAreas(world: World, dt: number): void {
         if (!segment || segment.dead) {
           continue
         }
-        const reach = area.radius + segmentRadius(index)
-        if (Math.hypot(segment.x - area.x, segment.z - area.z) <= reach) {
+        const part = requirePart(segment.slot, segment.partId)
+        if (segmentHitsCircle(part, segment, area.x, area.z, area.radius)) {
           damageSegment(world, snake, index, area.damage, owner, world.time)
         }
       }
@@ -351,19 +359,21 @@ export function updateAreas(world: World, dt: number): void {
 interface ContactEntry {
   snake: Snake
   index: number
-  x: number
-  z: number
-  radius: number
-  damage: number
+  segment: Segment
+  part: PartDef
+  reach: number
 }
 
-const CONTACT_CELL = 1.5
+const MAX_REACH = Math.max(...PARTS.map((part) => part.collider.reach))
+// Three by three cells must cover the two farthest boxes, so the broad phase
+// keeps working when a new part adds a longer claw.
+const CONTACT_CELL = Math.max(1.5, MAX_REACH * 2)
 
 function contactKey(cellX: number, cellZ: number): string {
   return `${cellX}:${cellZ}`
 }
 
-/** Damages touching segments. Only parts with contact damage hurt anything. */
+/** Damages touching segments. Only hitbox colliders deal contact damage. */
 export function updateContact(world: World): void {
   const entries: ContactEntry[] = []
   for (const snake of world.snakes) {
@@ -375,20 +385,17 @@ export function updateContact(world: World): void {
       if (!segment || segment.dead) {
         continue
       }
-      entries.push({
-        snake,
-        index,
-        x: segment.x,
-        z: segment.z,
-        radius: segmentRadius(index),
-        damage: requirePart(segment.slot, segment.partId).contact.damage,
-      })
+      const part = requirePart(segment.slot, segment.partId)
+      entries.push({ snake, index, segment, part, reach: part.collider.reach })
     }
   }
 
   const grid = new Map<string, ContactEntry[]>()
   for (const entry of entries) {
-    const key = contactKey(Math.floor(entry.x / CONTACT_CELL), Math.floor(entry.z / CONTACT_CELL))
+    const key = contactKey(
+      Math.floor(entry.segment.x / CONTACT_CELL),
+      Math.floor(entry.segment.z / CONTACT_CELL),
+    )
     const bucket = grid.get(key)
     if (bucket) {
       bucket.push(entry)
@@ -398,8 +405,8 @@ export function updateContact(world: World): void {
   }
 
   for (const entry of entries) {
-    const cellX = Math.floor(entry.x / CONTACT_CELL)
-    const cellZ = Math.floor(entry.z / CONTACT_CELL)
+    const cellX = Math.floor(entry.segment.x / CONTACT_CELL)
+    const cellZ = Math.floor(entry.segment.z / CONTACT_CELL)
     for (let offsetX = -1; offsetX <= 1; offsetX += 1) {
       for (let offsetZ = -1; offsetZ <= 1; offsetZ += 1) {
         const bucket = grid.get(contactKey(cellX + offsetX, cellZ + offsetZ))
@@ -411,15 +418,37 @@ export function updateContact(world: World): void {
           if (other.snake.id >= entry.snake.id) {
             continue
           }
-          const reach = entry.radius + other.radius
-          if (Math.hypot(entry.x - other.x, entry.z - other.z) > reach) {
+          if (
+            Math.hypot(entry.segment.x - other.segment.x, entry.segment.z - other.segment.z) >
+            entry.reach + other.reach
+          ) {
             continue
           }
-          if (entry.damage > 0) {
-            damageSegment(world, other.snake, other.index, entry.damage, entry.snake, world.time)
+          const entryHits =
+            entry.part.contact.damage > 0 &&
+            collidersOverlap(entry.part, entry.segment, other.part, other.segment, true, false)
+          const otherHits =
+            other.part.contact.damage > 0 &&
+            collidersOverlap(other.part, other.segment, entry.part, entry.segment, true, false)
+          if (entryHits) {
+            damageSegment(
+              world,
+              other.snake,
+              other.index,
+              entry.part.contact.damage,
+              entry.snake,
+              world.time,
+            )
           }
-          if (other.damage > 0) {
-            damageSegment(world, entry.snake, entry.index, other.damage, other.snake, world.time)
+          if (otherHits) {
+            damageSegment(
+              world,
+              entry.snake,
+              entry.index,
+              other.part.contact.damage,
+              other.snake,
+              world.time,
+            )
           }
         }
       }

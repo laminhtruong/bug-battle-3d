@@ -18,7 +18,11 @@ export default defineBody({
   name: 'My Body',
   hp: 2,
   score: 5,
-  contact: { damage: 1 },
+  contact: { damage: 0 },
+  boxes: [
+    // Unity BoxCollider m_Center and m_Size, XZ only.
+    { center: [0, -0.05], size: [1.5, 1.15] },
+  ],
   attack: {
     kind: 'projectile',
     cooldown: 1.4,
@@ -38,11 +42,49 @@ export default defineBody({
 - `id` must match `^[a-z0-9]+(-[a-z0-9]+)*$`.
 - Head and body ids may repeat. `head:gun` and `body:gun` are different parts.
 - `slot` is set by the factory (`defineHead` or `defineBody`), never by hand.
-- `attack` is optional. Parts without an attack only deal contact damage.
+- `boxes` is required and must contain at least one Unity BoxCollider. It is the
+  part's hit shape; there is no fallback circle.
+- `attack` is optional. Parts without an attack only deal contact damage through
+  their `hitbox` boxes.
 - Attacks are data, not functions. The simulation interprets them; do not import
   three.js, the DOM or `Math.random`.
 - `score` is what a killer earns for destroying this part.
 - `visual` is a string key used by the renderer, not a texture path.
+
+## Colliders
+
+The original game has no simple circle around a head or a body. Each part
+carries the trigger BoxColliders authored in its Unity art prefab. Copy them
+exactly:
+
+1. Open the art prefab, for example `HeadClaw01.prefab` or `BodySpike02.prefab`.
+   Do not copy from the gameplay `Head.prefab` or `Body.prefab`.
+2. For every BoxCollider with `m_IsTrigger: 1`, copy `m_Center` x/z and
+   `m_Size` x/z into one `boxes` entry.
+3. A child named `Body` is only a hurtbox: leave `hitbox` off. A child named
+   `Claw` also deals contact damage: add `hitbox: true`.
+4. Ignore `BulletFire`, `Skeleton`, MeshCollider and any non-trigger collider.
+5. Use the raw Unity numbers. The definition scales them by the prefab's 0.25
+   art scale, so the boxes always line up with the model.
+6. The centre is relative to the part pivot. Local `+z` points forward, the same
+   direction the model faces.
+
+```ts
+// Spike body: the main body plus two claws.
+boxes: [
+  { center: [0, -0.05], size: [1.5, 1.15] },
+  { center: [-1.4, -0.05], size: [1.3, 0.25], hitbox: true },
+  { center: [1.4, -0.05], size: [1.3, 0.25], hitbox: true },
+],
+```
+
+All boxes are hurtboxes, so a projectile or another claw can damage any of them.
+Only `hitbox` boxes cause contact damage, with the part's `contact.damage`.
+That is why a gun head has `contact: { damage: 0 }`: its Unity prefab has only a
+`Body` collider, while every claw head has `Claw` boxes.
+
+If a part has no Unity prefab yet, start from a box that covers the visible
+model. The box may be smaller than the art, but it must not be empty.
 
 ## Attack shapes
 
@@ -75,12 +117,14 @@ The part file can carry a `model` key; it defaults to the part id. The asset che
 expects `models/parts/head/<model>.glb` or `models/parts/body/<model>.glb`. A part
 without a model file still plays; the renderer falls back to a colored primitive.
 
-`src/render/models.ts` loads every registered model in the background, recenters
-it on the ground and scales it to arena units. Body models are skinned, so they
-are copied with `SkeletonUtils.clone`; a plain `clone` would leave them bound to
-the template bones and they would never draw under the snake. Models must keep
-their first UV set: the parts share one palette texture and take their colors
-from it.
+`src/render/models.ts` loads every registered model in the background. It keeps
+the pivot authored in the model file, drops the arbitrary offset of the source
+FBX scene, then applies the prefab's 0.25 scale and 0.125 lift. The `boxes`
+values use the same scale, so the collider and the art share one pivot. Body
+models are skinned, so they are copied with `SkeletonUtils.clone`; a plain
+`clone` would leave them bound to the template bones and they would never draw
+under the snake. Models must keep their first UV set: the parts share one
+palette texture and take their colors from it.
 
 ## Balance
 

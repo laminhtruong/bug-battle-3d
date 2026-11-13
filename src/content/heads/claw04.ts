@@ -6,4 +6,15 @@ export default defineHead({
   hp: 2,
   score: 50,
   contact: { damage: 1 },
+  boxes: [
+    { center: [0, 0.05], size: [2, 1.5] },
+    { center: [0.05, 1.6], size: [1, 1.25], hitbox: true },
+    { center: [-0.05, 1.6], size: [1, 1.25], hitbox: true },
+    { center: [0, 2.9], size: [0.5, 3.5], hitbox: true },
+    { center: [2.5, 4], size: [2.1, 0.4], hitbox: true },
+    { center: [-2.5, 4], size: [2.1, 0.4], hitbox: true },
+    { center: [0, 3.5], size: [3, 0.6], hitbox: true },
+    { center: [4.95, 2.65], size: [0.2, 0.75], hitbox: true },
+    { center: [-4.95, 2.65], size: [0.2, 0.75], hitbox: true },
+  ],
 })

@@ -9,6 +9,8 @@ line port; the rules were re-derived from prefabs, scripts and playtests.
 - Snake chain that grows by eating and by picking up dropped parts.
 - Heads and bodies as combinable parts with their own health, attacks and score.
 - Contact damage, projectiles, cone attacks and ground hazards.
+- The trigger BoxColliders of each head and body, copied from the Unity art
+  prefabs and scaled with the art, instead of a circle around every segment.
 - Short rounds in one arena with bots filling empty slots.
 - Respawn with the base loadout.
 
@@ -56,12 +58,12 @@ line port; the rules were re-derived from prefabs, scripts and playtests.
 
 ## Rules taken from the original
 
-| Original                                   | This version                                  |
-| ------------------------------------------ | --------------------------------------------- |
+| Original                                    | This version                                   |
+| ------------------------------------------- | ---------------------------------------------- |
 | Joystick pushes the bug, releasing stops it | The snake only moves while the stick is pushed |
 | A lost head does not end the round          | The round ends when no part can attack anymore |
 | Exploded parts leave their bones behind     | Destroyed parts stay in the chain              |
-| A collected head revives a headless bug      | Picking up a head revives the head             |
+| A collected head revives a headless bug     | Picking up a head revives the head             |
 
 ## Where to look
 

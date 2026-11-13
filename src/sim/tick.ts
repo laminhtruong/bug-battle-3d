@@ -3,7 +3,8 @@ import { BALANCE } from '@/data/balance'
 import { updateAi } from './ai'
 import { fireAttacks, updateAreas, updateContact, updateProjectiles } from './combat'
 import { countApples, countEnemies, respawnSnake, spawnApple, spawnEnemy } from './spawn'
-import { growSnake, healSnake, segmentRadius, updateMovement } from './snake'
+import { segmentHitsCircle } from './collider'
+import { growSnake, healSnake, updateMovement } from './snake'
 import type { Pickup, Snake, World } from './types'
 
 function equipHead(snake: Snake, partId: string): void {
@@ -73,8 +74,17 @@ function collectPickups(world: World): void {
       if (!snake.alive) {
         continue
       }
-      const reach = BALANCE.pickupRadius + segmentRadius(0)
-      if (Math.hypot(snake.x - pickup.x, snake.z - pickup.z) > reach) {
+      const head = snake.segments[0]
+      if (
+        !head ||
+        !segmentHitsCircle(
+          requirePart(head.slot, head.partId),
+          head,
+          pickup.x,
+          pickup.z,
+          BALANCE.pickupRadius,
+        )
+      ) {
         continue
       }
       collect(world, snake, pickup)

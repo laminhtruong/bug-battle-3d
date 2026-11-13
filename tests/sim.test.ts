@@ -211,6 +211,9 @@ describe('combat', () => {
     const second = getSnake(world, 'bot-2')
     placeHead(first, 0, 0)
     placeHead(second, 0, 0)
+    // The collider boxes are directional, so face both heads the same way.
+    first.segments[0]!.angle = 0
+    second.segments[0]!.angle = 0
     const firstHp = first.segments[0]?.hp ?? 0
     const secondHp = second.segments[0]?.hp ?? 0
 
@@ -218,6 +221,42 @@ describe('combat', () => {
 
     expect(first.segments[0]?.hp).toBeLessThan(firstHp)
     expect(second.segments[0]?.hp).toBeLessThan(secondHp)
+  })
+
+  it('reaches with the long claw collider', () => {
+    const world = createWorld({ seed: 16, arena: classicArena })
+    const attacker = getSnake(world, 'bot-1')
+    const target = getSnake(world, 'bot-2')
+    attacker.segments[0]!.partId = 'claw04'
+    target.segments[0]!.partId = 'gun'
+    attacker.segments[0]!.angle = 0
+    target.segments[0]!.angle = 0
+    placeHead(attacker, 0, 0)
+    placeHead(target, 0, 1)
+    const attackerHp = attacker.segments[0]?.hp ?? 0
+    const targetHp = target.segments[0]?.hp ?? 0
+
+    updateContact(world)
+
+    expect(target.segments[0]?.hp).toBe(targetHp - 1)
+    expect(attacker.segments[0]?.hp).toBe(attackerHp)
+  })
+
+  it('does not hurt with a part that has no hitbox', () => {
+    const world = createWorld({ seed: 15, arena: classicArena })
+    const first = getSnake(world, 'bot-1')
+    const second = getSnake(world, 'bot-2')
+    first.segments[0]!.partId = 'gun'
+    second.segments[0]!.partId = 'gun'
+    placeHead(first, 0, 0)
+    placeHead(second, 0, 0)
+    const firstHp = first.segments[0]?.hp ?? 0
+    const secondHp = second.segments[0]?.hp ?? 0
+
+    updateContact(world)
+
+    expect(first.segments[0]?.hp).toBe(firstHp)
+    expect(second.segments[0]?.hp).toBe(secondHp)
   })
 
   it('hits a segment with a projectile', () => {

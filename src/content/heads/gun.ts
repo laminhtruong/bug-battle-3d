@@ -5,7 +5,8 @@ export default defineHead({
   name: 'Gunner',
   hp: 2,
   score: 20,
-  contact: { damage: 1 },
+  contact: { damage: 0 },
+  boxes: [{ center: [0, 0], size: [2, 1.4] }],
   attack: {
     kind: 'projectile',
     cooldown: 0.25,

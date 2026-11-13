@@ -1,0 +1,68 @@
+import { describe, expect, it } from 'vitest'
+import { requirePart } from '@/content'
+import { collidersOverlap, segmentHitsCircle, segmentHitsCone } from '@/sim/collider'
+import type { Segment } from '@/sim/types'
+
+function makeSegment(partId: string, x: number, z: number, angle: number): Segment {
+  const part = requirePart('head', partId)
+  return {
+    partId,
+    slot: 'head',
+    hp: part.hp,
+    maxHp: part.hp,
+    dead: false,
+    x,
+    z,
+    angle,
+    cooldown: 0,
+    hurtUntil: 0,
+  }
+}
+
+describe('part colliders', () => {
+  it('scales the Unity BoxColliders into arena units', () => {
+    const claw = requirePart('head', 'claw01')
+    expect(claw.collider.boxes[0]).toMatchObject({
+      x: 0,
+      z: 0.0125,
+      halfWidth: 0.25,
+      halfDepth: 0.1625,
+      hitbox: false,
+    })
+    expect(claw.collider.boxes[1]).toMatchObject({
+      x: 0.1625,
+      z: 0.325,
+      halfWidth: 0.0875,
+      halfDepth: 0.1,
+      hitbox: true,
+    })
+    expect(requirePart('head', 'claw04').collider.reach).toBeGreaterThan(1.3)
+  })
+
+  it('tests the box shape, not a circle around the pivot', () => {
+    const part = requirePart('head', 'claw01')
+    const segment = makeSegment('claw01', 0, 0, 0)
+
+    expect(segmentHitsCircle(part, segment, 0, 0, 0.01)).toBe(true)
+    expect(segmentHitsCircle(part, segment, 0.1625, 0.325, 0.01)).toBe(true)
+    // Between the two claws and beyond the head box, a circle would still hit.
+    expect(segmentHitsCircle(part, segment, 0, 0.325, 0.01)).toBe(false)
+  })
+
+  it('keeps contact boxes directional', () => {
+    const part = requirePart('head', 'claw01')
+    const forward = makeSegment('claw01', 0, 0, 0)
+    const backward = makeSegment('claw01', 0, 0, Math.PI)
+
+    expect(collidersOverlap(part, forward, part, forward, true, false)).toBe(true)
+    expect(collidersOverlap(part, forward, part, backward, true, false)).toBe(false)
+  })
+
+  it('uses the box extents for cone attacks', () => {
+    const part = requirePart('head', 'gun')
+    const segment = makeSegment('gun', 0, 0, 0)
+
+    expect(segmentHitsCone(part, segment, 0, -1, 0, 2, 0.5)).toBe(true)
+    expect(segmentHitsCone(part, segment, 2, 0, 0, 2, 0.5)).toBe(false)
+  })
+})
