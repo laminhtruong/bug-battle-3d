@@ -31,9 +31,8 @@ All notable changes to this project are documented here. The format follows
   muzzle arrows, and clicking the part art switches back to the art arrows.
 - Cone attacks draw a 3D cone volume in the editor, so the effect origin,
   direction and reach are visible while authoring.
-- The local player's parts glow on the floor like the original prefab. A hurt
-  part flashes its emission white twice, and a destroyed part pops the original
-  12-spark effect instead of only leaving bones behind.
+- A hurt part flashes its emission white twice, and a destroyed part pops the
+  original 12-spark effect instead of only leaving bones behind.
 
 ### Changed
 

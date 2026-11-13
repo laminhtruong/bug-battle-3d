@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import { fnv1a } from '@/core/rng'
 import { BALANCE } from '@/data/balance'
 import type { PartDef } from '@/content/define'
-import { createEffects, createGlow } from './effects'
+import { createEffects } from './effects'
 import { getPartModel, clonePartModel, getBonesModel, cloneBonesModel, getPartClip } from './models'
 import { createShadow } from './shadow'
 import type { RenderState } from './state'
@@ -37,8 +37,6 @@ interface SegmentView {
   /** Remains of a lost part, shown in place of the model. */
   bones: THREE.Object3D
   shadow: THREE.Mesh
-  /** Soft player-only pool on the floor, in place of the old team ring. */
-  glow: THREE.Mesh
   /** Per-segment material copies, so a hit only flashes the part that was hit. */
   materials: THREE.MeshToonMaterial[]
   flash: number
@@ -87,8 +85,6 @@ function createSegment(slot: PartDef['slot'], id: string): SegmentView {
   const bonesNode = bones ?? new THREE.Mesh(BONES_GEOMETRY, BONES_MATERIAL)
   bonesNode.visible = false
   const model = clonePartModel(slot, id)
-  const glow = createGlow(head)
-  glow.visible = false
   if (model) {
     const clip = getPartClip(slot, id)
     const mixer = clip ? new THREE.AnimationMixer(model) : undefined
@@ -100,7 +96,6 @@ function createSegment(slot: PartDef['slot'], id: string): SegmentView {
       node: model,
       bones: bonesNode,
       shadow: createShadow(head ? 1 : 0.8),
-      glow,
       materials: ownMaterials(model),
       flash: 0,
       dead: false,
@@ -121,7 +116,6 @@ function createSegment(slot: PartDef['slot'], id: string): SegmentView {
     node: mesh,
     bones: bonesNode,
     shadow: createShadow(head ? 1 : 0.8),
-    glow,
     materials: ownMaterials(mesh),
     flash: 0,
     dead: false,
@@ -143,7 +137,7 @@ export function createSnakeViewer(scene: THREE.Scene) {
   const effects = createEffects(scene)
 
   return {
-    sync(world: RenderState, dt = 0, playerId?: string): void {
+    sync(world: RenderState, dt = 0): void {
       const alive = new Set<string>()
       for (const snake of world.snakes) {
         alive.add(snake.id)
@@ -158,8 +152,6 @@ export function createSnakeViewer(scene: THREE.Scene) {
         if (!snake.alive) {
           continue
         }
-        const own = snake.id === playerId
-
         for (let index = 0; index < snake.segments.length; index += 1) {
           const segment = snake.segments[index]
           if (!segment) {
@@ -178,11 +170,9 @@ export function createSnakeViewer(scene: THREE.Scene) {
               view.group.remove(entry.node)
               view.group.remove(entry.bones)
               view.group.remove(entry.shadow)
-              view.group.remove(entry.glow)
               for (const material of entry.materials) {
                 material.dispose()
               }
-              ;(entry.glow.material as THREE.Material).dispose()
             }
             // Models load asynchronously, so a segment can swap from primitive to model.
             entry = createSegment(segment.slot, segment.partId)
@@ -190,7 +180,6 @@ export function createSnakeViewer(scene: THREE.Scene) {
             view.group.add(entry.node)
             view.group.add(entry.bones)
             view.group.add(entry.shadow)
-            view.group.add(entry.glow)
             created = true
           }
           // A part that arrives already broken should not pop again.
@@ -218,8 +207,6 @@ export function createSnakeViewer(scene: THREE.Scene) {
           entry.bones.rotation.y = segment.angle
           entry.shadow.visible = true
           entry.shadow.position.set(segment.x, 0.02, segment.z)
-          entry.glow.visible = own && !segment.dead
-          entry.glow.position.set(segment.x, 0.02, segment.z)
 
           // The original flashes the part's emission white twice when it is hurt.
           const remaining = segment.hurtUntil - world.time
@@ -241,7 +228,6 @@ export function createSnakeViewer(scene: THREE.Scene) {
             entry.node.visible = false
             entry.bones.visible = false
             entry.shadow.visible = false
-            entry.glow.visible = false
           }
         }
       }
@@ -253,7 +239,6 @@ export function createSnakeViewer(scene: THREE.Scene) {
             for (const material of entry.materials) {
               material.dispose()
             }
-            ;(entry.glow.material as THREE.Material).dispose()
           }
           scene.remove(view.group)
           views.delete(id)

@@ -12,15 +12,6 @@ function sprite(draw: (context: CanvasRenderingContext2D) => void): THREE.Canvas
   return new THREE.CanvasTexture(canvas)
 }
 
-const glowTexture = sprite((context) => {
-  const gradient = context.createRadialGradient(32, 32, 0, 32, 32, 32)
-  gradient.addColorStop(0, 'rgba(255, 255, 255, 0.9)')
-  gradient.addColorStop(0.4, 'rgba(255, 255, 255, 0.45)')
-  gradient.addColorStop(1, 'rgba(255, 255, 255, 0)')
-  context.fillStyle = gradient
-  context.fillRect(0, 0, 64, 64)
-})
-
 const sparkTexture = sprite((context) => {
   context.translate(32, 32)
   context.beginPath()
@@ -33,30 +24,6 @@ const sparkTexture = sprite((context) => {
   context.fillStyle = '#ffffff'
   context.fill()
 })
-
-const GLOW_GEOMETRY = new THREE.PlaneGeometry(1, 1)
-GLOW_GEOMETRY.rotateX(-Math.PI / 2)
-
-/**
- * The soft pool the original puts under each part of the local player. The
- * prefab glow is a 2.8 unit horizontal billboard at floor level; bodies scale it
- * down to 60% on X and Z.
- */
-export function createGlow(head: boolean): THREE.Mesh {
-  const glow = new THREE.Mesh(
-    GLOW_GEOMETRY,
-    new THREE.MeshBasicMaterial({
-      map: glowTexture,
-      transparent: true,
-      opacity: 0.5,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-    }),
-  )
-  glow.scale.setScalar(head ? 2.8 : 2.8 * 0.6)
-  glow.position.y = 0.02
-  return glow
-}
 
 interface BurstParticle {
   velocity: THREE.Vector3
