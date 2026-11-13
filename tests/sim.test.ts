@@ -124,6 +124,24 @@ describe('world', () => {
     killSnake(unlucky, unluckyEnemy)
 
     expect(unlucky.pickups).toHaveLength(0)
+
+    // Parts shot off before the kill still roll, so a worn-down long bug drops.
+    const worn = createWorld({ seed: 48, arena: classicArena })
+    const wornEnemy = worn.snakes.find((snake) => snake.control === 'enemy')
+    if (!wornEnemy) {
+      throw new Error('expected a wandering bug')
+    }
+    const wornParts = wornEnemy.segments.length
+    for (const segment of wornEnemy.segments) {
+      segment.dead = true
+    }
+    worn.pickups = []
+    worn.rng.next = () => 0.1
+    killSnake(worn, wornEnemy)
+
+    expect(
+      worn.pickups.filter((pickup) => pickup.kind === 'head' || pickup.kind === 'body'),
+    ).toHaveLength(wornParts)
   })
 
   it('keeps a wandering bug on its route past a nearby player', () => {

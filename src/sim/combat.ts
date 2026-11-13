@@ -99,25 +99,21 @@ export function killSnake(world: World, snake: Snake): void {
     z: snake.z,
   })
 
-  const allParts = snake.segments.map((segment) => ({
+  const parts = snake.segments.map((segment) => ({
     slot: segment.slot,
     partId: segment.partId,
   }))
-  const remaining = snake.segments
-    .filter((segment) => !segment.dead)
-    .map((segment) => ({
-      slot: segment.slot,
-      partId: segment.partId,
-    }))
   snake.segments = []
 
   if (snake.control === 'powerup') {
     spawnPowerupDrops(world, snake.x, snake.z)
   } else if (snake.control === 'boss') {
-    spawnBossDrops(world, snake.x, snake.z, allParts)
+    spawnBossDrops(world, snake.x, snake.z, parts)
     world.bossSpawnAt = world.time + world.arena.bossEverySec
   } else {
-    spawnDrops(world, snake.x, snake.z, remaining)
+    // Parts shot off before death still roll, or a long bug worn down by area
+    // damage would drop nothing.
+    spawnDrops(world, snake.x, snake.z, parts)
   }
 }
 
