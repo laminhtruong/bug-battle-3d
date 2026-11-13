@@ -284,13 +284,13 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
     handles.push(mesh)
   }
 
-  /** Orange X/Z arrows on the selected muzzle, so a point can be nudged per axis. */
+  /** X/Y/Z arrows on the selected muzzle, colored like the axis gizmo. */
   function buildSpawnGizmo(): void {
     spawnGizmoGroup.clear()
     spawnGizmoHandles.length = 0
     addGizmoHandle(
       new THREE.CylinderGeometry(0.018, 0.018, 0.52, 8).rotateZ(-Math.PI / 2),
-      SPAWN_COLOR,
+      AXIS_X_COLOR,
       'spawn-x',
       new THREE.Vector3(0.26, 0, 0),
       0.9,
@@ -299,7 +299,7 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
     )
     addGizmoHandle(
       new THREE.ConeGeometry(0.08, 0.2, 12).rotateZ(-Math.PI / 2),
-      SPAWN_COLOR,
+      AXIS_X_COLOR,
       'spawn-x',
       new THREE.Vector3(0.62, 0, 0),
       0.9,
@@ -308,7 +308,7 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
     )
     addGizmoHandle(
       new THREE.CylinderGeometry(0.018, 0.018, 0.52, 8),
-      SPAWN_COLOR,
+      AXIS_Y_COLOR,
       'spawn-y',
       new THREE.Vector3(0, 0.26, 0),
       0.9,
@@ -317,7 +317,7 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
     )
     addGizmoHandle(
       new THREE.ConeGeometry(0.08, 0.2, 12),
-      SPAWN_COLOR,
+      AXIS_Y_COLOR,
       'spawn-y',
       new THREE.Vector3(0, 0.62, 0),
       0.9,
@@ -326,7 +326,7 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
     )
     addGizmoHandle(
       new THREE.CylinderGeometry(0.018, 0.018, 0.52, 8).rotateX(Math.PI / 2),
-      SPAWN_COLOR,
+      AXIS_Z_COLOR,
       'spawn-z',
       new THREE.Vector3(0, 0, 0.26),
       0.9,
@@ -335,7 +335,7 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
     )
     addGizmoHandle(
       new THREE.ConeGeometry(0.08, 0.2, 12).rotateX(Math.PI / 2),
-      SPAWN_COLOR,
+      AXIS_Z_COLOR,
       'spawn-z',
       new THREE.Vector3(0, 0, 0.62),
       0.9,
