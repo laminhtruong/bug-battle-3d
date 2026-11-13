@@ -26,7 +26,7 @@ line port; the rules were re-derived from prefabs, scripts and playtests.
 
 | Unity version                 | This version                                 |
 | ----------------------------- | -------------------------------------------- |
-| Frame-rate dependent movement | Fixed 30 Hz simulation, variable render      |
+| Frame-rate dependent movement | Fixed 30 Hz simulation, render interpolation |
 | `Random`                      | Seeded `mulberry32`, no `Math.random` in sim |
 | Prefab hierarchy per segment  | Segments sampled from the head trail         |
 | MonoBehaviour combat          | Data-driven attack descriptors               |

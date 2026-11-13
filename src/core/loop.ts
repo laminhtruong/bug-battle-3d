@@ -2,7 +2,8 @@ export interface LoopOptions {
   /** Fixed simulation step in seconds. */
   step: number
   update(): void
-  render(dt: number): void
+  /** `alpha` is how far the accumulator has moved toward the next step. */
+  render(dt: number, alpha: number): void
   maxSteps?: number
 }
 
@@ -30,7 +31,7 @@ export function startLoop({ step, update, render, maxSteps = 5 }: LoopOptions): 
       steps += 1
     }
 
-    render(elapsed)
+    render(elapsed, accumulator / step)
     requestAnimationFrame(frame)
   }
 

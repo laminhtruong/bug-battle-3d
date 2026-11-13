@@ -19,7 +19,7 @@ import {
 } from './protocol'
 import { createSnapshot } from './snapshot'
 
-const SNAPSHOT_INTERVAL = 1 / 15
+const SNAPSHOT_INTERVAL = 1 / BALANCE.snapshotRate
 const INPUT_INTERVAL_MS = 1000 / 60
 
 export interface HostHandlers {

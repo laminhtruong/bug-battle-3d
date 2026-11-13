@@ -9,6 +9,7 @@ import { startHost, type HostSession } from '@/net/host'
 import { createPropViewer } from '@/render/prop-view'
 import { preloadPartModels } from '@/render/models'
 import { createView } from '@/render/scene'
+import { createSmoother } from '@/render/smooth'
 import { createSnakeViewer } from '@/render/snake-view'
 import type { RenderState } from '@/render/state'
 import { tickWorld } from '@/sim/tick'
@@ -30,6 +31,7 @@ if (!canvas) {
 const view = createView(canvas)
 const snakeViewer = createSnakeViewer(view.scene)
 const propViewer = createPropViewer(view.scene)
+const smoother = createSmoother()
 const input = createInput()
 const nameTags = createNameTags()
 
@@ -41,6 +43,8 @@ let world: World | undefined
 let host: HostSession | undefined
 let client: ClientSession | undefined
 let renderState: RenderState | undefined
+/** Seconds since the last guest snapshot, used to blend between snapshots. */
+let snapshotAge = 0
 let playerId = 'you'
 let playerName = ''
 let resultsShown = false
@@ -88,6 +92,8 @@ function resetSession(): void {
   client = undefined
   world = undefined
   renderState = undefined
+  smoother.reset()
+  snapshotAge = 0
   resultsShown = false
   mode = 'idle'
   nameTags.clear()
@@ -169,7 +175,11 @@ async function joinMatch(code: string, name: string): Promise<void> {
       hud.showGame()
     },
     onSnapshot: (state) => {
+      if (renderState) {
+        smoother.capture(renderState)
+      }
       renderState = state
+      snapshotAge = 0
     },
     onSound: (name) => playSound(name),
     onResults: (rows) => showResults(rows, false),
@@ -219,6 +229,7 @@ startLoop({
         human.steerX = move.x
         human.steerZ = move.z
       }
+      smoother.capture(world)
       if (!world.ended) {
         tickWorld(world, STEP)
         for (const event of world.events) {
@@ -237,6 +248,10 @@ startLoop({
 
     if (mode === 'host' && host) {
       host.setInput(move.x, move.z)
+      const hostState = host.getState()
+      if (hostState) {
+        smoother.capture(hostState)
+      }
       host.update(STEP)
       for (const sound of host.drainSounds()) {
         playOwned(sound)
@@ -248,7 +263,7 @@ startLoop({
       client.sendInput(move.x, move.z)
     }
   },
-  render: (dt) => {
+  render: (dt, alpha) => {
     if (mode === 'local' && world) {
       renderState = world
     } else if (mode === 'host' && host) {
@@ -256,13 +271,20 @@ startLoop({
     }
 
     if (renderState) {
-      snakeViewer.sync(renderState, dt)
-      propViewer.sync(renderState)
-      updateFocus(renderState)
+      let blend = alpha
+      if (mode === 'guest') {
+        // Snapshots arrive slower than frames, so blend over the gap between two.
+        snapshotAge += dt
+        blend = snapshotAge * BALANCE.snapshotRate
+      }
+      const shown = smoother.sample(renderState, blend)
+      snakeViewer.sync(shown, dt)
+      propViewer.sync(shown)
+      updateFocus(shown)
       view.updateCamera(focusX, focusZ, dt)
       if (mode !== 'idle') {
         hud.update(renderState, playerId)
-        nameTags.sync(renderState, view.camera, playerId)
+        nameTags.sync(shown, view.camera, playerId)
       }
     }
     view.render()

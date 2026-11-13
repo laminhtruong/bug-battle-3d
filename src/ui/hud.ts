@@ -116,9 +116,9 @@ export function createHud(handlers: HudHandlers): Hud {
     playSound('click')
   }
 
-  root.querySelector('[data-action="local"]')?.addEventListener('click', () =>
-    click(handlers.onLocal),
-  )
+  root
+    .querySelector('[data-action="local"]')
+    ?.addEventListener('click', () => click(handlers.onLocal))
   root.querySelector('[data-action="create"]')?.addEventListener('click', () => {
     click(() => handlers.onCreate(getPlayerName()))
   })
@@ -126,9 +126,9 @@ export function createHud(handlers: HudHandlers): Hud {
     click(() => handlers.onJoin(codeInput.value.trim(), getPlayerName()))
   })
   startButton.addEventListener('click', () => click(handlers.onStart))
-  root.querySelector('[data-action="cancel"]')?.addEventListener('click', () =>
-    click(handlers.onCancel),
-  )
+  root
+    .querySelector('[data-action="cancel"]')
+    ?.addEventListener('click', () => click(handlers.onCancel))
   againButton.addEventListener('click', () => click(handlers.onAgain))
   root.querySelector('[data-action="menu"]')?.addEventListener('click', () => {
     click(handlers.onCancel)

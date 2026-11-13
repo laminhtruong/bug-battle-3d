@@ -42,4 +42,6 @@ export const BALANCE = {
   appleRespawnSec: 0.8,
   roundSec: 90,
   leaderboardSize: 4,
+  /** Host snapshots per second. Guests blend between two of them. */
+  snapshotRate: 15,
 } as const

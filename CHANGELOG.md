@@ -27,6 +27,9 @@ All notable changes to this project are documented here. The format follows
   gun, fire, lightning and poison heads no longer hurt by touching.
 - The content hash now covers part stats and colliders, not only part ids, so
   mismatched builds are rejected before a match starts.
+- The renderer blends between the last two simulation ticks, and guests blend
+  between two host snapshots, so movement is smooth on any display refresh rate
+  instead of stepping at 30 Hz.
 - The rules follow the original game again:
   - the snake only moves while the stick is pushed and stops when it is
     released, a light push moves slower;
