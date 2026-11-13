@@ -8,12 +8,18 @@ const RETARGET_MAX_SEC = 5
 /** Bots grab parts before apples, and only look this far for each. */
 const BOT_GEAR_RANGE = 40
 const BOT_POWERUP_RANGE = 45
+/** A bot chases a nearby player for a short run, then leaves it alone for a while. */
+const BOT_CHASE_RANGE = 22
+const BOT_CHASE_SEC = 3
+const BOT_CHASE_REST_SEC = 4
+/** The bot keeps the chase while the prey stays this close. */
+const BOT_CHASE_LEASH = 30
+/** The boss looks further and keeps chasing, unlike a bot. */
+const BOSS_AGGRO_RANGE = 40
 /** A ranged boss lines up its shot once its attack is this close to ready. */
 const BOSS_AIM_COOLDOWN = 0.35
 /** Closer than this the boss stops flanking and attacks. */
 const BOSS_FLANK_RANGE = 10
-/** A wandering bug only leaves its route when a player is this close. */
-const ENEMY_AGGRO_RANGE = 34
 
 /** Pushes the steering away from the walls so targets near an edge stay reachable. */
 function steerAway(world: World, snake: Snake, x: number, z: number): void {
@@ -93,48 +99,46 @@ function nearestPowerup(world: World, snake: Snake, range: number): Snake | unde
 /**
  * Bots gear up before they eat: part drops and power-ups are worth more than an
  * apple, and they only chase an apple when there is nothing better nearby.
+ * A player that walks close is chased for a short run, then ignored for a rest.
  */
-function updateBot(world: World, snake: Snake): void {
-  const gear = nearestPickup(world, snake, BOT_GEAR_RANGE, ['head', 'body', 'heal'])
+function updateBot(world: World, bot: Snake): void {
+  const now = world.time
+  const chasing = now < bot.ai.chaseUntil
+  const prey = chasing ? nearestPlayer(world, bot, BOT_CHASE_LEASH) : undefined
+  if (prey) {
+    steerAway(world, bot, prey.x, prey.z)
+    return
+  }
+  if (chasing) {
+    // Ran out of prey mid-chase, so start the rest cooldown from here.
+    bot.ai.chaseUntil = now
+    bot.ai.chaseRestUntil = now + BOT_CHASE_REST_SEC
+  }
+  if (now >= bot.ai.chaseRestUntil) {
+    const target = nearestPlayer(world, bot, BOT_CHASE_RANGE)
+    if (target) {
+      bot.ai.chaseUntil = now + BOT_CHASE_SEC
+      bot.ai.chaseRestUntil = bot.ai.chaseUntil + BOT_CHASE_REST_SEC
+      steerAway(world, bot, target.x, target.z)
+      return
+    }
+  }
+  const gear = nearestPickup(world, bot, BOT_GEAR_RANGE, ['head', 'body', 'heal'])
   if (gear) {
-    steerAway(world, snake, gear.x, gear.z)
+    steerAway(world, bot, gear.x, gear.z)
     return
   }
-  const powerup = nearestPowerup(world, snake, BOT_POWERUP_RANGE)
+  const powerup = nearestPowerup(world, bot, BOT_POWERUP_RANGE)
   if (powerup) {
-    steerAway(world, snake, powerup.x, powerup.z)
+    steerAway(world, bot, powerup.x, powerup.z)
     return
   }
-  const apple = nearestPickup(world, snake, BOT_GEAR_RANGE, ['apple'])
+  const apple = nearestPickup(world, bot, BOT_GEAR_RANGE, ['apple'])
   if (apple) {
-    steerAway(world, snake, apple.x, apple.z)
+    steerAway(world, bot, apple.x, apple.z)
     return
   }
-  updateWander(world, snake)
-}
-
-function livingHp(snake: Snake): number {
-  return snake.segments.reduce((sum, segment) => (segment.dead ? sum : sum + segment.hp), 0)
-}
-
-/** The boss hunts the weakest player, not merely the closest one. */
-function pickBossTarget(world: World, boss: Snake): Snake | undefined {
-  let target: Snake | undefined
-  let lowestHp = Number.POSITIVE_INFINITY
-  let nearestDistance = Number.POSITIVE_INFINITY
-  for (const candidate of world.snakes) {
-    if (!candidate.alive || candidate.id === boss.id || !isPlayerControl(candidate.control)) {
-      continue
-    }
-    const hp = livingHp(candidate)
-    const distance = Math.hypot(candidate.x - boss.x, candidate.z - boss.z)
-    if (hp < lowestHp || (hp === lowestHp && distance < nearestDistance)) {
-      target = candidate
-      lowestHp = hp
-      nearestDistance = distance
-    }
-  }
-  return target
+  updateWander(world, bot)
 }
 
 function bossPhase(boss: Snake): number {
@@ -157,7 +161,7 @@ function nearestPlayer(world: World, snake: Snake, range: number): Snake | undef
   let nearest: Snake | undefined
   let nearestDistance = range
   for (const candidate of world.snakes) {
-    if (!candidate.alive || !isPlayerControl(candidate.control)) {
+    if (!candidate.alive || candidate.id === snake.id || !isPlayerControl(candidate.control)) {
       continue
     }
     const distance = Math.hypot(candidate.x - snake.x, candidate.z - snake.z)
@@ -169,25 +173,13 @@ function nearestPlayer(world: World, snake: Snake, range: number): Snake | undef
   return nearest
 }
 
-/** Wanderers keep their route until a player comes close, then give chase. */
-function updateEnemy(world: World, enemy: Snake): void {
-  const target = nearestPlayer(world, enemy, ENEMY_AGGRO_RANGE)
-  if (!target) {
-    updateWander(world, enemy)
-    return
-  }
-  const aim = leadPoint(enemy, target)
-  enemy.ai.targetX = aim.x
-  enemy.ai.targetZ = aim.z
-  steerAway(world, enemy, aim.x, aim.z)
-}
-
 /**
  * The boss leads its target and weaves to a flank while its attack reloads.
- * Once the attack is ready it lines up, so it is not a straight chase.
+ * It wanders until a player comes close, then keeps the chase for as long as
+ * the target stays near.
  */
 function updateBoss(world: World, boss: Snake): void {
-  const target = pickBossTarget(world, boss)
+  const target = nearestPlayer(world, boss, BOSS_AGGRO_RANGE)
   if (!target) {
     updateWander(world, boss)
     return
@@ -211,13 +203,13 @@ function updateBoss(world: World, boss: Snake): void {
   steerAway(world, boss, aimX, aimZ)
 }
 
-/** Bots, bosses and wanderers share the same steering interface as remote players. */
+/** Bots and bosses steer themselves; wandering bugs only roam, like the original. */
 export function updateAi(world: World, snake: Snake): void {
   if (snake.control === 'boss') {
     updateBoss(world, snake)
-  } else if (snake.control === 'enemy') {
-    updateEnemy(world, snake)
   } else if (snake.control === 'bot') {
     updateBot(world, snake)
+  } else if (snake.control === 'enemy') {
+    updateWander(world, snake)
   }
 }

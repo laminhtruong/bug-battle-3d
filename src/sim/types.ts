@@ -31,6 +31,10 @@ export interface AiState {
   targetX: number
   targetZ: number
   retargetAt: number
+  /** A bot chases a nearby player until this time. */
+  chaseUntil: number
+  /** A bot leaves players alone until this time, after a chase. */
+  chaseRestUntil: number
 }
 
 export interface Snake {

@@ -54,10 +54,11 @@ line port; the rules were re-derived from prefabs, scripts and playtests.
 - Sound effects are per player. The host tags every effect with the snake it
   belongs to and each client keeps the ones of its own snake, so the arena of
   bots stays silent.
-- Wandering bugs keep their original role: they patrol, shoot forward and chase
-  a player that comes close. The map also holds destructible power-ups, and one
-  boss at a time uses a tactical AI: it picks the weakest player, leads the
-  target, flanks while reloading and lines up its shot when ready.
+- Wandering bugs keep their original role: they roam and shoot forward, but they
+  never chase. The map also holds destructible power-ups. Bots forage apples and
+  power-ups and chase a nearby player for a short run. One boss at a time roams
+  until a player is close, then leads the target, flanks while reloading and
+  lines up its shot when ready, from a longer range than a bot.
 - The apple and power-up targets reuse the original Unity props: `item_full`
   for the apple and `box` for the power-up, both at their prefab scale and
   rotation, textured with the shared bug palette.

@@ -87,7 +87,7 @@ function createSnake(world: World, input: CreateSnakeInput): Snake {
     score: 0,
     kills: 0,
     speed: input.speed,
-    ai: { targetX: input.x, targetZ: input.z, retargetAt: 0 },
+    ai: { targetX: input.x, targetZ: input.z, retargetAt: 0, chaseUntil: 0, chaseRestUntil: 0 },
     baseHeadId: input.headId,
   }
   fillTrail(snake)
@@ -97,12 +97,48 @@ function createSnake(world: World, input: CreateSnakeInput): Snake {
   return snake
 }
 
+/** Bots and wandering bugs roll gear up to the strongest part a human owns. */
+function gearCap(world: World): number {
+  let strongest = 0
+  for (const snake of world.snakes) {
+    if (!snake.alive || snake.control !== 'human') {
+      continue
+    }
+    for (const segment of snake.segments) {
+      if (!segment.dead) {
+        strongest = Math.max(strongest, requirePart(segment.slot, segment.partId).score)
+      }
+    }
+  }
+  return strongest + BALANCE.botGearBonus
+}
+
+/** Random part ids, keeping the roll within the player's current power. */
+function pickGearIds(
+  world: World,
+  slot: 'head' | 'body',
+  pool: readonly string[],
+  count: number,
+): string[] {
+  const cap = gearCap(world)
+  const allowed = pool.filter((id) => requirePart(slot, id).score <= cap)
+  const source = allowed.length > 0 ? allowed : pool
+  return Array.from({ length: count }, () => world.rng.pick(source))
+}
+
+const HEAD_IDS = HEADS.map((part) => part.id)
+const BODY_IDS = BODIES.map((part) => part.id)
+
 export function createPlayerSnake(world: World, setup: PlayerSetup): Snake {
   const spawn = pickSpawnPoint(world)
-  const bodyIds = Array.from({ length: BALANCE.food.startSegments - 1 }, () => DEFAULT_BODY_ID)
+  const bot = setup.control === 'bot'
+  const bodyCount = BALANCE.food.startSegments - 1
   return createSnake(world, {
     ...setup,
-    bodyIds,
+    headId: bot ? pickGearIds(world, 'head', HEAD_IDS, 1)[0] ?? setup.headId : setup.headId,
+    bodyIds: bot
+      ? pickGearIds(world, 'body', BODY_IDS, bodyCount)
+      : Array.from({ length: bodyCount }, () => DEFAULT_BODY_ID),
     x: spawn.x,
     z: spawn.z,
     angle: angleFromDirection(-spawn.x, -spawn.z),
@@ -122,10 +158,19 @@ export function respawnSnake(world: World, snake: Snake): void {
   snake.ai.targetX = spawn.x
   snake.ai.targetZ = spawn.z
   snake.ai.retargetAt = world.time
+  snake.ai.chaseUntil = 0
+  snake.ai.chaseRestUntil = 0
   fillTrail(snake)
+  const bot = snake.control === 'bot'
+  const bodyCount = BALANCE.food.startSegments - 1
+  if (bot) {
+    snake.baseHeadId = pickGearIds(world, 'head', HEAD_IDS, 1)[0] ?? snake.baseHeadId
+  }
   snake.segments = makeSegments(
     snake.baseHeadId,
-    Array.from({ length: BALANCE.food.startSegments - 1 }, () => DEFAULT_BODY_ID),
+    bot
+      ? pickGearIds(world, 'body', BODY_IDS, bodyCount)
+      : Array.from({ length: bodyCount }, () => DEFAULT_BODY_ID),
   )
   syncSegments(snake)
   world.events.push({ type: 'spawn', snakeId: snake.id, x: snake.x, z: snake.z })
@@ -187,15 +232,14 @@ export function spawnEnemy(world: World): void {
   const point = pickMapPoint(world, 12, BALANCE.enemySpawnMinDistance)
   const heads = arena.enemyHeads.length > 0 ? arena.enemyHeads : [DEFAULT_HEAD_ID]
   const bodies = arena.enemyBodies.length > 0 ? arena.enemyBodies : [DEFAULT_BODY_ID]
-  const bodyIds = Array.from({ length: rng.int(2, 5) }, () => rng.pick(bodies))
 
   createSnake(world, {
     id: nextEntityId(world, 'enemy'),
     name: 'Bug',
     control: 'enemy',
     slot: -1,
-    headId: rng.pick(heads),
-    bodyIds,
+    headId: pickGearIds(world, 'head', heads, 1)[0] ?? DEFAULT_HEAD_ID,
+    bodyIds: pickGearIds(world, 'body', bodies, BALANCE.food.startSegments - 1),
     x: point.x,
     z: point.z,
     angle: rng.range(-Math.PI, Math.PI),

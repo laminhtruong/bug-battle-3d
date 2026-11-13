@@ -117,9 +117,13 @@ source rename map and the conversion steps are documented in
 Early playable version (`0.1.0`):
 
 - One arena, four players plus bots, 90 second rounds.
-- Every player starts with a head and three normal bodies.
-- Eight wandering bugs patrol the map, chase a player that comes close, and are
-  replaced a couple of seconds after they die.
+- You start with a head and three normal bodies; bots roll a random head and
+  three random bodies whose strength follows the best part you own.
+- Eight wandering bugs roam the map at random and are replaced a couple of
+  seconds after they die.
+- Bots forage apples and power-ups, break off for a short chase when a player
+  comes close, then go back to foraging. The boss roams until a player comes
+  close, then keeps chasing from a longer range.
 - Twenty apples spawn around the arena and refill during the round.
 - Sixteen destructible power-ups sit around the arena with 5 to 10 health. Breaking
   one drops a head 30% of the time and a body otherwise.

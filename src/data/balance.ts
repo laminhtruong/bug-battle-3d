@@ -23,6 +23,8 @@ export const BALANCE = {
   bossCooldownScale: 1.2,
   /** Wandering bugs attack slower than players, as in the original. */
   enemyCooldownScale: 1.5,
+  /** Bots roll gear this much stronger than the best part the human owns. */
+  botGearBonus: 10,
   food: {
     /** Head plus three normal bodies. */
     startSegments: 4,

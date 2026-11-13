@@ -71,19 +71,19 @@ describe('world', () => {
     ).toHaveLength(classicArena.enemyCap)
   })
 
-  it('makes a wandering bug chase a nearby player', () => {
+  it('keeps a wandering bug on its route past a nearby player', () => {
     const world = createWorld({ seed: 45, arena: classicArena })
     const enemy = world.snakes.find((snake) => snake.control === 'enemy')
-    const player = getSnake(world, 'bot-1')
     if (!enemy) {
       throw new Error('expected a wandering bug')
     }
-    // Move the other players away so the test only sees bot-1.
+    // The player sits behind the bug; a chasing bug would steer the other way.
     for (const other of world.snakes.filter((snake) => isPlayerControl(snake.control))) {
-      placeHead(other, 90, 90)
+      placeHead(other, 0, -12)
     }
-    placeHead(player, 0, 10)
     placeHead(enemy, 0, 0)
+    enemy.ai.targetX = 0
+    enemy.ai.targetZ = 10
     enemy.ai.retargetAt = world.time + 10
 
     updateAi(world, enemy)
@@ -91,14 +91,97 @@ describe('world', () => {
     expect(enemy.steerZ).toBeGreaterThan(0.5)
   })
 
-  it('starts every bug with a head and three normal bodies', () => {
-    const world = createWorld({ seed: 2, arena: classicArena })
-    for (const snake of world.snakes.filter((entry) => isPlayerControl(entry.control))) {
+  it('makes a bot chase a nearby player for a short run, then rest', () => {
+    const world = createWorld({
+      seed: 46,
+      arena: classicArena,
+      players: [{ id: 'human', name: 'You', control: 'human', slot: 0, headId: DEFAULT_HEAD_ID }],
+    })
+    const bot = getSnake(world, 'bot-2')
+    const human = getSnake(world, 'human')
+    // Keep only the two snakes the bot could steer at.
+    world.snakes = world.snakes.filter(
+      (snake) => snake.id === bot.id || snake.id === human.id,
+    )
+    world.pickups = []
+    placeHead(bot, 0, 0)
+    placeHead(human, 0, 10)
+    bot.ai.retargetAt = world.time + 10
+
+    updateAi(world, bot)
+
+    expect(bot.ai.chaseUntil).toBeGreaterThan(world.time)
+    expect(bot.steerZ).toBeGreaterThan(0.5)
+
+    // The chase ran out; the same player is still close but the bot rests.
+    world.time = bot.ai.chaseUntil + 0.1
+    placeHead(human, 0, -10)
+    bot.ai.targetX = 0
+    bot.ai.targetZ = 10
+    bot.ai.retargetAt = world.time + 10
+
+    updateAi(world, bot)
+
+    expect(bot.ai.chaseRestUntil).toBeGreaterThan(world.time)
+    expect(bot.steerZ).toBeGreaterThan(0.5)
+  })
+
+  it('makes the boss wander until a player is close, then chase', () => {
+    const world = createWorld({ seed: 47, arena: classicArena })
+    spawnBoss(world)
+    const boss = world.snakes.find((snake) => snake.control === 'boss')
+    if (!boss) {
+      throw new Error('expected a boss')
+    }
+    for (const player of world.snakes.filter((snake) => isPlayerControl(snake.control))) {
+      placeHead(player, 90, 90)
+    }
+    placeHead(boss, 0, 0)
+    boss.ai.targetX = 0
+    boss.ai.targetZ = 10
+    boss.ai.retargetAt = world.time + 10
+
+    updateAi(world, boss)
+
+    // Nobody is close, so the boss roams its own route.
+    expect(boss.steerZ).toBeGreaterThan(0.5)
+
+    placeHead(getSnake(world, 'bot-1'), 0, 12)
+    updateAi(world, boss)
+
+    // A nearby player turns the boss away from its route and onto the chase.
+    expect(boss.ai.targetX !== 0 || boss.ai.targetZ !== 10).toBe(true)
+    const chaseZ = boss.ai.targetZ
+    expect(chaseZ).toBeGreaterThan(0)
+  })
+
+  it('starts humans with a head and three normal bodies, bots with random gear', () => {
+    const world = createWorld({
+      seed: 2,
+      arena: classicArena,
+      players: [{ id: 'human', name: 'You', control: 'human', slot: 0, headId: DEFAULT_HEAD_ID }],
+    })
+    const human = getSnake(world, 'human')
+    expect(human.segments).toHaveLength(BALANCE.food.startSegments)
+    expect(human.segments[0]?.slot).toBe('head')
+    for (const segment of human.segments.slice(1)) {
+      expect(segment).toMatchObject({ slot: 'body', partId: 'normal', dead: false })
+    }
+    const cap = requirePart('head', DEFAULT_HEAD_ID).score + BALANCE.botGearBonus
+    for (const snake of world.snakes.filter((entry) => entry.control === 'bot')) {
       expect(snake.segments).toHaveLength(BALANCE.food.startSegments)
       expect(snake.segments[0]?.slot).toBe('head')
-      for (const segment of snake.segments.slice(1)) {
-        expect(segment).toMatchObject({ slot: 'body', partId: 'normal', dead: false })
+      for (const segment of snake.segments) {
+        expect(requirePart(segment.slot, segment.partId).score).toBeLessThanOrEqual(cap)
       }
+    }
+  })
+
+  it('starts a wandering bug with a head and three bodies', () => {
+    const world = createWorld({ seed: 48, arena: classicArena })
+    for (const enemy of world.snakes.filter((snake) => snake.control === 'enemy')) {
+      expect(enemy.segments).toHaveLength(BALANCE.food.startSegments)
+      expect(enemy.segments[0]?.slot).toBe('head')
     }
   })
 
@@ -158,7 +241,7 @@ describe('world', () => {
     boss.z = 0
     boss.segments[0]!.cooldown = 2
     player.x = 0
-    player.z = 40
+    player.z = 36
     player.angle = 0
     player.speed = BALANCE.playerSpeed
 

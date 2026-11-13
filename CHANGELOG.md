@@ -11,17 +11,22 @@ All notable changes to this project are documented here. The format follows
 - Arena redesign: every bug starts with a head and three normal bodies, sixteen
   destructible power-ups with 5 to 10 health sit around the map, and a boss with
   a strong head and ten varied bodies spawns every 30 seconds.
-- Eight wandering bugs patrol the map and give chase when a player comes close.
-  They respawn a couple of seconds after they die, and apples keep spawning
-  randomly around the arena.
+- Eight wandering bugs roam the map at random. They shoot forward but never
+  chase, and they respawn a couple of seconds after they die. Apples keep
+  spawning randomly around the arena.
+- Bots roll a random head and three random bodies whose part score stays close
+  to the best part the human owns. They forage apples and power-ups, chase a
+  nearby player for a short run, then rest before chasing again.
 - The apple and power-up targets now use the original Unity models (`item_full`
   and `box`) with the shared bug palette, instead of placeholder primitives.
 - A destroyed power-up drops one item: a head 30% of the time, otherwise a body.
   A dead boss drops exactly ten of its own parts, including its head, and comes
   back 30 seconds later.
-- Boss AI leads its target, hunts the weakest player, weaves to a flank while its
-  attack reloads and lines up when ready. Bots now grab part drops and power-ups
-  before apples instead of only walking to the nearest apple.
+- Boss AI leads its target, weaves to a flank while its attack reloads and lines
+  up when ready. It roams the map until a player comes close, then chases from a
+  longer range than a bot; it never goes after pickups or power-ups.
+- Bots hunt part drops, power-ups and apples in range, and chase a nearby player
+  for a short run before resting.
 - Host-authoritative online play with five character room codes over PeerJS.
 - Lobby, guest handshake, content hash check and disconnect-to-bot fallback.
 - Wire protocol with zod validation, message size limits and input rate limits.
