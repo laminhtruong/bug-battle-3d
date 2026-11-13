@@ -6,7 +6,7 @@ export const BALANCE = {
   tickRate: 30,
   maxPlayers: 4,
   playerSpeed: 12,
-  enemySpeed: 8.8,
+  bossSpeed: 12.5,
   /** Radians per second. High enough to feel direct, low enough to avoid snapping. */
   turnRate: 16,
   bodySpacing: 1.2,
@@ -18,10 +18,11 @@ export const BALANCE = {
   projectileRadius: 0.72,
   hurtCooldownSec: 0.25,
   respawnDelaySec: 3,
-  /** Enemy attacks are slower than player attacks, as in the original. */
-  enemyCooldownScale: 1.5,
+  /** The boss attacks a little slower than a player, but carries many parts. */
+  bossCooldownScale: 1.2,
   food: {
-    startSegments: 2,
+    /** Head plus three normal bodies. */
+    startSegments: 4,
     applesToGrow: 2,
     growthStep: 2,
     scorePerApple: 5,
@@ -35,8 +36,15 @@ export const BALANCE = {
     ttlSec: 20,
   },
   pickupRadius: 2.8,
-  enemySpawnMinDistance: 32,
-  enemyRespawnSec: 1.5,
+  /** Destructible power-ups scattered around the map. */
+  powerupHpMin: 5,
+  powerupHpMax: 10,
+  powerupDropHeadChance: 0.3,
+  powerupRespawnSec: 5,
+  powerupSpawnMinDistance: 24,
+  /** Boss loot: its head plus nine of its ten bodies. */
+  bossLootCount: 10,
+  bossSpawnMinDistance: 48,
   appleRespawnSec: 0.8,
   roundSec: 90,
   leaderboardSize: 4,

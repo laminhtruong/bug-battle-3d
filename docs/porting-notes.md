@@ -54,8 +54,9 @@ line port; the rules were re-derived from prefabs, scripts and playtests.
 - Sound effects are per player. The host tags every effect with the snake it
   belongs to and each client keeps the ones of its own snake, so the arena of
   bots stays silent.
-- Normal bugs wander and shoot forward, like the original. Only bosses chase
-  the player, and this arena has no bosses yet.
+- There are no free-roaming bugs. The map holds destructible power-ups, and one
+  boss at a time uses a tactical AI: it picks the weakest player, leads the
+  target, flanks while reloading and lines up its shot when ready.
 
 ## Rules taken from the original
 

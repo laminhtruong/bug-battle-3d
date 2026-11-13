@@ -1,9 +1,10 @@
-import { DEFAULT_BODY_ID, DEFAULT_HEAD_ID, requirePart } from '@/content'
+import { BODIES, DEFAULT_BODY_ID, DEFAULT_HEAD_ID, HEADS, requirePart } from '@/content'
 import { angleFromDirection, directionFromAngle } from '@/core/math2d'
 import type { Vec2 } from '@/core/math2d'
 import type { Rng } from '@/core/rng'
 import { BALANCE } from '@/data/balance'
 import { syncSegments, TRAIL_MAX_DISTANCE } from './snake'
+import { isPlayerControl } from './types'
 import type { Pickup, PickupKind, Segment, Snake, SnakeControl, World } from './types'
 
 export interface PlayerSetup {
@@ -144,7 +145,7 @@ export function pickSpawnPoint(world: World): Vec2 {
   for (const candidate of world.arena.spawns) {
     let nearest = Number.POSITIVE_INFINITY
     for (const snake of world.snakes) {
-      if (!snake.alive || snake.control === 'enemy') {
+      if (!snake.alive || !isPlayerControl(snake.control)) {
         continue
       }
       nearest = Math.min(nearest, Math.hypot(candidate.x - snake.x, candidate.z - snake.z))
@@ -157,45 +158,101 @@ export function pickSpawnPoint(world: World): Vec2 {
   return { x: best.x, z: best.z }
 }
 
-function isSafeEnemySpawn(world: World, x: number, z: number): boolean {
+function isSafeMapSpawn(world: World, x: number, z: number, minDistance: number): boolean {
   for (const snake of world.snakes) {
-    if (!snake.alive || snake.control === 'enemy') {
+    if (!snake.alive || !isPlayerControl(snake.control)) {
       continue
     }
-    if (Math.hypot(snake.x - x, snake.z - z) < BALANCE.enemySpawnMinDistance) {
+    if (Math.hypot(snake.x - x, snake.z - z) < minDistance) {
       return false
     }
   }
   return true
 }
 
-export function spawnEnemy(world: World): void {
-  const { arena, rng } = world
-  let point = randomPointInArena(rng, arena, 12)
+function pickMapPoint(world: World, margin: number, minDistance: number): Vec2 {
+  let point = randomPointInArena(world.rng, world.arena, margin)
   for (let attempt = 0; attempt < 12; attempt += 1) {
-    const candidate = randomPointInArena(rng, arena, 12)
-    point = candidate
-    if (isSafeEnemySpawn(world, candidate.x, candidate.z)) {
+    point = randomPointInArena(world.rng, world.arena, margin)
+    if (isSafeMapSpawn(world, point.x, point.z, minDistance)) {
       break
     }
   }
+  return point
+}
 
-  const heads = arena.enemyHeads.length > 0 ? arena.enemyHeads : [DEFAULT_HEAD_ID]
-  const bodies = arena.enemyBodies.length > 0 ? arena.enemyBodies : [DEFAULT_BODY_ID]
-  const bodyIds = Array.from({ length: rng.int(1, 4) }, () => rng.pick(bodies))
+/** Heads without contact damage, so a power-up is a target, not a hazard. */
+const POWERUP_HEADS = HEADS.filter((part) => part.contact.damage === 0)
 
-  createSnake(world, {
-    id: nextEntityId(world, 'enemy'),
-    name: 'Bug',
-    control: 'enemy',
+/**
+ * Destructible loot target. It is a stationary one-part snake, so projectiles
+ * and contact attacks damage it like any other bug.
+ */
+export function spawnPowerup(world: World): Snake {
+  const { rng } = world
+  const point = pickMapPoint(world, 12, BALANCE.powerupSpawnMinDistance)
+  const snake = createSnake(world, {
+    id: nextEntityId(world, 'powerup'),
+    name: 'PowerUp',
+    control: 'powerup',
     slot: -1,
-    headId: rng.pick(heads),
-    bodyIds,
+    headId: rng.pick(POWERUP_HEADS.length > 0 ? POWERUP_HEADS : HEADS).id,
+    bodyIds: [],
     x: point.x,
     z: point.z,
     angle: rng.range(-Math.PI, Math.PI),
-    speed: BALANCE.enemySpeed,
+    speed: 0,
   })
+  const head = snake.segments[0]
+  if (head) {
+    const hp = rng.int(BALANCE.powerupHpMin, BALANCE.powerupHpMax + 1)
+    head.hp = hp
+    head.maxHp = hp
+  }
+  return snake
+}
+
+function shuffled<T>(rng: Rng, items: readonly T[]): T[] {
+  const copy = [...items]
+  for (let index = copy.length - 1; index > 0; index -= 1) {
+    const swap = rng.int(0, index + 1)
+    const value = copy[index]!
+    copy[index] = copy[swap]!
+    copy[swap] = value
+  }
+  return copy
+}
+
+/** Fills the boss body with every pool type first, then random repeats. */
+function bossBodyIds(world: World): string[] {
+  const { arena, rng } = world
+  const pool = arena.bossBodies.length > 0 ? arena.bossBodies : [DEFAULT_BODY_ID]
+  const variety = shuffled(rng, pool)
+  const bodyIds = variety.slice(0, arena.bossBodyCount)
+  while (bodyIds.length < arena.bossBodyCount) {
+    bodyIds.push(rng.pick(pool))
+  }
+  return bodyIds
+}
+
+export function spawnBoss(world: World): Snake {
+  const { arena, rng } = world
+  const point = pickMapPoint(world, 24, BALANCE.bossSpawnMinDistance)
+  const heads = arena.bossHeads.length > 0 ? arena.bossHeads : [DEFAULT_HEAD_ID]
+  const boss = createSnake(world, {
+    id: nextEntityId(world, 'boss'),
+    name: 'Boss',
+    control: 'boss',
+    slot: -1,
+    headId: rng.pick(heads),
+    bodyIds: bossBodyIds(world),
+    x: point.x,
+    z: point.z,
+    angle: angleFromDirection(-point.x, -point.z),
+    speed: BALANCE.bossSpeed,
+  })
+  world.events.push({ type: 'spawn', snakeId: boss.id, x: boss.x, z: boss.z })
+  return boss
 }
 
 export function createPickup(
@@ -256,8 +313,43 @@ export function spawnDrops(
   }
 }
 
-export function countEnemies(world: World): number {
-  return world.snakes.filter((snake) => snake.control === 'enemy' && snake.alive).length
+/** One item: a head 30% of the time, otherwise a body. */
+export function spawnPowerupDrops(world: World, x: number, z: number): void {
+  const { rng } = world
+  const slot: 'head' | 'body' =
+    rng.next() < BALANCE.powerupDropHeadChance ? 'head' : 'body'
+  const partId = rng.pick(slot === 'head' ? HEADS : BODIES).id
+  createPickup(world, slot, x, z, partId)
+}
+
+/**
+ * The boss drops exactly ten of its parts: its head plus nine of its ten
+ * bodies, so the reward includes the good head it was using.
+ */
+export function spawnBossDrops(
+  world: World,
+  x: number,
+  z: number,
+  parts: readonly { slot: 'head' | 'body'; partId: string }[],
+): void {
+  const { rng } = world
+  const loot = parts.filter((part) => part.slot === 'head').slice(0, 1)
+  for (const part of parts) {
+    if (loot.length >= BALANCE.bossLootCount) {
+      break
+    }
+    if (part.slot === 'body') {
+      loot.push(part)
+    }
+  }
+  const jitter = (): number => rng.range(-8, 8)
+  for (const part of loot) {
+    createPickup(world, part.slot, x + jitter(), z + jitter(), part.partId)
+  }
+}
+
+export function countPowerups(world: World): number {
+  return world.snakes.filter((snake) => snake.control === 'powerup' && snake.alive).length
 }
 
 export function countApples(world: World): number {

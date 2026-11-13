@@ -380,7 +380,7 @@ export function createSnakeViewer(scene: THREE.Scene) {
         if (alive.has(id)) {
           continue
         }
-        // An enemy leaves the snake list the tick it dies, so its remains play out here.
+        // Map targets leave the snake list the tick they die, so their remains play out here.
         if (view.alive) {
           view.alive = false
           startDeath(view)

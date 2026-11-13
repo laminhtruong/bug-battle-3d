@@ -2,6 +2,7 @@ import { playSound } from '@/audio/sfx'
 import { EN } from '@/i18n/en'
 import type { RenderState } from '@/render/state'
 import type { LobbyPlayer, ResultRow } from '@/net/protocol'
+import { isPlayerControl } from '@/sim/types'
 
 export interface HudHandlers {
   onLocal(): void
@@ -174,7 +175,7 @@ export function createHud(handlers: HudHandlers): Hud {
     update: (state, playerId) => {
       timer.textContent = String(Math.ceil(state.duration - state.time))
       const rows = state.snakes
-        .filter((snake) => snake.control !== 'enemy')
+        .filter((snake) => isPlayerControl(snake.control))
         .slice()
         .sort((a, b) => b.score - a.score)
       const nextSignature = rows

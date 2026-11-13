@@ -2,9 +2,17 @@ import { requirePart } from '@/content'
 import { BALANCE } from '@/data/balance'
 import { updateAi } from './ai'
 import { fireAttacks, updateAreas, updateContact, updateProjectiles } from './combat'
-import { countApples, countEnemies, respawnSnake, spawnApple, spawnEnemy } from './spawn'
+import {
+  countApples,
+  countPowerups,
+  respawnSnake,
+  spawnApple,
+  spawnBoss,
+  spawnPowerup,
+} from './spawn'
 import { segmentHitsCircle } from './collider'
 import { growSnake, healSnake, updateMovement } from './snake'
+import { isPlayerControl } from './types'
 import type { Pickup, Snake, World } from './types'
 
 function equipHead(snake: Snake, partId: string): void {
@@ -71,7 +79,7 @@ function collectPickups(world: World): void {
     }
     let taken = false
     for (const snake of world.snakes) {
-      if (!snake.alive) {
+      if (!snake.alive || !isPlayerControl(snake.control)) {
         continue
       }
       const head = snake.segments[0]
@@ -100,24 +108,36 @@ function collectPickups(world: World): void {
 
 function updateRespawns(world: World): void {
   for (const snake of world.snakes) {
-    if (!snake.alive && snake.control !== 'enemy' && world.time >= snake.respawnAt) {
+    if (isPlayerControl(snake.control) && !snake.alive && world.time >= snake.respawnAt) {
       respawnSnake(world, snake)
     }
   }
-  world.snakes = world.snakes.filter((snake) => snake.control !== 'enemy' || snake.alive)
+  // Map targets vanish on death; players stay in the list to respawn.
+  world.snakes = world.snakes.filter(
+    (snake) => isPlayerControl(snake.control) || snake.alive,
+  )
 }
 
-function updateEnemySpawns(world: World): void {
-  for (let index = world.enemyRespawns.length - 1; index >= 0; index -= 1) {
-    const respawnAt = world.enemyRespawns[index]
-    if (respawnAt === undefined || world.time < respawnAt) {
-      continue
-    }
-    world.enemyRespawns.splice(index, 1)
-    if (countEnemies(world) < world.arena.enemyCap) {
-      spawnEnemy(world)
-    }
+function updateBossSpawn(world: World): void {
+  if (world.time < world.bossSpawnAt) {
+    return
   }
+  const bossAlive = world.snakes.some((snake) => snake.control === 'boss' && snake.alive)
+  if (!bossAlive) {
+    spawnBoss(world)
+  }
+  world.bossSpawnAt = world.time + world.arena.bossEverySec
+}
+
+function updatePowerupSpawns(world: World): void {
+  if (
+    world.time < world.powerupSpawnAt ||
+    countPowerups(world) >= world.arena.powerupTarget
+  ) {
+    return
+  }
+  spawnPowerup(world)
+  world.powerupSpawnAt = world.time + BALANCE.powerupRespawnSec
 }
 
 function updateAppleSpawns(world: World): void {
@@ -147,7 +167,7 @@ export function tickWorld(world: World, dt: number): void {
   const halfWidth = world.arena.width / 2
   const halfDepth = world.arena.depth / 2
   for (const snake of world.snakes) {
-    if (!snake.alive) {
+    if (!snake.alive || snake.control === 'powerup') {
       continue
     }
     if (snake.control !== 'human') {
@@ -162,6 +182,7 @@ export function tickWorld(world: World, dt: number): void {
   updateAreas(world, dt)
   updateContact(world)
   collectPickups(world)
-  updateEnemySpawns(world)
+  updateBossSpawn(world)
+  updatePowerupSpawns(world)
   updateAppleSpawns(world)
 }

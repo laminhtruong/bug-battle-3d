@@ -3,7 +3,7 @@ import type { AttackDef, PartDef, SpawnPoint } from '@/content/define'
 import { directionFromAngle } from '@/core/math2d'
 import { BALANCE } from '@/data/balance'
 import { collidersOverlap, segmentHitsCircle, segmentHitsCone } from './collider'
-import { nextEntityId, spawnDrops } from './spawn'
+import { nextEntityId, spawnBossDrops, spawnDrops, spawnPowerupDrops } from './spawn'
 import type { Projectile, Segment, Snake, World } from './types'
 
 interface AttackContext {
@@ -101,6 +101,10 @@ export function killSnake(world: World, snake: Snake): void {
     z: snake.z,
   })
 
+  const allParts = snake.segments.map((segment) => ({
+    slot: segment.slot,
+    partId: segment.partId,
+  }))
   const remaining = snake.segments
     .filter((segment) => !segment.dead)
     .map((segment) => ({
@@ -108,10 +112,14 @@ export function killSnake(world: World, snake: Snake): void {
       partId: segment.partId,
     }))
   snake.segments = []
-  spawnDrops(world, snake.x, snake.z, remaining)
 
-  if (snake.control === 'enemy') {
-    world.enemyRespawns.push(world.time + BALANCE.enemyRespawnSec)
+  if (snake.control === 'powerup') {
+    spawnPowerupDrops(world, snake.x, snake.z)
+  } else if (snake.control === 'boss') {
+    spawnBossDrops(world, snake.x, snake.z, allParts)
+    world.bossSpawnAt = world.time + world.arena.bossEverySec
+  } else {
+    spawnDrops(world, snake.x, snake.z, remaining)
   }
 }
 
@@ -225,10 +233,10 @@ function fire(world: World, context: AttackContext): void {
 
 export function fireAttacks(world: World, dt: number): void {
   for (const snake of world.snakes) {
-    if (!snake.alive) {
+    if (!snake.alive || snake.control === 'powerup') {
       continue
     }
-    const cooldownScale = snake.control === 'enemy' ? BALANCE.enemyCooldownScale : 1
+    const cooldownScale = snake.control === 'boss' ? BALANCE.bossCooldownScale : 1
     for (const segment of snake.segments) {
       if (segment.dead) {
         continue

@@ -8,6 +8,15 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Arena redesign: every bug starts with a head and three normal bodies, ten
+  destructible power-ups with 5 to 10 health sit around the map, and a boss with
+  a strong head and ten varied bodies spawns every 30 seconds.
+- A destroyed power-up drops one item: a head 30% of the time, otherwise a body.
+  A dead boss drops exactly ten of its own parts, including its head, and comes
+  back 30 seconds later.
+- Boss AI leads its target, hunts the weakest player, weaves to a flank while its
+  attack reloads and lines up when ready. Bots now grab part drops and power-ups
+  before apples instead of only walking to the nearest apple.
 - Host-authoritative online play with five character room codes over PeerJS.
 - Lobby, guest handshake, content hash check and disconnect-to-bot fallback.
 - Wire protocol with zod validation, message size limits and input rate limits.
@@ -66,7 +75,9 @@ All notable changes to this project are documented here. The format follows
 - The content hash now covers part stats and colliders, not only part ids, so
   mismatched builds are rejected before a match starts.
 - Snapshots carry each segment's `hurtUntil`, so guests see the same hit flash
-  as the host. This bumps the wire protocol to version 5.
+  as the host. This bumped the wire protocol to version 5.
+- Snapshots also carry the new `powerup` and `boss` snake controls, so the wire
+  protocol is now version 6.
 - The renderer blends between the last two simulation ticks, and guests blend
   between two host snapshots, so movement is smooth on any display refresh rate
   instead of stepping at 30 Hz.

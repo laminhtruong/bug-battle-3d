@@ -13,8 +13,10 @@ export const classicArena: ArenaDef = {
   ],
   floorTexture: 'floor-base',
   durationSec: 90,
-  enemyCap: 12,
+  powerupTarget: 16,
   appleTarget: 20,
-  enemyHeads: ['claw01', 'claw02', 'claw03', 'gun'],
-  enemyBodies: ['normal', 'spike01'],
+  bossEverySec: 30,
+  bossHeads: ['claw03', 'claw04', 'fire', 'gun', 'lightning', 'poison'],
+  bossBodies: ['normal', 'spike01', 'spike02', 'fire', 'gun', 'lightning', 'poison'],
+  bossBodyCount: 10,
 }

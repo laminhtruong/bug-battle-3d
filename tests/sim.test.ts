@@ -7,11 +7,14 @@ import { classicArena } from '@/content/arenas/classic'
 import {
   damageSegment,
   fireAttacks,
+  killSnake,
   updateAreas,
   updateContact,
   updateProjectiles,
 } from '@/sim/combat'
+import { spawnBoss, spawnPowerup } from '@/sim/spawn'
 import { tickWorld } from '@/sim/tick'
+import { isPlayerControl } from '@/sim/types'
 import type { Projectile, Snake, World } from '@/sim/types'
 
 const STEP = 1 / BALANCE.tickRate
@@ -37,13 +40,33 @@ function placeHead(snake: Snake, x: number, z: number): void {
 describe('world', () => {
   it('fills four player slots with bots', () => {
     const world = createWorld({ seed: 1, arena: classicArena })
-    const players = world.snakes.filter((snake) => snake.control !== 'enemy')
+    const players = world.snakes.filter((snake) => isPlayerControl(snake.control))
     expect(players).toHaveLength(BALANCE.maxPlayers)
     expect(players.map((snake) => snake.slot)).toEqual([0, 1, 2, 3])
-    expect(world.snakes.filter((snake) => snake.control === 'enemy')).toHaveLength(
-      classicArena.enemyCap,
-    )
     expect(world.pickups.length).toBeGreaterThanOrEqual(classicArena.appleTarget)
+    expect(world.snakes.some((snake) => snake.control === 'boss')).toBe(false)
+  })
+
+  it('starts every bug with a head and three normal bodies', () => {
+    const world = createWorld({ seed: 2, arena: classicArena })
+    for (const snake of world.snakes.filter((entry) => isPlayerControl(entry.control))) {
+      expect(snake.segments).toHaveLength(BALANCE.food.startSegments)
+      expect(snake.segments[0]?.slot).toBe('head')
+      for (const segment of snake.segments.slice(1)) {
+        expect(segment).toMatchObject({ slot: 'body', partId: 'normal', dead: false })
+      }
+    }
+  })
+
+  it('scatters destructible power-ups with random health', () => {
+    const world = createWorld({ seed: 3, arena: classicArena })
+    const powerups = world.snakes.filter((snake) => snake.control === 'powerup')
+    expect(powerups).toHaveLength(classicArena.powerupTarget)
+    for (const powerup of powerups) {
+      expect(powerup.segments).toHaveLength(1)
+      expect(powerup.segments[0]?.hp).toBeGreaterThanOrEqual(BALANCE.powerupHpMin)
+      expect(powerup.segments[0]?.hp).toBeLessThanOrEqual(BALANCE.powerupHpMax)
+    }
   })
 
   it('is deterministic for a seed', () => {
@@ -69,27 +92,37 @@ describe('world', () => {
     }
   })
 
-  it('lets normal bugs wander instead of chasing the player', () => {
+  it('builds a boss with a good head and varied bodies', () => {
     const world = createWorld({ seed: 31, arena: classicArena })
-    const enemy = world.snakes.find((snake) => snake.control === 'enemy')
+    const boss = spawnBoss(world)
+    expect(boss.segments).toHaveLength(classicArena.bossBodyCount + 1)
+    const head = boss.segments[0]
+    const bodyIds = boss.segments.slice(1).map((segment) => segment.partId)
+    expect(head).toBeDefined()
+    expect(classicArena.bossHeads).toContain(head?.partId)
+    expect(new Set(bodyIds).size).toBeGreaterThanOrEqual(
+      Math.min(classicArena.bossBodies.length, classicArena.bossBodyCount),
+    )
+  })
+
+  it('weaves to a flank instead of chasing in a straight line', () => {
+    const world = createWorld({ seed: 32, arena: classicArena })
+    const boss = spawnBoss(world)
     const player = getSnake(world, 'bot-1')
-    expect(enemy).toBeDefined()
-    if (!enemy) {
-      return
-    }
-    // Put the player right next to the bug and its own target on the far side.
-    enemy.x = 0
-    enemy.z = 0
+    boss.id = 'boss-3'
+    boss.x = 0
+    boss.z = 0
+    boss.segments[0]!.cooldown = 2
     player.x = 0
-    player.z = 2
-    enemy.ai.targetX = 0
-    enemy.ai.targetZ = -10
-    enemy.ai.retargetAt = world.time + 10
+    player.z = 40
+    player.angle = 0
+    player.speed = BALANCE.playerSpeed
 
-    updateAi(world, enemy)
+    updateAi(world, boss)
 
-    expect(enemy.steerX).toBeCloseTo(0, 5)
-    expect(enemy.steerZ).toBeCloseTo(-1, 5)
+    // A direct chase would aim at x = 0; the flank moves the aim sideways.
+    expect(Math.abs(boss.ai.targetX)).toBeGreaterThan(1)
+    expect(boss.steerZ).toBeGreaterThan(0)
   })
 
   it('grows after eating the required apples', () => {
@@ -166,6 +199,54 @@ describe('world', () => {
       return
     }
     expect(Math.hypot(head.x - body.x, head.z - body.z)).toBeCloseTo(BALANCE.headSpacing, 5)
+  })
+})
+
+describe('arena targets', () => {
+  it('drops a head 30 percent of the time and a body otherwise', () => {
+    const world = createWorld({ seed: 41, arena: classicArena })
+    const originalNext = world.rng.next
+
+    world.rng.next = () => 0.1
+    const headPowerup = spawnPowerup(world)
+    killSnake(world, headPowerup)
+    const headDrop = world.pickups.find((pickup) => pickup.kind === 'head')
+    expect(headDrop?.partId).toBeDefined()
+
+    world.pickups = world.pickups.filter((pickup) => pickup.kind === 'apple')
+    world.rng.next = () => 0.5
+    const bodyPowerup = spawnPowerup(world)
+    killSnake(world, bodyPowerup)
+    const bodyDrop = world.pickups.find((pickup) => pickup.kind === 'body')
+    expect(bodyDrop?.partId).toBeDefined()
+
+    world.rng.next = originalNext
+  })
+
+  it('drops exactly ten boss parts, including its head', () => {
+    const world = createWorld({ seed: 42, arena: classicArena })
+    const boss = spawnBoss(world)
+    const headId = boss.segments[0]?.partId
+
+    killSnake(world, boss)
+
+    const loot = world.pickups.filter(
+      (pickup) => pickup.kind === 'head' || pickup.kind === 'body',
+    )
+    expect(loot).toHaveLength(BALANCE.bossLootCount)
+    expect(loot.some((pickup) => pickup.kind === 'head' && pickup.partId === headId)).toBe(true)
+    expect(world.bossSpawnAt).toBe(world.time + classicArena.bossEverySec)
+  })
+
+  it('spawns a boss after the arena delay', () => {
+    const world = createWorld({ seed: 43, arena: classicArena })
+    expect(world.snakes.some((snake) => snake.control === 'boss')).toBe(false)
+
+    while (world.time < classicArena.bossEverySec) {
+      tickWorld(world, STEP)
+    }
+
+    expect(world.snakes.some((snake) => snake.control === 'boss')).toBe(true)
   })
 })
 

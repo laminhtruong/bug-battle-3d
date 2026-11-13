@@ -9,9 +9,13 @@ export interface ArenaDef {
   /** Floor texture key under public/assets. */
   floorTexture: string
   durationSec: number
-  enemyCap: number
+  /** Destructible power-ups kept on the map. */
+  powerupTarget: number
   appleTarget: number
-  /** Part ids used to build wandering enemies. */
-  enemyHeads: readonly string[]
-  enemyBodies: readonly string[]
+  /** Seconds between boss spawns, and between a boss death and its replacement. */
+  bossEverySec: number
+  /** Boss head and body pools. */
+  bossHeads: readonly string[]
+  bossBodies: readonly string[]
+  bossBodyCount: number
 }

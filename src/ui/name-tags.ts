@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import type { RenderState } from '@/render/state'
+import { isPlayerControl } from '@/sim/types'
 
 /**
  * Name labels that follow the players.
@@ -24,7 +25,7 @@ export function createNameTags(): NameTags {
       camera.updateMatrixWorld()
 
       for (const snake of state.snakes) {
-        if (snake.control === 'enemy' || state.ended) {
+        if (!isPlayerControl(snake.control) || state.ended) {
           continue
         }
         const head = snake.segments[0]

@@ -2,8 +2,15 @@ import type { ArenaDef } from '@/content/arena'
 import { DEFAULT_HEAD_ID } from '@/content'
 import { createRng } from '@/core/rng'
 import { BALANCE } from '@/data/balance'
-import { countApples, countEnemies, createPlayerSnake, spawnApple, spawnEnemy } from './spawn'
+import {
+  countApples,
+  countPowerups,
+  createPlayerSnake,
+  spawnApple,
+  spawnPowerup,
+} from './spawn'
 import type { PlayerSetup } from './spawn'
+import { isPlayerControl } from './types'
 import type { World } from './types'
 
 export interface WorldOptions {
@@ -26,7 +33,8 @@ export function createWorld({ seed, arena, players = [] }: WorldOptions): World 
     areas: [],
     pickups: [],
     events: [],
-    enemyRespawns: [],
+    bossSpawnAt: arena.bossEverySec,
+    powerupSpawnAt: 0,
     appleSpawnAt: 0,
     nextId: 0,
   }
@@ -46,8 +54,8 @@ export function createWorld({ seed, arena, players = [] }: WorldOptions): World 
   for (const setup of setups) {
     createPlayerSnake(world, setup)
   }
-  while (countEnemies(world) < arena.enemyCap) {
-    spawnEnemy(world)
+  while (countPowerups(world) < arena.powerupTarget) {
+    spawnPowerup(world)
   }
   while (countApples(world) < arena.appleTarget) {
     spawnApple(world)
@@ -58,5 +66,7 @@ export function createWorld({ seed, arena, players = [] }: WorldOptions): World 
 
 /** Living player snakes, sorted by slot. Used by the HUD and the results screen. */
 export function playerSnakes(world: World): World['snakes'] {
-  return world.snakes.filter((snake) => snake.control !== 'enemy').sort((a, b) => a.slot - b.slot)
+  return world.snakes
+    .filter((snake) => isPlayerControl(snake.control))
+    .sort((a, b) => a.slot - b.slot)
 }
