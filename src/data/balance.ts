@@ -44,6 +44,14 @@ export const BALANCE = {
   /** Destructible power-ups scattered around the map. */
   powerupHpMin: 5,
   powerupHpMax: 10,
+  /** A broken crate throws this many items out around it. */
+  powerupDropCountMin: 3,
+  powerupDropCountMax: 5,
+  /** Items land this far from the broken crate. */
+  powerupDropMinDistance: 2,
+  powerupDropMaxDistance: 5,
+  /** Crate centres keep this much space between them. */
+  powerupSpacing: 18,
   /** A head stops this far from a power-up centre, so the crate is solid. */
   powerupSolidRadius: 1.9,
   powerupDropHeadChance: 0.3,

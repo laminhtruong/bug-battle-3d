@@ -1,5 +1,5 @@
 import { BODIES, DEFAULT_BODY_ID, DEFAULT_HEAD_ID, HEADS, requirePart } from '@/content'
-import { angleFromDirection, directionFromAngle } from '@/core/math2d'
+import { angleFromDirection, directionFromAngle, TAU } from '@/core/math2d'
 import type { Vec2 } from '@/core/math2d'
 import type { Rng } from '@/core/rng'
 import { BALANCE } from '@/data/balance'
@@ -215,11 +215,19 @@ function isSafeMapSpawn(world: World, x: number, z: number, minDistance: number)
   return true
 }
 
-function pickMapPoint(world: World, margin: number, minDistance: number): Vec2 {
+function pickMapPoint(
+  world: World,
+  margin: number,
+  minDistance: number,
+  check?: (x: number, z: number) => boolean,
+): Vec2 {
   let point = randomPointInArena(world.rng, world.arena, margin)
-  for (let attempt = 0; attempt < 12; attempt += 1) {
+  for (let attempt = 0; attempt < 24; attempt += 1) {
     point = randomPointInArena(world.rng, world.arena, margin)
-    if (isSafeMapSpawn(world, point.x, point.z, minDistance)) {
+    if (
+      isSafeMapSpawn(world, point.x, point.z, minDistance) &&
+      (!check || check(point.x, point.z))
+    ) {
       break
     }
   }
@@ -250,13 +258,25 @@ export function spawnEnemy(world: World): void {
 /** Heads without contact damage, so a power-up is a target, not a hazard. */
 const POWERUP_HEADS = HEADS.filter((part) => part.contact.damage === 0)
 
+/** Crates keep clear of each other, so two boxes never share a corner. */
+function clearOfCrates(world: World, x: number, z: number): boolean {
+  return world.snakes.every(
+    (snake) =>
+      snake.control !== 'powerup' ||
+      !snake.alive ||
+      Math.hypot(snake.x - x, snake.z - z) >= BALANCE.powerupSpacing,
+  )
+}
+
 /**
  * Destructible loot target. It is a stationary one-part snake, so projectiles
  * and contact attacks damage it like any other bug.
  */
 export function spawnPowerup(world: World): Snake {
   const { rng } = world
-  const point = pickMapPoint(world, 12, BALANCE.powerupSpawnMinDistance)
+  const point = pickMapPoint(world, 12, BALANCE.powerupSpawnMinDistance, (x, z) =>
+    clearOfCrates(world, x, z),
+  )
   const snake = createSnake(world, {
     id: nextEntityId(world, 'powerup'),
     name: 'PowerUp',
@@ -380,13 +400,28 @@ export function spawnDrops(
   }
 }
 
-/** One item: a head 30% of the time, otherwise a body. */
+/** A broken crate throws three to five items out around it. */
 export function spawnPowerupDrops(world: World, x: number, z: number): void {
   const { rng } = world
-  const slot: 'head' | 'body' =
-    rng.next() < BALANCE.powerupDropHeadChance ? 'head' : 'body'
-  const partId = rng.pick(slot === 'head' ? HEADS : BODIES).id
-  createPickup(world, slot, x, z, partId)
+  const count = rng.int(BALANCE.powerupDropCountMin, BALANCE.powerupDropCountMax + 1)
+  for (let index = 0; index < count; index += 1) {
+    const slot: 'head' | 'body' =
+      rng.next() < BALANCE.powerupDropHeadChance ? 'head' : 'body'
+    const partId = rng.pick(slot === 'head' ? HEADS : BODIES).id
+    // One item per slice of the ring, so the loot spreads all around the crate.
+    const angle = (index / count) * TAU + rng.range(0, TAU / count)
+    const distance = rng.range(
+      BALANCE.powerupDropMinDistance,
+      BALANCE.powerupDropMaxDistance,
+    )
+    createPickup(
+      world,
+      slot,
+      x + Math.sin(angle) * distance,
+      z + Math.cos(angle) * distance,
+      partId,
+    )
+  }
 }
 
 /**

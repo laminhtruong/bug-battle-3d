@@ -125,8 +125,9 @@ Early playable version (`0.1.0`):
   comes close, then go back to foraging. The boss roams until a player comes
   close, then keeps chasing from a longer range.
 - Twenty apples spawn around the arena and refill during the round.
-- Sixteen destructible power-ups sit around the arena with 5 to 10 health. Breaking
-  one drops a head 30% of the time and a body otherwise.
+- Sixteen destructible power-ups sit around the arena with 5 to 10 health, kept
+  apart from each other. Breaking one throws three to five items out around it,
+  each a head 30% of the time and a body otherwise.
 - A boss with a strong head and ten mixed bodies appears every 30 seconds and
   returns 30 seconds after it dies, dropping ten of its own parts.
 - Core combat: contact damage, projectile heads and bodies, fire cones, poison and

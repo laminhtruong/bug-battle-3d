@@ -439,6 +439,57 @@ describe('arena targets', () => {
     world.rng.next = originalNext
   })
 
+  it('throws three to five items around a broken crate', () => {
+    for (const seed of [61, 62, 63]) {
+      const world = createWorld({ seed, arena: classicArena })
+      world.pickups = []
+      const crate = spawnPowerup(world)
+      const x = crate.x
+      const z = crate.z
+
+      killSnake(world, crate)
+
+      const drops = world.pickups
+      expect(drops.length).toBeGreaterThanOrEqual(BALANCE.powerupDropCountMin)
+      expect(drops.length).toBeLessThanOrEqual(BALANCE.powerupDropCountMax)
+      for (const drop of drops) {
+        const distance = Math.hypot(drop.x - x, drop.z - z)
+        expect(distance).toBeGreaterThanOrEqual(BALANCE.powerupDropMinDistance - 1e-6)
+        expect(distance).toBeLessThanOrEqual(BALANCE.powerupDropMaxDistance + 1e-6)
+      }
+    }
+  })
+
+  it('keeps power-ups apart, including respawns', () => {
+    const world = createWorld({ seed: 56, arena: classicArena })
+    const arena = { ...classicArena, enemyCap: 0 }
+    world.arena = arena
+    world.snakes = world.snakes.filter((snake) => snake.control === 'powerup')
+    for (const crate of world.snakes.slice(0, 4)) {
+      killSnake(world, crate)
+    }
+
+    const ticks = BALANCE.powerupRespawnSec * BALANCE.tickRate * 5
+    for (let index = 0; index < ticks; index += 1) {
+      tickWorld(world, STEP)
+    }
+
+    const crates = world.snakes.filter(
+      (snake) => snake.control === 'powerup' && snake.alive,
+    )
+    expect(crates).toHaveLength(arena.powerupTarget)
+    for (const first of crates) {
+      for (const second of crates) {
+        if (first.id >= second.id) {
+          continue
+        }
+        expect(Math.hypot(first.x - second.x, first.z - second.z)).toBeGreaterThanOrEqual(
+          BALANCE.powerupSpacing,
+        )
+      }
+    }
+  })
+
   it('drops exactly ten boss parts, including its head', () => {
     const world = createWorld({ seed: 42, arena: classicArena })
     const boss = spawnBoss(world)
