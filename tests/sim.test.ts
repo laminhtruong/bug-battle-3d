@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { BALANCE } from '@/data/balance'
-import { DEFAULT_HEAD_ID } from '@/content'
+import { DEFAULT_HEAD_ID, requirePart } from '@/content'
 import { createWorld } from '@/sim/world'
 import { updateAi } from '@/sim/ai'
 import { classicArena } from '@/content/arenas/classic'
@@ -287,6 +287,37 @@ describe('combat', () => {
     expect(shot.z).toBeCloseTo(2, 5)
     expect(shot.vx).toBeCloseTo(5, 5)
     expect(shot.vz).toBeCloseTo(0, 5)
+  })
+
+  it('fires a cone from its spawn point', () => {
+    const world = createWorld({ seed: 16, arena: classicArena })
+    const shooter = getSnake(world, 'bot-2')
+    const target = getSnake(world, 'bot-1')
+    const head = shooter.segments[0]
+    if (!head) {
+      throw new Error('missing head')
+    }
+    head.partId = 'fire'
+    head.angle = 0
+    head.cooldown = 0
+    placeHead(shooter, 0, 0)
+    placeHead(target, 0, 4.5)
+
+    const part = requirePart('head', 'fire')
+    if (part.attack?.kind !== 'cone') {
+      throw new Error('fire head is not a cone')
+    }
+    const original = part.attack.cone.spawnPoints
+    // Two arena units forward: the target at 4.5 is out of range from the part.
+    part.attack.cone.spawnPoints = [{ x: 0, z: 8, angle: 0 }]
+    const hp = target.segments[0]?.hp ?? 0
+    try {
+      fireAttacks(world, 0)
+    } finally {
+      part.attack.cone.spawnPoints = original
+    }
+
+    expect(target.segments[0]?.hp).toBe(hp - 1)
   })
 
   it('hits a segment with a projectile', () => {

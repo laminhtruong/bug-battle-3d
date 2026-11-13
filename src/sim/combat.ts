@@ -116,6 +116,18 @@ export function killSnake(world: World, snake: Snake): void {
   }
 }
 
+/** Turns an authored muzzle into a world point, rotated and scaled with the part. */
+function spawnOrigin(segment: Segment, spawn: SpawnPoint): { x: number; z: number } {
+  const cos = Math.cos(segment.angle)
+  const sin = Math.sin(segment.angle)
+  const localX = spawn.x * PART_SCALE
+  const localZ = spawn.z * PART_SCALE
+  return {
+    x: segment.x + localX * cos + localZ * sin,
+    z: segment.z - localX * sin + localZ * cos,
+  }
+}
+
 function spawnProjectile(
   world: World,
   snake: Snake,
@@ -125,19 +137,14 @@ function spawnProjectile(
   attack: Extract<AttackDef, { kind: 'projectile' }>,
 ): void {
   const direction = directionFromAngle(angle)
-  // The muzzle is authored in prefab units, so rotate it with the segment and
-  // scale it like the art and the collider boxes.
-  const cos = Math.cos(segment.angle)
-  const sin = Math.sin(segment.angle)
-  const localX = spawn.x * PART_SCALE
-  const localZ = spawn.z * PART_SCALE
+  const origin = spawnOrigin(segment, spawn)
   const projectile: Projectile = {
     id: nextEntityId(world, 'shot'),
     ownerId: snake.id,
     partId: segment.partId,
     visual: attack.projectile.visual,
-    x: segment.x + localX * cos + localZ * sin,
-    z: segment.z - localX * sin + localZ * cos,
+    x: origin.x,
+    z: origin.z,
     vx: direction.x * attack.projectile.speed,
     vz: direction.z * attack.projectile.speed,
     damage: attack.projectile.damage,
@@ -167,40 +174,38 @@ function fireCone(world: World, context: AttackContext): void {
     return
   }
   const halfAngle = (attack.cone.halfAngleDeg * Math.PI) / 180
-  for (const target of world.snakes) {
-    if (!target.alive || target.id === snake.id) {
-      continue
-    }
-    for (let index = target.segments.length - 1; index >= 0; index -= 1) {
-      const other = target.segments[index]
-      if (!other || other.dead) {
+  for (const spawn of attack.cone.spawnPoints) {
+    const origin = spawnOrigin(segment, spawn)
+    const angle = segment.angle + (spawn.angle * Math.PI) / 180
+    for (const target of world.snakes) {
+      if (!target.alive || target.id === snake.id) {
         continue
       }
-      const part = requirePart(other.slot, other.partId)
-      if (
-        !segmentHitsCone(
-          part,
-          other,
-          segment.x,
-          segment.z,
-          segment.angle,
-          attack.cone.range,
-          halfAngle,
-        )
-      ) {
-        continue
+      for (let index = target.segments.length - 1; index >= 0; index -= 1) {
+        const other = target.segments[index]
+        if (!other || other.dead) {
+          continue
+        }
+        const part = requirePart(other.slot, other.partId)
+        if (
+          !segmentHitsCone(part, other, origin.x, origin.z, angle, attack.cone.range, halfAngle)
+        ) {
+          continue
+        }
+        damageSegment(world, target, index, 1, snake, world.time)
       }
-      damageSegment(world, target, index, 1, snake, world.time)
     }
   }
+  const first = attack.cone.spawnPoints[0]!
+  const firstOrigin = spawnOrigin(segment, first)
   world.events.push({
     type: 'attack',
     snakeId: snake.id,
     partId: segment.partId,
     kind: 'cone',
-    x: segment.x,
-    z: segment.z,
-    angle: segment.angle,
+    x: firstOrigin.x,
+    z: firstOrigin.z,
+    angle: segment.angle + (first.angle * Math.PI) / 180,
   })
 }
 

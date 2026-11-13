@@ -45,6 +45,9 @@ describe('content registry', () => {
         expect(part.attack.projectile.ttl).toBeGreaterThan(0)
         expect(part.attack.projectile.spawnPoints.length).toBeGreaterThan(0)
       }
+      if (part.attack?.kind === 'cone') {
+        expect(part.attack.cone.spawnPoints.length).toBeGreaterThan(0)
+      }
       expect(requirePart(part.slot, part.id).id).toBe(part.id)
     }
   })

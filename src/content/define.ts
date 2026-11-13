@@ -119,6 +119,11 @@ const attackSchema = z.discriminatedUnion('kind', [
       range: z.number().positive(),
       halfAngleDeg: z.number().positive().max(180),
       duration: z.number().positive(),
+      /** Cone origins. Angle rotates the cone relative to the part facing. */
+      spawnPoints: z
+        .array(spawnPointSchema)
+        .min(1)
+        .default(() => [{ x: 0, z: 0, angle: 0 }]),
     }),
   }),
 ])

@@ -4,7 +4,7 @@ import path from 'node:path'
 import { format, resolveConfig } from 'prettier'
 import type { Plugin } from 'vite'
 import { parsePartInput } from '../src/content/define.ts'
-import type { AttackDef, Slot } from '../src/content/define'
+import type { AttackDef, Slot, SpawnPoint } from '../src/content/define'
 
 /**
  * Dev-only API behind the part editor. It reads and writes the same JSON files
@@ -45,10 +45,33 @@ export interface LoadedPartDraft {
   draft: PartDraft
 }
 
+function cleanSpawns(points: SpawnPoint[]): { x: number; z: number; angle?: number }[] {
+  return points.map(({ x, z, angle }) => ({
+    x,
+    z,
+    ...(angle !== 0 ? { angle } : {}),
+  }))
+}
+
 /** Drops defaults that the schema supplies, so editor saves stay small. */
 function cleanAttack(attack: AttackDef): unknown {
   if (attack.kind === 'cone') {
-    return attack
+    const { range, halfAngleDeg, duration, spawnPoints } = attack.cone
+    const isDefault =
+      spawnPoints.length === 1 &&
+      spawnPoints[0]?.x === 0 &&
+      spawnPoints[0]?.z === 0 &&
+      spawnPoints[0]?.angle === 0
+    return {
+      kind: 'cone',
+      cooldown: attack.cooldown,
+      cone: {
+        range,
+        halfAngleDeg,
+        duration,
+        ...(isDefault ? {} : { spawnPoints: cleanSpawns(spawnPoints) }),
+      },
+    }
   }
   const { speed, ttl, visual, damage, spawnPoints, onLand } = attack.projectile
   return {
@@ -59,11 +82,7 @@ function cleanAttack(attack: AttackDef): unknown {
       ttl,
       visual,
       ...(damage !== 1 ? { damage } : {}),
-      spawnPoints: spawnPoints.map(({ x, z, angle }) => ({
-        x,
-        z,
-        ...(angle !== 0 ? { angle } : {}),
-      })),
+      spawnPoints: cleanSpawns(spawnPoints),
       ...(onLand
         ? {
             onLand: {
