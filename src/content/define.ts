@@ -52,13 +52,13 @@ const attackSchema = z.discriminatedUnion('kind', [
 ])
 
 /**
- * A trigger BoxCollider copied from the Unity part prefab. Values are the raw
- * prefab units; the definition scales them to arena units. Only the XZ plane
- * matters for gameplay, so the y component of the Unity values is dropped.
+ * A trigger BoxCollider in raw prefab units. The definition scales the values
+ * to arena units. The simulation runs on the XZ plane, but Y is kept so the
+ * editor can draw the box at the same height as the art.
  */
 const prefabBoxSchema = z.object({
-  center: z.tuple([z.number(), z.number()]),
-  size: z.tuple([z.number().positive(), z.number().positive()]),
+  center: z.tuple([z.number(), z.number(), z.number()]),
+  size: z.tuple([z.number().positive(), z.number().positive(), z.number().positive()]),
   /**
    * True for the prefab's "Claw" colliders. Only these boxes deal contact
    * damage; every box is a hurtbox that projectiles and attacks can hit.
@@ -69,8 +69,10 @@ const prefabBoxSchema = z.object({
 /** A collider box in part-local arena units, ready for the simulation. */
 export interface ColliderBox {
   x: number
+  y: number
   z: number
   halfWidth: number
+  halfHeight: number
   halfDepth: number
   hitbox: boolean
 }
@@ -86,6 +88,11 @@ const baseSchema = z.object({
   name: z.string().min(1),
   /** Asset key. Defaults to the part id. */
   model: z.string().optional(),
+  /**
+   * Shifts the art only, in raw prefab units like `boxes`. Used to line a head
+   * up with the body chain without moving its colliders.
+   */
+  offset: z.tuple([z.number(), z.number()]).default([0, 0]),
   hp: z.number().int().positive(),
   /** Score awarded to whoever destroys this part. */
   score: z.number().int().min(0),
@@ -101,8 +108,10 @@ const colliderSchema = z.object({
   boxes: z.array(
     z.object({
       x: z.number(),
+      y: z.number(),
       z: z.number(),
       halfWidth: z.number().positive(),
+      halfHeight: z.number().positive(),
       halfDepth: z.number().positive(),
       hitbox: z.boolean(),
     }),
@@ -117,27 +126,33 @@ const partSchema = baseSchema.extend({
 })
 
 export type PartInput = z.input<typeof inputSchema>
+export type ParsedPartInput = z.output<typeof inputSchema>
 export type AttackDef = z.infer<typeof attackSchema>
 export type PartDef = z.infer<typeof partSchema>
+
+/** Validates a part file before it is written to disk. */
+export const parsePartInput = (value: unknown): ParsedPartInput => inputSchema.parse(value)
 
 function buildCollider(boxes: z.infer<typeof prefabBoxSchema>[]): PartCollider {
   const scaled = boxes.map((box) => ({
     x: box.center[0] * PART_SCALE,
-    z: box.center[1] * PART_SCALE,
+    y: box.center[1] * PART_SCALE,
+    z: box.center[2] * PART_SCALE,
     halfWidth: (box.size[0] * PART_SCALE) / 2,
-    halfDepth: (box.size[1] * PART_SCALE) / 2,
+    halfHeight: (box.size[1] * PART_SCALE) / 2,
+    halfDepth: (box.size[2] * PART_SCALE) / 2,
     hitbox: box.hitbox,
   }))
   const reach = scaled.reduce(
     (max, box) =>
-      Math.max(max, Math.hypot(Math.abs(box.x) + box.halfWidth, Math.abs(box.z) + box.halfDepth)),
+      Math.max(max, Math.hypot(box.x, box.z) + Math.hypot(box.halfWidth, box.halfDepth)),
     0,
   )
   return { boxes: scaled, reach }
 }
 
 function define(slot: Slot, input: PartInput): PartDef {
-  const parsed = inputSchema.parse(input)
+  const parsed = parsePartInput(input)
   const { boxes, ...rest } = parsed
   return partSchema.parse({
     ...rest,

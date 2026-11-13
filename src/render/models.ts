@@ -29,7 +29,8 @@ const boneTemplates = new Map<Slot, THREE.Group>()
 const boneRequests = new Map<Slot, Promise<void>>()
 
 function modelId(slot: Slot, id: string): string {
-  return `${slot}:${getPart(slot, id)?.model ?? id}`
+  // Art offsets are per part, so two parts sharing one file are separate templates.
+  return `${slot}:${id}`
 }
 
 /**
@@ -38,7 +39,10 @@ function modelId(slot: Slot, id: string): string {
  * drag a head with long claws or antennae off that pivot, so the chain would
  * join it at the wrong spot, and every head would sit differently.
  */
-function preparePart(root: THREE.Object3D): THREE.Group {
+function preparePart(
+  root: THREE.Object3D,
+  offset: readonly [number, number] = [0, 0],
+): THREE.Group {
   root.traverse((node) => {
     if (node instanceof THREE.Mesh) {
       node.material = partMaterial
@@ -57,6 +61,8 @@ function preparePart(root: THREE.Object3D): THREE.Group {
   const holder = new THREE.Group()
   holder.add(root)
   holder.scale.setScalar(PART_SCALE)
+  // The offset is authored in prefab units, so it scales with the art.
+  holder.position.set(offset[0] * PART_SCALE, 0, offset[1] * PART_SCALE)
   return holder
 }
 
@@ -85,11 +91,12 @@ function load(slot: Slot, id: string): Promise<void> {
   if (running) {
     return running
   }
-  const model = getPart(slot, id)?.model ?? id
+  const part = getPart(slot, id)
+  const model = part?.model ?? id
   const request = loader
     .loadAsync(`/assets/models/parts/${slot}/${model}.glb`)
     .then((gltf) => {
-      templates.set(key, preparePart(gltf.scene))
+      templates.set(key, preparePart(gltf.scene, part?.offset))
       const clip = gltf.animations[0]
       if (clip) {
         clips.set(key, clip)

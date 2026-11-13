@@ -2,8 +2,9 @@ import type { ColliderBox, PartDef } from '@/content/define'
 import type { Segment } from './types'
 
 /**
- * Collision helpers for the oriented boxes copied from the Unity prefabs.
+ * Collision helpers for the BoxColliders authored on each part.
  * Every box is a hurtbox; boxes marked as hitboxes also deal contact damage.
+ * The simulation runs on the XZ plane, so the box Y fields are ignored here.
  */
 
 function localToWorldX(
