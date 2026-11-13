@@ -32,11 +32,9 @@ export const BALANCE = {
     scorePerApple: 5,
   },
   drops: {
-    headChance: 0.15,
-    bodyChance: 0.3,
+    /** Every part of a dead bug rolls this, so longer bugs drop more. */
+    partChance: 0.5,
     healChance: 0.5,
-    applesMin: 3,
-    applesMax: 5,
     ttlSec: 20,
   },
   pickupRadius: 2.8,

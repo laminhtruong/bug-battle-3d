@@ -143,7 +143,7 @@ export function createPlayerSnake(world: World, setup: PlayerSetup): Snake {
   const bodyCount = BALANCE.food.startSegments - 1
   return createSnake(world, {
     ...setup,
-    headId: bot ? pickGearIds(world, 'head', HEAD_IDS, 1)[0] ?? setup.headId : setup.headId,
+    headId: bot ? (pickGearIds(world, 'head', HEAD_IDS, 1)[0] ?? setup.headId) : setup.headId,
     bodyIds: bot
       ? pickGearIds(world, 'body', BODY_IDS, bodyCount)
       : Array.from({ length: bodyCount }, () => DEFAULT_BODY_ID),
@@ -377,7 +377,7 @@ export function spawnApple(world: World): void {
   createPickup(world, 'apple', point.x, point.z)
 }
 
-/** Drops part pickups, a heal and a few apples around a dead snake. */
+/** Drops part pickups and a heal around a dead snake; longer bugs drop more. */
 export function spawnDrops(
   world: World,
   x: number,
@@ -388,22 +388,13 @@ export function spawnDrops(
   const jitter = (): number => rng.range(-6, 6)
 
   for (const { slot, partId } of parts) {
-    if (slot === 'head') {
-      if (rng.next() < BALANCE.drops.headChance) {
-        createPickup(world, 'head', x + jitter(), z + jitter(), partId)
-      }
-    } else if (rng.next() < BALANCE.drops.bodyChance) {
-      createPickup(world, 'body', x + jitter(), z + jitter(), partId)
+    if (rng.next() < BALANCE.drops.partChance) {
+      createPickup(world, slot, x + jitter(), z + jitter(), partId)
     }
   }
 
   if (rng.next() < BALANCE.drops.healChance) {
     createPickup(world, 'heal', x + jitter(), z + jitter())
-  }
-
-  const apples = rng.int(BALANCE.drops.applesMin, BALANCE.drops.applesMax + 1)
-  for (let index = 0; index < apples; index += 1) {
-    createPickup(world, 'apple', x + jitter(), z + jitter())
   }
 }
 
@@ -413,15 +404,11 @@ export function spawnPowerupDrops(world: World, x: number, z: number): void {
   const count = rng.int(BALANCE.powerupDropCountMin, BALANCE.powerupDropCountMax + 1)
   const landAt = world.time + BALANCE.powerupDropFlightSec
   for (let index = 0; index < count; index += 1) {
-    const slot: 'head' | 'body' =
-      rng.next() < BALANCE.powerupDropHeadChance ? 'head' : 'body'
+    const slot: 'head' | 'body' = rng.next() < BALANCE.powerupDropHeadChance ? 'head' : 'body'
     const partId = rng.pick(slot === 'head' ? HEADS : BODIES).id
     // One item per slice of the ring, so the loot spreads all around the crate.
     const angle = (index / count) * TAU + rng.range(0, TAU / count)
-    const distance = rng.range(
-      BALANCE.powerupDropMinDistance,
-      BALANCE.powerupDropMaxDistance,
-    )
+    const distance = rng.range(BALANCE.powerupDropMinDistance, BALANCE.powerupDropMaxDistance)
     const drop = createPickup(
       world,
       slot,
