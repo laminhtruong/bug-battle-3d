@@ -35,7 +35,7 @@ export const BALANCE = {
     ttlSec: 20,
   },
   pickupRadius: 2.8,
-  enemySpawnMinDistance: 8,
+  enemySpawnMinDistance: 32,
   enemyRespawnSec: 1.5,
   appleRespawnSec: 0.8,
   roundSec: 90,

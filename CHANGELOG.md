@@ -116,7 +116,7 @@ All notable changes to this project are documented here. The format follows
 ### Added
 
 - Deterministic 30 Hz arena simulation with seeded RNG.
-- One 48 by 48 arena, four player slots, bots fill empty slots, 90 second rounds.
+- One 192 by 192 arena, four player slots, bots fill empty slots, 90 second rounds.
 - Eight heads and seven bodies discovered from the content registry and validated
   with zod.
 - Contact damage, projectile attacks, fire cones, poison and lightning areas,

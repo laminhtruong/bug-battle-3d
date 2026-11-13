@@ -1,7 +1,7 @@
 import { normalize } from '@/core/math2d'
 import type { Snake, World } from './types'
 
-const WANDER_MARGIN = 4
+const WANDER_MARGIN = 16
 const RETARGET_MIN_SEC = 3
 const RETARGET_MAX_SEC = 5
 
@@ -19,7 +19,7 @@ function pickWanderTarget(world: World, snake: Snake): void {
 }
 
 function updateWander(world: World, snake: Snake): void {
-  const reached = Math.hypot(snake.ai.targetX - snake.x, snake.ai.targetZ - snake.z) < 1
+  const reached = Math.hypot(snake.ai.targetX - snake.x, snake.ai.targetZ - snake.z) < 4
   if (reached || world.time >= snake.ai.retargetAt) {
     pickWanderTarget(world, snake)
   }

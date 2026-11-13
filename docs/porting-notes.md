@@ -20,7 +20,7 @@ line port; the rules were re-derived from prefabs, scripts and playtests.
 - Doozy UI, DOTween, Jambox SDK.
 - Quests, shop, progression, daily rewards and accounts.
 - The old map scenes and their zone logic. Only floor visuals and textures are
-  reused, on a new single 48 by 48 arena.
+  reused, on a new single 192 by 192 arena.
 
 ## How the rewrite differs
 

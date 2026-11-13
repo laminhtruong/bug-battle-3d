@@ -121,6 +121,9 @@ describe('world', () => {
     expect(player.segments).toHaveLength(0)
 
     for (let index = 0; index <= BALANCE.respawnDelaySec * BALANCE.tickRate; index += 1) {
+      // Apples are spawned at the end of a tick; drop them so the fresh snake
+      // cannot eat one on the respawn tick.
+      world.pickups = []
       tickWorld(world, STEP)
     }
 

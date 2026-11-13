@@ -130,7 +130,7 @@ export function respawnSnake(world: World, snake: Snake): void {
   world.events.push({ type: 'spawn', snakeId: snake.id, x: snake.x, z: snake.z })
 }
 
-export function randomPointInArena(rng: Rng, arena: World['arena'], margin = 2): Vec2 {
+export function randomPointInArena(rng: Rng, arena: World['arena'], margin = 8): Vec2 {
   return {
     x: rng.range(-arena.width / 2 + margin, arena.width / 2 - margin),
     z: rng.range(-arena.depth / 2 + margin, arena.depth / 2 - margin),
@@ -171,9 +171,9 @@ function isSafeEnemySpawn(world: World, x: number, z: number): boolean {
 
 export function spawnEnemy(world: World): void {
   const { arena, rng } = world
-  let point = randomPointInArena(rng, arena, 3)
+  let point = randomPointInArena(rng, arena, 12)
   for (let attempt = 0; attempt < 12; attempt += 1) {
-    const candidate = randomPointInArena(rng, arena, 3)
+    const candidate = randomPointInArena(rng, arena, 12)
     point = candidate
     if (isSafeEnemySpawn(world, candidate.x, candidate.z)) {
       break
@@ -205,8 +205,8 @@ export function createPickup(
   z: number,
   partId?: string,
 ): Pickup {
-  const limitX = world.arena.width / 2 - 1
-  const limitZ = world.arena.depth / 2 - 1
+  const limitX = world.arena.width / 2 - 4
+  const limitZ = world.arena.depth / 2 - 4
   const pickup: Pickup = {
     id: nextEntityId(world, 'pickup'),
     kind,
@@ -222,7 +222,7 @@ export function createPickup(
 }
 
 export function spawnApple(world: World): void {
-  const point = randomPointInArena(world.rng, world.arena, 2)
+  const point = randomPointInArena(world.rng, world.arena, 8)
   createPickup(world, 'apple', point.x, point.z)
 }
 
