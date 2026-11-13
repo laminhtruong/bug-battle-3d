@@ -119,7 +119,8 @@ function createSegment(slot: PartDef['slot'], id: string): SegmentView {
       materials: ownMaterials(model),
       flash: 0,
       dead: false,
-      baseScale: new THREE.Vector3(1, 1, 1),
+      // The model holder is already scaled down by PART_SCALE.
+      baseScale: model.scale.clone(),
       dying: 0,
       exploded: true,
       spawnAge: -1,
