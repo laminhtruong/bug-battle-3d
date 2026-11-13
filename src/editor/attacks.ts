@@ -41,7 +41,12 @@ export const ATTACK_PRESETS: readonly AttackPreset[] = [
     create: () => ({
       kind: 'cone',
       cooldown: 1,
-      cone: { range: 4, halfAngleDeg: 25, duration: 0.3 },
+      cone: {
+        range: 4,
+        halfAngleDeg: 25,
+        duration: 0.3,
+        spawnPoints: [{ x: 0, z: 0, angle: 0 }],
+      },
     }),
   },
 ]

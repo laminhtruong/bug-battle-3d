@@ -37,6 +37,8 @@ export interface PreviewState {
   selected: number
   spawns: PreviewSpawn[]
   selectedSpawn: number
+  /** Drawn as a translucent sector around every muzzle for cone attacks. */
+  cone?: { range: number; halfAngleDeg: number }
   showReference: boolean
   editColliders: boolean
 }
@@ -93,6 +95,12 @@ interface SpawnEntry {
   line: THREE.Line
 }
 
+interface ConeEntry {
+  group: THREE.Group
+  mesh: THREE.Mesh
+  line: THREE.Line
+}
+
 type Drag =
   | { kind: 'move'; index: number; dx: number; dz: number }
   | {
@@ -110,6 +118,13 @@ type Drag =
     }
   | { kind: 'offset-free'; dx: number; dz: number }
   | { kind: 'spawn'; index: number; dx: number; dz: number }
+  | {
+      kind: 'spawn-axis'
+      index: number
+      origin: THREE.Vector3
+      axis: THREE.Vector3
+      startT: number
+    }
   | {
       kind: 'scale'
       index: number
@@ -199,15 +214,26 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
   const referenceHolder = new THREE.Group()
   const boxGroup = new THREE.Group()
   const spawnGroup = new THREE.Group()
+  const coneGroup = new THREE.Group()
   const gizmoGroup = new THREE.Group()
+  const spawnGizmoGroup = new THREE.Group()
   referenceHolder.position.z = -BALANCE.headSpacing
-  scene.add(modelHolder, referenceHolder, boxGroup, spawnGroup, gizmoGroup)
+  scene.add(
+    modelHolder,
+    referenceHolder,
+    boxGroup,
+    spawnGroup,
+    coneGroup,
+    gizmoGroup,
+    spawnGizmoGroup,
+  )
 
   let modelKey = ''
   let modelToken = 0
   let referenceLoaded = false
   let boxes: BoxEntry[] = []
   let spawns: SpawnEntry[] = []
+  let cones: ConeEntry[] = []
   let selected = -1
   let selectedSpawn = -1
   let tool: Tool = 'move'
@@ -215,6 +241,7 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
   let drag: Drag | null = null
   let dragChanged = false
   const gizmoHandles: THREE.Mesh[] = []
+  const spawnGizmoHandles: THREE.Mesh[] = []
 
   const raycaster = new THREE.Raycaster()
   const pointer = new THREE.Vector2()
@@ -238,6 +265,8 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
     handle: string,
     position: THREE.Vector3,
     opacity = 0.95,
+    group: THREE.Group = gizmoGroup,
+    handles: THREE.Mesh[] = gizmoHandles,
   ): void {
     const material = new THREE.MeshBasicMaterial({
       color,
@@ -249,8 +278,50 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
     mesh.position.copy(position)
     mesh.renderOrder = 20
     mesh.userData.handle = handle
-    gizmoGroup.add(mesh)
-    gizmoHandles.push(mesh)
+    group.add(mesh)
+    handles.push(mesh)
+  }
+
+  /** Orange X/Z arrows on the selected muzzle, so a point can be nudged per axis. */
+  function buildSpawnGizmo(): void {
+    spawnGizmoGroup.clear()
+    spawnGizmoHandles.length = 0
+    addGizmoHandle(
+      new THREE.CylinderGeometry(0.018, 0.018, 0.52, 8).rotateZ(-Math.PI / 2),
+      SPAWN_COLOR,
+      'spawn-x',
+      new THREE.Vector3(0.26, 0, 0),
+      0.9,
+      spawnGizmoGroup,
+      spawnGizmoHandles,
+    )
+    addGizmoHandle(
+      new THREE.ConeGeometry(0.08, 0.2, 12).rotateZ(-Math.PI / 2),
+      SPAWN_COLOR,
+      'spawn-x',
+      new THREE.Vector3(0.62, 0, 0),
+      0.9,
+      spawnGizmoGroup,
+      spawnGizmoHandles,
+    )
+    addGizmoHandle(
+      new THREE.CylinderGeometry(0.018, 0.018, 0.52, 8).rotateX(Math.PI / 2),
+      SPAWN_COLOR,
+      'spawn-z',
+      new THREE.Vector3(0, 0, 0.26),
+      0.9,
+      spawnGizmoGroup,
+      spawnGizmoHandles,
+    )
+    addGizmoHandle(
+      new THREE.ConeGeometry(0.08, 0.2, 12).rotateX(Math.PI / 2),
+      SPAWN_COLOR,
+      'spawn-z',
+      new THREE.Vector3(0, 0, 0.62),
+      0.9,
+      spawnGizmoGroup,
+      spawnGizmoHandles,
+    )
   }
 
   function buildGizmo(): void {
@@ -397,6 +468,17 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
     gizmoGroup.scale.setScalar(THREE.MathUtils.clamp(distance * 0.16, 0.35, 1.6))
   }
 
+  function updateSpawnGizmoTransform(): void {
+    const entry = spawns[selectedSpawn]
+    spawnGizmoGroup.visible = !editColliders && entry !== undefined
+    if (!entry) {
+      return
+    }
+    spawnGizmoGroup.position.copy(entry.group.position)
+    const distance = camera.position.distanceTo(entry.group.position)
+    spawnGizmoGroup.scale.setScalar(THREE.MathUtils.clamp(distance * 0.14, 0.3, 1.4))
+  }
+
   function axisParameter(ray: THREE.Ray, origin: THREE.Vector3, axis: THREE.Vector3): number {
     const start = origin.clone().addScaledVector(axis, -100)
     const end = origin.clone().addScaledVector(axis, 100)
@@ -487,10 +569,16 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
   }
 
   function paintSpawns(): void {
-    spawns.forEach((entry, index) => {
-      const color = index === selectedSpawn ? SELECTED_COLOR : SPAWN_COLOR
-      ;(entry.mesh.material as THREE.MeshBasicMaterial).color.setHex(color)
-      ;(entry.line.material as THREE.LineBasicMaterial).color.setHex(color)
+    const paint = (mesh: THREE.Mesh, line: THREE.Line, selected: boolean): void => {
+      const color = selected ? SELECTED_COLOR : SPAWN_COLOR
+      ;(mesh.material as THREE.MeshBasicMaterial).color.setHex(color)
+      ;(line.material as THREE.LineBasicMaterial).color.setHex(color)
+    }
+    spawns.forEach((entry, index) => paint(entry.mesh, entry.line, index === selectedSpawn))
+    cones.forEach((entry, index) => {
+      paint(entry.mesh, entry.line, index === selectedSpawn)
+      ;(entry.mesh.material as THREE.MeshBasicMaterial).opacity =
+        index === selectedSpawn ? 0.18 : 0.09
     })
   }
 
@@ -527,6 +615,79 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
     paintSpawns()
   }
 
+  function coneOutline(radius: number, halfAngle: number): THREE.Vector3[] {
+    const points = [new THREE.Vector3()]
+    for (let step = 0; step <= 24; step += 1) {
+      const angle = -halfAngle + (halfAngle * 2 * step) / 24
+      points.push(new THREE.Vector3(Math.sin(angle) * radius, 0, Math.cos(angle) * radius))
+    }
+    points.push(new THREE.Vector3())
+    return points
+  }
+
+  function rebuildCones(state: PreviewState): void {
+    coneGroup.clear()
+    cones = []
+    if (!state.cone) {
+      return
+    }
+    const halfAngle = (state.cone.halfAngleDeg * Math.PI) / 180
+    // Range is authored in arena units, like the simulation uses it.
+    const radius = state.cone.range
+    cones = state.spawns.map((spawn) => {
+      const group = new THREE.Group()
+      group.position.set(spawn.x * PART_SCALE, SPAWN_Y, spawn.z * PART_SCALE)
+      group.rotation.y = (spawn.angle * Math.PI) / 180
+      const geometry = new THREE.CircleGeometry(
+        radius,
+        32,
+        -Math.PI / 2 - halfAngle,
+        halfAngle * 2,
+      ).rotateX(-Math.PI / 2)
+      const mesh = new THREE.Mesh(
+        geometry,
+        new THREE.MeshBasicMaterial({
+          color: SPAWN_COLOR,
+          transparent: true,
+          opacity: 0.09,
+          depthTest: false,
+          side: THREE.DoubleSide,
+        }),
+      )
+      mesh.renderOrder = 5
+      const line = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(coneOutline(radius, halfAngle)),
+        new THREE.LineBasicMaterial({
+          color: SPAWN_COLOR,
+          transparent: true,
+          opacity: 0.75,
+          depthTest: false,
+        }),
+      )
+      line.renderOrder = 6
+      group.add(mesh, line)
+      coneGroup.add(group)
+      return { group, mesh, line }
+    })
+    paintSpawns()
+  }
+
+  function placeSpawn(index: number, x: number, z: number): void {
+    const entry = spawns[index]
+    if (!entry) {
+      return
+    }
+    entry.group.position.x = x
+    entry.group.position.z = z
+    const cone = cones[index]
+    if (cone) {
+      cone.group.position.x = x
+      cone.group.position.z = z
+    }
+    markDragStart()
+    handlers.onSpawnMove(index, x / PART_SCALE, z / PART_SCALE)
+  }
+
   function setPointer(event: PointerEvent): void {
     const rect = canvas.getBoundingClientRect()
     pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
@@ -545,6 +706,30 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
       return
     }
     setPointer(event)
+    const spawnGizmoHit = spawnGizmoGroup.visible
+      ? raycaster.intersectObjects(spawnGizmoHandles, false)[0]
+      : undefined
+    if (spawnGizmoHit) {
+      const handle = spawnGizmoHit.object.userData.handle as string
+      const entry = spawns[selectedSpawn]
+      if (!entry) {
+        return
+      }
+      const axis = handle === 'spawn-x' ? AXIS_X : AXIS_Z
+      const origin = entry.group.position.clone()
+      dragChanged = false
+      drag = {
+        kind: 'spawn-axis',
+        index: selectedSpawn,
+        origin,
+        axis,
+        startT: axisParameter(raycaster.ray, origin, axis),
+      }
+      controls.enabled = false
+      canvas.setPointerCapture(event.pointerId)
+      event.stopImmediatePropagation()
+      return
+    }
     const gizmoHit = gizmoGroup.visible
       ? raycaster.intersectObjects(gizmoHandles, false)[0]
       : undefined
@@ -770,18 +955,13 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
       if (!raycaster.ray.intersectPlane(dragPlane, dragPoint)) {
         return
       }
-      const entry = spawns[drag.index]
-      if (!entry) {
-        return
-      }
-      entry.group.position.x = dragPoint.x + drag.dx
-      entry.group.position.z = dragPoint.z + drag.dz
-      markDragStart()
-      handlers.onSpawnMove(
-        drag.index,
-        entry.group.position.x / PART_SCALE,
-        entry.group.position.z / PART_SCALE,
-      )
+      placeSpawn(drag.index, dragPoint.x + drag.dx, dragPoint.z + drag.dz)
+      return
+    }
+    if (drag.kind === 'spawn-axis') {
+      const t = axisParameter(raycaster.ray, drag.origin, drag.axis)
+      const position = drag.origin.clone().addScaledVector(drag.axis, t - drag.startT)
+      placeSpawn(drag.index, position.x, position.z)
       return
     }
     const entry = boxes[drag.index]
@@ -878,10 +1058,12 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
   resize()
 
   buildGizmo()
+  buildSpawnGizmo()
 
   renderer.setAnimationLoop(() => {
     controls.update()
     updateGizmoTransform()
+    updateSpawnGizmoTransform()
     renderer.render(scene, camera)
     gizmo.update()
   })
@@ -895,8 +1077,10 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
       setReference(state.showReference, state.slot)
       rebuildBoxes(state)
       rebuildSpawns(state)
+      rebuildCones(state)
       buildGizmo()
       updateGizmoTransform()
+      updateSpawnGizmoTransform()
     },
     select(index) {
       selected = Math.min(index, boxes.length - 1)
@@ -919,10 +1103,13 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
       referenceHolder.visible = false
       boxGroup.clear()
       spawnGroup.clear()
+      coneGroup.clear()
       boxes = []
       spawns = []
+      cones = []
       selectedSpawn = -1
       gizmoGroup.visible = false
+      spawnGizmoGroup.visible = false
     },
     dispose() {
       renderer.setAnimationLoop(null)

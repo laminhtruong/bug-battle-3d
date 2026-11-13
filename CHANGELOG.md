@@ -23,12 +23,16 @@ All notable changes to this project are documented here. The format follows
   files the game loads.
 - Attack editing from presets (projectile, side projectiles, hazard projectile,
   side hazard projectiles and cone), with add/remove and editable values.
-- Projectile attacks take any number of spawn points, each with a position and
-  a direction. The editor draws them as handles that can be dragged on the
-  arena plane or edited with X/Z/A fields.
+- Projectile and cone attacks take any number of spawn points, each with a
+  position and a direction. The editor draws them as handles with X/Z arrows so
+  a point can be dragged per axis or edited with X/Z/A fields.
+- Cone attacks draw their sector in the editor, so the effect origin, direction
+  and reach are visible while authoring.
 
 ### Changed
 
+- Cone attacks now store their effect origin in `spawnPoints` too, defaulting to
+  the part pivot and forward, so old content keeps its behaviour.
 - Projectile attacks now store their muzzles in `spawnPoints` instead of a
   single `mount`. Each point has a raw prefab position and an optional direction
   in degrees, so one part can fire from several places. The simulation rotates

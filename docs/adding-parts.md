@@ -37,12 +37,11 @@ Vite dev server for its file API.
   "attack": {
     "kind": "projectile",
     "cooldown": 1.4,
-    "mount": "forward",
     "projectile": {
       "speed": 12,
       "ttl": 1.2,
       "visual": "bullet",
-      "damage": 1
+      "spawnPoints": [{ "x": 0, "z": 1.96 }]
     }
   }
 }
@@ -120,10 +119,13 @@ The editor authors attacks from presets: **Projectile**, **Side projectiles**,
 Attack section to add an attack; pick **No attack** to remove it. The preset only
 fills sensible defaults, so every value stays editable afterwards.
 
-A projectile can have any number of spawn points. They are drawn in the 3D view:
-drag a point to move it, or edit its X/Z/A fields. A is the firing direction in
-degrees relative to the part facing: `0` is forward, `90` is right and `-90` is
-left. Add or remove points with **+ point** and the row's delete button.
+A projectile and a cone can have any number of spawn points. They are drawn in
+the 3D view as orange handles: drag a point, drag the orange X/Z arrows on the
+selected point, or edit its X/Z/A fields. A is the direction in degrees relative
+to the part facing: `0` is forward, `90` is right and `-90` is left. Add or
+remove points with **+ point** and the row's delete button. For a cone the
+spawn point is where the effect starts, and the editor draws the whole sector so
+its reach is easy to see.
 
 ```json
 "attack": {
@@ -149,13 +151,20 @@ zero and `damage` when it is `1`; the schema supplies those defaults. `onLand`
 is optional and turns the shot into a delayed area hazard. `visual` is one of
 `bullet`, `poison` or `lightning`.
 
-An immediate cone hit around the part: `damage` is fixed at 1 for cones.
+An immediate cone hit: `damage` is fixed at 1 for cones. The optional
+`spawnPoints` move the cone origin; without them it starts at the part pivot and
+faces forward.
 
 ```json
 "attack": {
   "kind": "cone",
   "cooldown": 0.9,
-  "cone": { "range": 2.2, "halfAngleDeg": 45, "duration": 0.3 }
+  "cone": {
+    "range": 2.2,
+    "halfAngleDeg": 45,
+    "duration": 0.3,
+    "spawnPoints": [{ "x": 0, "z": 1.96 }]
+  }
 }
 ```
 

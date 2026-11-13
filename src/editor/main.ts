@@ -6,7 +6,7 @@ import {
   rotateBoxPoint,
   unrotateBoxPoint,
 } from '@/content/define'
-import type { AttackDef, Slot } from '@/content/define'
+import type { AttackDef, Slot, SpawnPoint } from '@/content/define'
 import { ATTACK_PRESETS, ATTACK_VISUALS, attackPreset } from './attacks'
 import { createPreview } from './preview'
 import type { Tool } from './preview'
@@ -272,13 +272,18 @@ function setDirty(value: boolean): void {
   }
 }
 
+/** Both attack kinds can carry muzzles; the UI and the view treat them the same. */
+function attackSpawns(attack: AttackDef): SpawnPoint[] {
+  return attack.kind === 'cone' ? attack.cone.spawnPoints : attack.projectile.spawnPoints
+}
+
 function clampSelectedSpawn(): void {
   const attack = current?.draft.attack
-  if (attack?.kind !== 'projectile') {
+  if (!attack) {
     selectedSpawn = 0
     return
   }
-  selectedSpawn = Math.max(0, Math.min(selectedSpawn, attack.projectile.spawnPoints.length - 1))
+  selectedSpawn = Math.max(0, Math.min(selectedSpawn, attackSpawns(attack).length - 1))
 }
 
 function currentArenaBoxes(): {
@@ -353,10 +358,10 @@ function syncBoxInputs(index: number): void {
 
 function syncSpawnInputs(index: number): void {
   const attack = current?.draft.attack
-  if (attack?.kind !== 'projectile') {
+  if (!attack) {
     return
   }
-  const point = attack.projectile.spawnPoints[index]
+  const point = attackSpawns(attack)[index]
   const row = inspector.querySelector<HTMLElement>(`.spawn-row[data-spawn-index="${index}"]`)
   if (!point || !row) {
     return
@@ -407,10 +412,10 @@ const preview = createPreview(canvas, {
   },
   onSpawnMove(index, x, z) {
     const attack = current?.draft.attack
-    if (attack?.kind !== 'projectile') {
+    if (!attack) {
       return
     }
-    const point = attack.projectile.spawnPoints[index]
+    const point = attackSpawns(attack)[index]
     if (!point) {
       return
     }
@@ -449,11 +454,12 @@ function applyPreview(): void {
     offset: current.draft.offset ?? [0, 0],
     boxes: currentArenaBoxes(),
     selected: selectedBox,
-    spawns:
-      attack?.kind === 'projectile'
-        ? attack.projectile.spawnPoints.map((point) => ({ ...point }))
-        : [],
+    spawns: attack ? attackSpawns(attack).map((point) => ({ ...point })) : [],
     selectedSpawn,
+    cone:
+      attack?.kind === 'cone'
+        ? { range: attack.cone.range, halfAngleDeg: attack.cone.halfAngleDeg }
+        : undefined,
     showReference: true,
     editColliders,
   })
@@ -503,8 +509,7 @@ function attackPresetSelect(attack: AttackDef | undefined): string {
   </label>`
 }
 
-function spawnRows(attack: Extract<AttackDef, { kind: 'projectile' }>): string {
-  const points = attack.projectile.spawnPoints
+function spawnRows(points: SpawnPoint[]): string {
   return points
     .map(
       (
@@ -521,6 +526,15 @@ function spawnRows(attack: Extract<AttackDef, { kind: 'projectile' }>): string {
     .join('')
 }
 
+function spawnSection(points: SpawnPoint[]): string {
+  return `<div class="group-head spawn-head">
+      <h4>Spawn points</h4>
+      <button type="button" data-action="add-spawn">+ point</button>
+    </div>
+    <p class="hint">Drag the arrows or a point in the view. A is the direction in degrees, relative to the part.</p>
+    <div class="spawns">${spawnRows(points)}</div>`
+}
+
 function attackFields(attack: AttackDef | undefined): string {
   if (!attack) {
     return '<p class="hint">No attack. Pick a preset to add one.</p>'
@@ -533,7 +547,8 @@ function attackFields(attack: AttackDef | undefined): string {
       <div class="row">
         <label>Half angle<input data-attack-field="half-angle" type="number" step="1" min="1" max="180" value="${fmt(attack.cone.halfAngleDeg)}"></label>
         <label>Duration<input data-attack-field="duration" type="number" step="0.05" min="0.01" value="${fmt(attack.cone.duration)}"></label>
-      </div>`
+      </div>
+      ${spawnSection(attack.cone.spawnPoints)}`
   }
   const projectile = attack.projectile
   return `<div class="row">
@@ -555,12 +570,7 @@ function attackFields(attack: AttackDef | undefined): string {
           </div>`
         : ''
     }
-    <div class="group-head spawn-head">
-      <h4>Spawn points</h4>
-      <button type="button" data-action="add-spawn">+ point</button>
-    </div>
-    <p class="hint">Drag a point in the view. A is the firing direction in degrees, relative to the part.</p>
-    <div class="spawns">${spawnRows(attack)}</div>`
+    ${spawnSection(attack.projectile.spawnPoints)}`
 }
 
 function boxRows(): string {
@@ -682,10 +692,10 @@ function selectSpawn(index: number): void {
     return
   }
   const attack = current.draft.attack
-  if (attack?.kind !== 'projectile') {
+  if (!attack) {
     return
   }
-  selectedSpawn = Math.max(0, Math.min(index, attack.projectile.spawnPoints.length - 1))
+  selectedSpawn = Math.max(0, Math.min(index, attackSpawns(attack).length - 1))
   for (const row of inspector.querySelectorAll<HTMLElement>('.spawn-row')) {
     row.classList.toggle('selected', Number(row.dataset.spawnIndex) === selectedSpawn)
   }
@@ -848,6 +858,7 @@ function setAttackField(target: HTMLInputElement | HTMLSelectElement): void {
       default:
         return
     }
+    applyPreview()
     markDirty()
     return
   }
@@ -891,11 +902,11 @@ function setAttackField(target: HTMLInputElement | HTMLSelectElement): void {
 
 function setSpawnField(target: HTMLInputElement): void {
   const attack = current?.draft.attack
-  if (attack?.kind !== 'projectile') {
+  if (!attack) {
     return
   }
   const index = Number(target.dataset.spawnIndex)
-  const point = attack.projectile.spawnPoints[index]
+  const point = attackSpawns(attack)[index]
   if (!point) {
     return
   }
@@ -1008,12 +1019,13 @@ function deleteBox(index: number): void {
 
 function addSpawn(): void {
   const attack = current?.draft.attack
-  if (attack?.kind !== 'projectile') {
+  if (!attack) {
     return
   }
+  const points = attackSpawns(attack)
   beginHistory()
-  attack.projectile.spawnPoints.push({ x: 0, z: 1.96, angle: 0 })
-  selectedSpawn = attack.projectile.spawnPoints.length - 1
+  points.push(attack.kind === 'cone' ? { x: 0, z: 0, angle: 0 } : { x: 0, z: 1.96, angle: 0 })
+  selectedSpawn = points.length - 1
   renderInspector()
   applyPreview()
   markDirty()
@@ -1021,11 +1033,11 @@ function addSpawn(): void {
 
 function deleteSpawn(index: number): void {
   const attack = current?.draft.attack
-  if (attack?.kind !== 'projectile' || attack.projectile.spawnPoints.length <= 1) {
+  if (!attack || attackSpawns(attack).length <= 1) {
     return
   }
   beginHistory()
-  attack.projectile.spawnPoints.splice(index, 1)
+  attackSpawns(attack).splice(index, 1)
   if (selectedSpawn > index) {
     selectedSpawn -= 1
   }

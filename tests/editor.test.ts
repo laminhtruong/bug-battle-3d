@@ -80,6 +80,27 @@ describe('part editor files', () => {
     }
   })
 
+  it('writes a cone spawn point when it moves', async () => {
+    const cone = (spawnPoints: { x: number; z: number; angle: number }[]): PartDraft => ({
+      ...claw,
+      attack: {
+        kind: 'cone',
+        cooldown: 1,
+        cone: { range: 4, halfAngleDeg: 25, duration: 0.3, spawnPoints },
+      },
+    })
+
+    const atOrigin = JSON.parse(await draftToJson(cone([{ x: 0, z: 0, angle: 0 }]), 'claw01.json'))
+    expect(atOrigin.attack.cone.spawnPoints).toBeUndefined()
+
+    const source = await draftToJson(cone([{ x: 0, z: 2, angle: 15 }]), 'claw01.json')
+    const part = defineHead(JSON.parse(source))
+    expect(part.attack?.kind).toBe('cone')
+    if (part.attack?.kind === 'cone') {
+      expect(part.attack.cone.spawnPoints).toEqual([{ x: 0, z: 2, angle: 15 }])
+    }
+  })
+
   it('turns every editor preset into a valid attack', () => {
     for (const preset of ATTACK_PRESETS) {
       const attack = preset.create()
