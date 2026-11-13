@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { asset } from '@/core/asset'
 import { PART_LIFT, boxQuaternion } from '@/content/define'
 import type { Slot } from '@/content/define'
 import { BALANCE } from '@/data/balance'
@@ -208,7 +209,7 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
   sun.position.set(6, 10, 5)
   scene.add(sun)
 
-  const atlas = new THREE.TextureLoader().load('/assets/textures/parts/bug-atlas.png')
+  const atlas = new THREE.TextureLoader().load(asset('textures/parts/bug-atlas.png'))
   atlas.colorSpace = THREE.SRGBColorSpace
   atlas.flipY = false
   const partMaterial = new THREE.MeshToonMaterial({ map: atlas })
@@ -535,7 +536,7 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
     const token = ++modelToken
     modelHolder.clear()
     loader
-      .loadAsync(`/assets/models/parts/${slot}/${model}.glb`)
+      .loadAsync(asset(`models/parts/${slot}/${model}.glb`))
       .then((gltf) => {
         if (token === modelToken) {
           modelHolder.add(prepare(gltf.scene, partMaterial))
@@ -555,7 +556,7 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
     }
     referenceLoaded = true
     loader
-      .loadAsync('/assets/models/parts/body/normal.glb')
+      .loadAsync(asset('models/parts/body/normal.glb'))
       .then((gltf) => {
         referenceHolder.add(prepare(gltf.scene, referenceMaterial))
       })

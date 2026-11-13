@@ -1,3 +1,4 @@
+import { asset } from '@/core/asset'
 import { playSound } from '@/audio/sfx'
 import { EN } from '@/i18n/en'
 import type { RenderState } from '@/render/state'
@@ -58,7 +59,7 @@ export function createHud(handlers: HudHandlers): Hud {
     <section class="screen" data-screen="menu">
       <header class="brand">
         <h1 class="brand-logo">
-          <img src="/assets/textures/ui/logo.png" alt="${EN.title}" />
+          <img src="${asset('textures/ui/logo.png')}" alt="${EN.title}" />
         </h1>
       </header>
       <div class="panel">

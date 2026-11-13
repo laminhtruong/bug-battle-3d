@@ -21,6 +21,7 @@ import {
   Vector3 as QuarksVector3,
   Vector4 as QuarksVector4,
 } from 'three.quarks'
+import { asset } from '@/core/asset'
 import type { Slot } from '@/content/define'
 
 /**
@@ -30,7 +31,7 @@ import type { Slot } from '@/content/define'
  */
 
 function texture(name: string): THREE.Texture {
-  const loaded = new THREE.TextureLoader().load(`/assets/textures/fx/${name}.png`)
+  const loaded = new THREE.TextureLoader().load(asset(`textures/fx/${name}.png`))
   loaded.colorSpace = THREE.SRGBColorSpace
   return loaded
 }

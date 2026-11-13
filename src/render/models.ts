@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js'
+import { asset } from '@/core/asset'
 import { PARTS, getPart } from '@/content'
 import { PART_LIFT } from '@/content/define'
 import type { Slot } from '@/content/define'
@@ -14,7 +15,7 @@ import type { Slot } from '@/content/define'
  * Parts share one 32x32 palette texture: their UVs point at flat colour swatches,
  * so a single material reproduces the flat look without per-part textures.
  */
-const atlas = new THREE.TextureLoader().load('/assets/textures/parts/bug-atlas.png')
+const atlas = new THREE.TextureLoader().load(asset('textures/parts/bug-atlas.png'))
 atlas.colorSpace = THREE.SRGBColorSpace
 // glTF UVs start at the top-left corner, so the image must not be flipped.
 atlas.flipY = false
@@ -124,7 +125,7 @@ function load(slot: Slot, id: string): Promise<void> {
   const part = getPart(slot, id)
   const model = part?.model ?? id
   const request = loader
-    .loadAsync(`/assets/models/parts/${slot}/${model}.glb`)
+    .loadAsync(asset(`models/parts/${slot}/${model}.glb`))
     .then((gltf) => {
       templates.set(key, preparePart(gltf.scene, part?.offset))
       const clip = gltf.animations[0]
@@ -152,7 +153,7 @@ function loadBones(slot: Slot): Promise<void> {
     return running
   }
   const request = loader
-    .loadAsync(`/assets/models/bones/${slot}.glb`)
+    .loadAsync(asset(`models/bones/${slot}.glb`))
     .then((gltf) => {
       boneTemplates.set(slot, normalize(gltf.scene))
     })
@@ -210,7 +211,7 @@ function loadProp(prop: PropId): Promise<void> {
     return running
   }
   const request = loader
-    .loadAsync(`/assets/models/props/${prop}.glb`)
+    .loadAsync(asset(`models/props/${prop}.glb`))
     .then((gltf) => {
       propTemplates.set(prop, prepareProp(gltf.scene, prop))
     })

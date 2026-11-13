@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { asset } from '@/core/asset'
 import { classicArena } from '@/content'
 
 export interface View {
@@ -41,7 +42,7 @@ export function createView(canvas: HTMLCanvasElement): View {
   scene.add(sun)
 
   const floorTexture = new THREE.TextureLoader().load(
-    `/assets/textures/arenas/${arena.id}/floor-base.png`,
+    asset(`textures/arenas/${arena.id}/floor-base.png`),
   )
   floorTexture.colorSpace = THREE.SRGBColorSpace
   floorTexture.wrapS = THREE.RepeatWrapping

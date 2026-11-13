@@ -1,3 +1,4 @@
+import { asset } from '@/core/asset'
 import type { WorldEvent } from '@/sim/types'
 import type { SoundEvent, SoundName } from '@/data/sounds'
 
@@ -22,7 +23,7 @@ function template(name: SoundName): HTMLAudioElement {
   if (cached) {
     return cached
   }
-  const audio = new Audio(`/assets/audio/sfx/${FILES[name]}`)
+  const audio = new Audio(asset(`audio/sfx/${FILES[name]}`))
   audio.preload = 'auto'
   templates.set(name, audio)
   return audio
