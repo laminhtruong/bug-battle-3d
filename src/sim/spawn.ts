@@ -87,7 +87,15 @@ function createSnake(world: World, input: CreateSnakeInput): Snake {
     score: 0,
     kills: 0,
     speed: input.speed,
-    ai: { targetX: input.x, targetZ: input.z, retargetAt: 0, chaseUntil: 0, chaseRestUntil: 0 },
+    ai: {
+      targetX: input.x,
+      targetZ: input.z,
+      retargetAt: 0,
+      chaseUntil: 0,
+      chaseRestUntil: 0,
+      seenX: input.x,
+      seenZ: input.z,
+    },
     baseHeadId: input.headId,
   }
   fillTrail(snake)

@@ -35,6 +35,9 @@ export interface AiState {
   chaseUntil: number
   /** A bot leaves players alone until this time, after a chase. */
   chaseRestUntil: number
+  /** Where the bot currently believes its target is; lags behind the truth. */
+  seenX: number
+  seenZ: number
 }
 
 export interface Snake {

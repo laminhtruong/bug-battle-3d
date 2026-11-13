@@ -127,6 +127,34 @@ describe('world', () => {
     expect(bot.steerZ).toBeGreaterThan(0.5)
   })
 
+  it('makes a bot trail a juke instead of turning with it', () => {
+    const world = createWorld({
+      seed: 48,
+      arena: classicArena,
+      players: [{ id: 'human', name: 'You', control: 'human', slot: 0, headId: DEFAULT_HEAD_ID }],
+    })
+    const bot = getSnake(world, 'bot-2')
+    const human = getSnake(world, 'human')
+    world.snakes = world.snakes.filter((snake) => snake.id === bot.id || snake.id === human.id)
+    world.pickups = []
+    placeHead(bot, 0, 0)
+    placeHead(human, 0, 10)
+
+    updateAi(world, bot)
+    expect(bot.steerZ).toBeGreaterThan(0.9)
+
+    // The player jukes sideways. The bot should not swing on the same tick.
+    placeHead(human, 10, 10)
+    updateAi(world, bot)
+    expect(bot.steerZ).toBeGreaterThan(0.9)
+
+    // After its reaction delay it turns onto the new spot.
+    for (let index = 0; index < BALANCE.tickRate; index += 1) {
+      updateAi(world, bot)
+    }
+    expect(bot.steerX).toBeGreaterThan(0.5)
+  })
+
   it('makes the boss wander until a player is close, then chase', () => {
     const world = createWorld({ seed: 47, arena: classicArena })
     spawnBoss(world)

@@ -1,5 +1,6 @@
 import { normalize } from '@/core/math2d'
 import { requirePart } from '@/content'
+import { BALANCE } from '@/data/balance'
 import { isPlayerControl } from './types'
 import type { Pickup, Snake, World } from './types'
 
@@ -19,6 +20,8 @@ const BOT_CHASE_SEC = 3
 const BOT_CHASE_REST_SEC = 4
 /** The bot keeps the chase while the prey stays this close. */
 const BOT_CHASE_LEASH = 30
+/** Bots see a moving target through a short reaction delay, not instantly. */
+const BOT_REACT_RATE = 3.2
 /** The boss looks further and keeps chasing, unlike a bot. */
 const BOSS_AGGRO_RANGE = 40
 /** A ranged boss lines up its shot once its attack is this close to ready. */
@@ -126,6 +129,13 @@ function faceOnly(snake: Snake, x: number, z: number): void {
   snake.steerZ = direction.z * 0.001
 }
 
+/** Moves the bot's mental image of its prey toward the real spot, at reaction speed. */
+function trackPrey(bot: Snake, prey: Snake): void {
+  const blend = 1 - Math.exp(-BOT_REACT_RATE / BALANCE.tickRate)
+  bot.ai.seenX += (prey.x - bot.ai.seenX) * blend
+  bot.ai.seenZ += (prey.z - bot.ai.seenZ) * blend
+}
+
 /**
  * Bots gear up before they eat: part drops and power-ups are worth more than an
  * apple, and they only chase an apple when there is nothing better nearby.
@@ -136,7 +146,8 @@ function updateBot(world: World, bot: Snake): void {
   const chasing = now < bot.ai.chaseUntil
   const prey = chasing ? nearestPlayer(world, bot, BOT_CHASE_LEASH) : undefined
   if (prey) {
-    steerAway(world, bot, prey.x, prey.z)
+    trackPrey(bot, prey)
+    steerAway(world, bot, bot.ai.seenX, bot.ai.seenZ)
     return
   }
   if (chasing) {
@@ -149,6 +160,9 @@ function updateBot(world: World, bot: Snake): void {
     if (target) {
       bot.ai.chaseUntil = now + BOT_CHASE_SEC
       bot.ai.chaseRestUntil = bot.ai.chaseUntil + BOT_CHASE_REST_SEC
+      // The bot locks on where the player is now, then trails behind the turn.
+      bot.ai.seenX = target.x
+      bot.ai.seenZ = target.z
       steerAway(world, bot, target.x, target.z)
       return
     }

@@ -31,8 +31,10 @@ All notable changes to this project are documented here. The format follows
   up when ready. It roams the map until a player comes close, then chases from a
   longer range than a bot; it never goes after pickups or power-ups.
 - Bots hunt part drops, power-ups and apples in range, and chase a nearby player
-  for a short run before resting. They stop at shooting range, aim at a crate
-  and fire instead of walking through it, and run when a player comes close.
+  for a short run before resting. They read a moving target through a short
+  reaction delay, so a sudden turn is not mirrored on the spot. They stop at
+  shooting range, aim at a crate and fire instead of walking through it, and run
+  when a player comes close.
 - Power-ups are solid: a snake head stops at the crate and slides around it
   instead of passing through.
 - Host-authoritative online play with five character room codes over PeerJS.
