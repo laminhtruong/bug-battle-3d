@@ -1,0 +1,19 @@
+{
+  "id": "poison",
+  "name": "Poison Body",
+  "hp": 1,
+  "score": 50,
+  "contact": { "damage": 0 },
+  "boxes": [{ "center": [0, 0, -0.05], "size": [1.5, 0.9, 1.15] }],
+  "attack": {
+    "kind": "projectile",
+    "cooldown": 3,
+    "mount": "sides",
+    "projectile": {
+      "speed": 3,
+      "ttl": 0.5,
+      "visual": "poison",
+      "onLand": { "duration": 0.5, "radius": 1.2 }
+    }
+  }
+}

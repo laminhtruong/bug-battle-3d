@@ -53,12 +53,12 @@ for (const file of assetFiles) {
   referenced.add(file)
 }
 
-const sourceFiles = (await listFiles(sourceRoot)).filter((file) => file.endsWith('.ts'))
+const sourceFiles = (await listFiles(sourceRoot)).filter((file) => /\.(ts|json)$/.test(file))
 const sourceText = (
   await Promise.all(sourceFiles.map((file) => readFile(path.join(sourceRoot, file), 'utf8')))
 ).join('\n')
 
-for (const model of sourceText.matchAll(/model:\s*'([a-z0-9-]+)'/g)) {
+for (const model of sourceText.matchAll(/["']?model["']?\s*:\s*["']([a-z0-9-]+)["']/g)) {
   const id = model[1]
   const candidates = [`models/parts/head/${id}.glb`, `models/parts/body/${id}.glb`]
   if (!candidates.some((candidate) => referenced.has(candidate))) {

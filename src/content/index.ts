@@ -1,13 +1,16 @@
 import { fnv1a } from '@/core/rng'
-import type { PartDef, Slot } from './define'
-import { parsePart } from './define'
+import type { PartDef, PartInput, Slot } from './define'
+import { definePart } from './define'
 
-const headModules = import.meta.glob<{ default: unknown }>('./heads/*.ts', { eager: true })
-const bodyModules = import.meta.glob<{ default: unknown }>('./bodies/*.ts', { eager: true })
+const headModules = import.meta.glob<{ default: PartInput }>('./heads/*.json', { eager: true })
+const bodyModules = import.meta.glob<{ default: PartInput }>('./bodies/*.json', { eager: true })
 
-function collect(modules: Record<string, { default: unknown }>, slot: 'head' | 'body'): PartDef[] {
+function collect(
+  modules: Record<string, { default: PartInput }>,
+  slot: 'head' | 'body',
+): PartDef[] {
   const parts = Object.values(modules)
-    .map((module) => parsePart(module.default))
+    .map((module) => definePart(slot, module.default))
     .sort((a, b) => a.id.localeCompare(b.id))
 
   for (const part of parts) {

@@ -756,7 +756,7 @@ function addPart(slot: Slot): void {
     contact: { damage: 0 },
     boxes: [{ center: [0, 0.4, 0], size: [2, 2.4, 1.4] }],
   }
-  const part: LoadedPart = { slot, file: `${id}.ts`, draft, isNew: true }
+  const part: LoadedPart = { slot, file: `${id}.json`, draft, isNew: true }
   parts.push(part)
   current = part
   selectedBox = 0

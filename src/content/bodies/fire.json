@@ -1,0 +1,13 @@
+{
+  "id": "fire",
+  "name": "Fire Body",
+  "hp": 1,
+  "score": 50,
+  "contact": { "damage": 0 },
+  "boxes": [{ "center": [0, 0, -0.05], "size": [1.5, 0.9, 1.15] }],
+  "attack": {
+    "kind": "cone",
+    "cooldown": 1.5,
+    "cone": { "range": 3, "halfAngleDeg": 25, "duration": 0.3 }
+  }
+}

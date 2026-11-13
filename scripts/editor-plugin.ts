@@ -1,14 +1,14 @@
-import { readdir, rm, stat, writeFile } from 'node:fs/promises'
+import { readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import path from 'node:path'
 import { format, resolveConfig } from 'prettier'
-import type { Plugin, ViteDevServer } from 'vite'
-import { unrotateBoxPoint } from '../src/content/define.ts'
-import type { PartDef, Slot } from '../src/content/define'
+import type { Plugin } from 'vite'
+import { parsePartInput } from '../src/content/define.ts'
+import type { Slot } from '../src/content/define'
 
 /**
- * Dev-only API behind the part editor. It reads and writes the same TypeScript
- * files the game ships, so the editor is another authoring path for content.
+ * Dev-only API behind the part editor. It reads and writes the same JSON files
+ * the game ships, so the editor is another authoring path for content.
  */
 
 const ROUTE = '/editor/api'
@@ -45,42 +45,8 @@ export interface LoadedPartDraft {
   draft: PartDraft
 }
 
-function snap(value: number): number {
-  return Math.round(value * 10_000) / 10_000
-}
-
-/** Turns the scaled runtime definition back into the raw prefab-unit input. */
-export function partToDraft(part: PartDef, scale: number): PartDraft {
-  const offset = part.offset ?? [0, 0]
-  return {
-    id: part.id,
-    name: part.name,
-    model: part.model,
-    hp: part.hp,
-    score: part.score,
-    contact: { damage: part.contact.damage },
-    boxes: part.collider.boxes.map((box) => {
-      const center = unrotateBoxPoint(box.rotation, [box.x / scale, box.y / scale, box.z / scale])
-      return {
-        center: center.map(snap) as [number, number, number],
-        size: [
-          snap((box.halfWidth * 2) / scale),
-          snap((box.halfHeight * 2) / scale),
-          snap((box.halfDepth * 2) / scale),
-        ],
-        ...(box.rotation.some((value) => value !== 0)
-          ? { rotation: box.rotation.map(snap) as [number, number, number] }
-          : {}),
-        ...(box.hitbox ? { hitbox: true } : {}),
-      }
-    }),
-    ...(offset[0] || offset[1] ? { offset: [snap(offset[0]), snap(offset[1])] } : {}),
-    ...(part.attack ? { attack: part.attack } : {}),
-  }
-}
-
-/** Builds the TypeScript source for a part file, without defaults noise. */
-export async function draftToSource(slot: Slot, draft: PartDraft, file: string): Promise<string> {
+/** Builds the JSON source for a part file, without defaults noise. */
+export async function draftToJson(draft: PartDraft, file: string): Promise<string> {
   const offset = draft.offset ?? [0, 0]
   const value = {
     id: draft.id,
@@ -98,14 +64,14 @@ export async function draftToSource(slot: Slot, draft: PartDraft, file: string):
     })),
     ...(draft.attack ? { attack: draft.attack } : {}),
   }
-  const define = slot === 'head' ? 'defineHead' : 'defineBody'
-  const source = `import { ${define} } from '../define'\n\nexport default ${define}(${JSON.stringify(
-    value,
-    null,
-    2,
-  )})\n`
   const config = (await resolveConfig(file)) ?? {}
-  return format(source, { ...config, parser: 'typescript', filepath: file })
+  return format(JSON.stringify(value), {
+    ...config,
+    parser: 'json',
+    // Keep small collider objects on one line, like the checked-in part files.
+    objectWrap: 'collapse',
+    filepath: file,
+  })
 }
 
 function readBody(req: IncomingMessage): Promise<string> {
@@ -138,35 +104,27 @@ function partFile(slot: Slot, id: string): string {
   if (!ID_PATTERN.test(id)) {
     throw new Error('part id must be kebab-case')
   }
-  return path.join(projectRoot, 'src', 'content', CONTENT_DIRS[slot], `${id}.ts`)
+  return path.join(projectRoot, 'src', 'content', CONTENT_DIRS[slot], `${id}.json`)
 }
 
-async function listParts(server: ViteDevServer): Promise<LoadedPartDraft[]> {
-  const define = await server.ssrLoadModule('/src/content/define.ts')
+async function listParts(): Promise<LoadedPartDraft[]> {
   const parts: LoadedPartDraft[] = []
   for (const slot of SLOTS) {
     const directory = path.join(projectRoot, 'src', 'content', CONTENT_DIRS[slot])
     const entries = await readdir(directory, { withFileTypes: true }).catch(() => [])
     for (const entry of entries) {
-      if (!entry.isFile() || !entry.name.endsWith('.ts')) {
+      if (!entry.isFile() || !entry.name.endsWith('.json')) {
         continue
       }
-      // The file mtime busts the module cache only when the source changes.
-      const modified = await stat(path.join(directory, entry.name))
-      const module = await server.ssrLoadModule(
-        `/src/content/${CONTENT_DIRS[slot]}/${entry.name}?t=${modified.mtimeMs}`,
-      )
-      const part = define.parsePart(module.default) as PartDef
-      if (part.slot !== slot) {
-        throw new Error(`part "${part.id}" is registered as ${part.slot}, expected ${slot}`)
-      }
-      parts.push({ slot, file: entry.name, draft: partToDraft(part, define.PART_SCALE) })
+      const source = await readFile(path.join(directory, entry.name), 'utf8')
+      const draft = parsePartInput(JSON.parse(source)) as PartDraft
+      parts.push({ slot, file: entry.name, draft })
     }
   }
   return parts.sort((first, second) => first.draft.id.localeCompare(second.draft.id))
 }
 
-async function savePart(server: ViteDevServer, req: IncomingMessage): Promise<LoadedPartDraft> {
+async function savePart(req: IncomingMessage): Promise<LoadedPartDraft> {
   const body = JSON.parse(await readBody(req)) as { slot?: Slot; draft?: PartDraft }
   if (!body.slot || !SLOTS.includes(body.slot) || !body.draft) {
     throw new Error('expected { slot, draft }')
@@ -176,16 +134,12 @@ async function savePart(server: ViteDevServer, req: IncomingMessage): Promise<Lo
     throw new Error('model must be kebab-case')
   }
   const file = partFile(body.slot, draft.id)
-  const define = await server.ssrLoadModule('/src/content/define.ts')
   // Validate before touching the file; a broken editor save must not break boot.
-  const parsed = define.parsePartInput(draft) as {
-    contact: { damage: number }
-    boxes: { hitbox?: boolean }[]
-  }
+  const parsed = parsePartInput(draft)
   if (parsed.contact.damage > 0 && !parsed.boxes.some((box) => box.hitbox)) {
     throw new Error('contact damage requires at least one claw box')
   }
-  await writeFile(file, await draftToSource(body.slot, draft, file), 'utf8')
+  await writeFile(file, await draftToJson(draft, file), 'utf8')
   return { slot: body.slot, file: path.basename(file), draft }
 }
 
@@ -215,19 +169,15 @@ async function listModels(url: URL): Promise<string[]> {
     .sort()
 }
 
-async function handle(
-  server: ViteDevServer,
-  req: IncomingMessage,
-  res: ServerResponse,
-): Promise<void> {
+async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const url = new URL(req.url ?? '/', 'http://localhost')
   try {
     if (url.pathname === '/parts' && req.method === 'GET') {
-      send(res, 200, { parts: await listParts(server) })
+      send(res, 200, { parts: await listParts() })
       return
     }
     if (url.pathname === '/parts' && req.method === 'POST') {
-      send(res, 200, { part: await savePart(server, req) })
+      send(res, 200, { part: await savePart(req) })
       return
     }
     if (url.pathname === '/parts' && req.method === 'DELETE') {
@@ -252,7 +202,7 @@ export function editorPlugin(): Plugin {
     configureServer(server) {
       projectRoot = server.config.root
       server.middlewares.use(ROUTE, (req, res) => {
-        void handle(server, req, res)
+        void handle(req, res)
       })
     },
   }

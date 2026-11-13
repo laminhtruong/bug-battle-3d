@@ -7,7 +7,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const sourceRoot = fileURLToPath(new URL('../src', import.meta.url))
-const filePattern = /^[a-z0-9]+(-[a-z0-9]+)*\.ts$/
+const filePattern = /^[a-z0-9]+(-[a-z0-9]+)*\.(ts|json)$/
 const problems = []
 
 async function walk(directory) {
@@ -18,7 +18,7 @@ async function walk(directory) {
       await walk(fullPath)
       continue
     }
-    if (!entry.name.endsWith('.ts')) {
+    if (!entry.name.endsWith('.ts') && !entry.name.endsWith('.json')) {
       continue
     }
 

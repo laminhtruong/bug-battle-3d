@@ -4,8 +4,9 @@ import { z } from 'zod'
  * Content definition for a head or body part.
  *
  * A part is pure data: stats, an optional attack descriptor, its collider boxes
- * and an optional model key. Adding a new head or body means adding one file
- * under src/content/heads or src/content/bodies. No engine code changes needed.
+ * and an optional model key. Adding a new head or body means adding one JSON
+ * file under src/content/heads or src/content/bodies. No engine code changes
+ * needed.
  */
 export type Slot = 'head' | 'body'
 
@@ -240,8 +241,6 @@ function define(slot: Slot, input: PartInput): PartDef {
   })
 }
 
-export const defineHead = (input: PartInput): PartDef => define('head', input)
-export const defineBody = (input: PartInput): PartDef => define('body', input)
-
-/** Re-validates a definition loaded from disk, so bad content fails at startup. */
-export const parsePart = (value: unknown): PartDef => partSchema.parse(value)
+export const definePart = (slot: Slot, input: PartInput): PartDef => define(slot, input)
+export const defineHead = (input: PartInput): PartDef => definePart('head', input)
+export const defineBody = (input: PartInput): PartDef => definePart('body', input)
