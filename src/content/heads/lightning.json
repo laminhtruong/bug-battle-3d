@@ -12,7 +12,7 @@
       "speed": 5,
       "ttl": 0.5,
       "visual": "lightning",
-      "spawnPoints": [{ "x": 0, "z": 1.96 }],
+      "spawnPoints": [{ "x": 0, "y": 0.5, "z": 1.85 }],
       "onLand": { "delay": 0.5, "duration": 0.5, "radius": 1.8 }
     }
   }
