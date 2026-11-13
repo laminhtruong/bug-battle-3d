@@ -90,10 +90,10 @@ FBX2glTF -b -k position -k normal -k uv0 -o public/assets/models/bones/body.glb 
 ```
 
 The FBX files live outside this repository, so the GLBs are committed instead.
-`src/render/models.ts` recenters each model, applies the shared palette texture
-and scales it to arena units; the source scenes place the parts far from the
-origin at a much larger scale. Placeholder primitives stay as a fallback while a
-model loads. Do not commit raw FBX, PSD or Unity package files.
+`src/render/models.ts` applies the shared palette texture and keeps each model at
+its authored size; the source scenes place the parts far from the origin at that
+same scale. Placeholder primitives stay as a fallback while a model loads. Do not
+commit raw FBX, PSD or Unity package files.
 
 FBX2glTF 0.9.7 writes NaN weights for vertices that the source FBX leaves
 unweighted, which makes the GPU drop their triangles. This hit the side spikes

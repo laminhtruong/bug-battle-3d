@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
-import { PART_LIFT, PART_SCALE, boxQuaternion } from '@/content/define'
+import { PART_LIFT, boxQuaternion } from '@/content/define'
 import type { Slot } from '@/content/define'
 import { BALANCE } from '@/data/balance'
 import { createViewGizmo } from './gizmo'
@@ -79,8 +79,8 @@ const SPAWN_COLOR = 0xffa94d
 const AXIS_X = new THREE.Vector3(1, 0, 0)
 const AXIS_Y = new THREE.Vector3(0, 1, 0)
 const AXIS_Z = new THREE.Vector3(0, 0, 1)
-const OFFSET_GIZMO_Y = 0.35
-const SPAWN_RADIUS = 0.075
+const OFFSET_GIZMO_Y = 1.4
+const SPAWN_RADIUS = 0.3
 
 interface BoxEntry {
   mesh: THREE.Mesh
@@ -162,11 +162,10 @@ function prepare(root: THREE.Object3D, material: THREE.Material): THREE.Group {
       part.position.set(0, 0, 0)
     }
   }
-  root.position.y = PART_LIFT / PART_SCALE
+  root.position.y = PART_LIFT
 
   const holder = new THREE.Group()
   holder.add(root)
-  holder.scale.setScalar(PART_SCALE)
   return holder
 }
 
@@ -179,7 +178,6 @@ function makePlaceholder(slot: Slot): THREE.Group {
   mesh.position.y = slot === 'head' ? 2 : 1.2
   const holder = new THREE.Group()
   holder.add(mesh)
-  holder.scale.setScalar(PART_SCALE)
   return holder
 }
 
@@ -189,11 +187,11 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
 
   const scene = new THREE.Scene()
   scene.background = new THREE.Color('#101c26')
-  scene.add(new THREE.GridHelper(12, 24, 0x3b5b6b, 0x243440))
-  scene.add(new THREE.AxesHelper(1.4))
+  scene.add(new THREE.GridHelper(24, 24, 0x3b5b6b, 0x243440))
+  scene.add(new THREE.AxesHelper(2.8))
 
   const camera = new THREE.PerspectiveCamera(45, 1, 0.05, 100)
-  camera.position.set(2.6, 2.8, 3.6)
+  camera.position.set(5.2, 5.6, 7.2)
 
   scene.add(new THREE.HemisphereLight(0xffffff, 0x456b4f, 2))
   const sun = new THREE.DirectionalLight(0xfff6e5, 2.2)
@@ -475,7 +473,7 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
       gizmoGroup.visible = modelHolder.children.length > 0 && selectedSpawn < 0
       gizmoGroup.position.set(modelHolder.position.x, OFFSET_GIZMO_Y, modelHolder.position.z)
       const distance = camera.position.distanceTo(gizmoGroup.position)
-      gizmoGroup.scale.setScalar(THREE.MathUtils.clamp(distance * 0.16, 0.35, 1.6))
+      gizmoGroup.scale.setScalar(THREE.MathUtils.clamp(distance * 0.16, 0.35, 3.2))
       return
     }
     const entry = boxes[selected]
@@ -486,7 +484,7 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
     gizmoGroup.visible = true
     gizmoGroup.position.copy(entry.mesh.position)
     const distance = camera.position.distanceTo(entry.mesh.position)
-    gizmoGroup.scale.setScalar(THREE.MathUtils.clamp(distance * 0.16, 0.35, 1.6))
+    gizmoGroup.scale.setScalar(THREE.MathUtils.clamp(distance * 0.16, 0.35, 3.2))
   }
 
   function updateSpawnGizmoTransform(): void {
@@ -497,7 +495,7 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
     }
     spawnGizmoGroup.position.copy(entry.group.position)
     const distance = camera.position.distanceTo(entry.group.position)
-    spawnGizmoGroup.scale.setScalar(THREE.MathUtils.clamp(distance * 0.14, 0.3, 1.4))
+    spawnGizmoGroup.scale.setScalar(THREE.MathUtils.clamp(distance * 0.14, 0.3, 2.8))
   }
 
   function axisParameter(ray: THREE.Ray, origin: THREE.Vector3, axis: THREE.Vector3): number {
@@ -611,7 +609,7 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
     spawnGroup.clear()
     spawns = state.spawns.map((spawn, index) => {
       const group = new THREE.Group()
-      group.position.set(spawn.x * PART_SCALE, spawn.y * PART_SCALE, spawn.z * PART_SCALE)
+      group.position.set(spawn.x, spawn.y, spawn.z)
       const mesh = new THREE.Mesh(
         new THREE.SphereGeometry(SPAWN_RADIUS, 12, 10),
         new THREE.MeshBasicMaterial({
@@ -675,7 +673,7 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
       .rotateX(-Math.PI / 2)
     cones = state.spawns.map((spawn) => {
       const group = new THREE.Group()
-      group.position.set(spawn.x * PART_SCALE, spawn.y * PART_SCALE, spawn.z * PART_SCALE)
+      group.position.set(spawn.x, spawn.y, spawn.z)
       group.rotation.y = (spawn.angle * Math.PI) / 180
       const mesh = new THREE.Mesh(
         geometry,
@@ -716,7 +714,7 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
       cone.group.position.set(x, y, z)
     }
     markDragStart()
-    handlers.onSpawnMove(index, x / PART_SCALE, y / PART_SCALE, z / PART_SCALE)
+    handlers.onSpawnMove(index, x, y, z)
   }
 
   function setPointer(event: PointerEvent): void {
@@ -973,7 +971,7 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
       modelHolder.position.x = position.x
       modelHolder.position.z = position.z
       markDragStart()
-      handlers.onOffset(modelHolder.position.x / PART_SCALE, modelHolder.position.z / PART_SCALE)
+      handlers.onOffset(modelHolder.position.x, modelHolder.position.z)
       return
     }
     if (drag.kind === 'offset-free') {
@@ -984,7 +982,7 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
       modelHolder.position.x = dragPoint.x + drag.dx
       modelHolder.position.z = dragPoint.z + drag.dz
       markDragStart()
-      handlers.onOffset(modelHolder.position.x / PART_SCALE, modelHolder.position.z / PART_SCALE)
+      handlers.onOffset(modelHolder.position.x, modelHolder.position.z)
       return
     }
     if (drag.kind === 'spawn') {
@@ -1114,7 +1112,7 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
       editColliders = state.editColliders
       boxGroup.visible = editColliders
       setModel(state.slot, state.model)
-      modelHolder.position.set(state.offset[0] * PART_SCALE, 0, state.offset[1] * PART_SCALE)
+      modelHolder.position.set(state.offset[0], 0, state.offset[1])
       setReference(state.showReference, state.slot)
       rebuildBoxes(state)
       rebuildSpawns(state)

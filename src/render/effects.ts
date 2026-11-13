@@ -42,10 +42,10 @@ interface Burst {
 const SPARKS = 12
 const SPARK_LIFE_MIN = 0.3
 const SPARK_LIFE_MAX = 0.5
-const SPARK_SPEED_MIN = 0.5
-const SPARK_SPEED_MAX = 1.5
-const SPARK_RADIUS = 0.4
-const SPARK_SIZE = 0.06
+const SPARK_SPEED_MIN = 2
+const SPARK_SPEED_MAX = 6
+const SPARK_RADIUS = 1.6
+const SPARK_SIZE = 0.24
 const FLASH_END = 0.32
 
 function randomDirection(): THREE.Vector3 {
@@ -66,7 +66,7 @@ export function createEffects(scene: THREE.Scene) {
       for (let index = 0; index < SPARKS; index += 1) {
         const offset = randomDirection().multiplyScalar(Math.random() * SPARK_RADIUS)
         positions[index * 3] = x + offset.x
-        positions[index * 3 + 1] = 0.125 + offset.y
+        positions[index * 3 + 1] = 0.5 + offset.y
         positions[index * 3 + 2] = z + offset.z
         colors[index * 4] = 1
         colors[index * 4 + 1] = 0.965

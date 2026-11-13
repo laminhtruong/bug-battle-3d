@@ -9,14 +9,14 @@
     "kind": "projectile",
     "cooldown": 3,
     "projectile": {
-      "speed": 3,
+      "speed": 12,
       "ttl": 0.5,
       "visual": "poison",
       "spawnPoints": [
         { "x": 1.2, "y": 0.75, "z": -0.05, "angle": 90 },
         { "x": -1.2, "y": 0.75, "z": -0.05, "angle": -90 }
       ],
-      "onLand": { "duration": 0.5, "radius": 1.2 }
+      "onLand": { "duration": 0.5, "radius": 4.8 }
     }
   }
 }

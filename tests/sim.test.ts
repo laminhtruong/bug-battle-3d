@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { BALANCE } from '@/data/balance'
 import { DEFAULT_HEAD_ID, requirePart } from '@/content'
-import { PART_SCALE } from '@/content/define'
 import { createWorld } from '@/sim/world'
 import { updateAi } from '@/sim/ai'
 import { classicArena } from '@/content/arenas/classic'
@@ -103,6 +102,8 @@ describe('world', () => {
       if (!apple) {
         throw new Error('expected an apple')
       }
+      // Keep one apple so the bigger pickup radius cannot collect several at once.
+      world.pickups = [apple]
       placeHead(player, apple.x, apple.z)
       tickWorld(world, STEP)
     }
@@ -288,9 +289,9 @@ describe('combat', () => {
       throw new Error('gun head is not a projectile')
     }
     const muzzle = part.attack.projectile.spawnPoints[0]!
-    // The muzzle is authored in prefab units and scaled with the art.
-    expect(shot.x).toBeCloseTo(1 + muzzle.z * PART_SCALE, 5)
-    expect(shot.z).toBeCloseTo(2 - muzzle.x * PART_SCALE, 5)
+    // The muzzle is authored in the same units as the art.
+    expect(shot.x).toBeCloseTo(1 + muzzle.z, 5)
+    expect(shot.z).toBeCloseTo(2 - muzzle.x, 5)
     expect(shot.vx).toBeCloseTo(part.attack.projectile.speed, 5)
     expect(shot.vz).toBeCloseTo(0, 5)
   })
@@ -316,7 +317,7 @@ describe('combat', () => {
     const original = cone.spawnPoints
     // Muzzle two arena units ahead, so the target is out of reach from the part
     // but inside the cone.
-    cone.spawnPoints = [{ x: 0, y: 2, z: 8, angle: 0 }]
+    cone.spawnPoints = [{ x: 0, y: 2, z: 2, angle: 0 }]
     placeHead(target, 0, 2 + cone.range / 2)
     const hp = target.segments[0]?.hp ?? 0
     try {

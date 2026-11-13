@@ -8,6 +8,6 @@
   "attack": {
     "kind": "cone",
     "cooldown": 1.5,
-    "cone": { "range": 3, "halfAngleDeg": 25, "duration": 0.3 }
+    "cone": { "range": 12, "halfAngleDeg": 25, "duration": 0.3 }
   }
 }

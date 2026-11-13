@@ -47,13 +47,13 @@ All notable changes to this project are documented here. The format follows
 - Projectile attacks now store their muzzles in `spawnPoints` instead of a
   single `mount`. Each point has a raw prefab position and an optional direction
   in degrees, so one part can fire from several places. The simulation rotates
-  each point with the part and scales it like the art.
+  each point with the part, in the same units as the art.
 - Head and body definitions now live in JSON files under `src/content/heads` and
   `src/content/bodies`. The game registry and the editor both read them, and the
   editor writes JSON, so content can be authored without touching TypeScript.
 - Part collision now uses the trigger BoxColliders authored in the Unity art
-  prefabs, scaled with the models, instead of one circle per segment. Long claws
-  and sideways spikes hit where the art says they should. Every box is a
+  prefabs, in the same units as the models, instead of one circle per segment.
+  Long claws and sideways spikes hit where the art says they should. Every box is a
   hurtbox; only boxes copied from a `Claw` collider deal contact damage, so the
   gun, fire, lightning and poison heads no longer hurt by touching.
 - Collider boxes keep the full Unity BoxCollider centre and size (X/Y/Z) and the
@@ -78,10 +78,12 @@ All notable changes to this project are documented here. The format follows
   - a destroyed part keeps its place in the chain and shows its bones, and
     picking up a head brings a lost head back.
 - The first body segment sits behind the head instead of inside it, at the
-  0.3 distance the original uses between parts.
-- Part models use the 0.25 scale and 0.125 lift of the Unity prefabs again, so
-  the models match the unit distances of the simulation and their collision
-  radii.
+  distance the original uses between parts.
+- Parts render at the size they are authored at instead of being shrunk to the
+  original prefab's quarter scale. Colliders, muzzles and offsets use the same
+  units, so they still line up with the art. Chain spacing, walk speed, attack
+  ranges and the camera field of view were scaled to match, so the arena and the
+  floor keep their proportions while the bugs read at their real size.
 - Part models keep the pivot authored in their model file, as the original
   prefabs do, instead of being recentred on their bounding box. Heads with long
   claws or antennae now attach to the chain at the same point as in Unity.

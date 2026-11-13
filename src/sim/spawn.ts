@@ -234,7 +234,7 @@ export function spawnDrops(
   parts: readonly { slot: 'head' | 'body'; partId: string }[],
 ): void {
   const { rng } = world
-  const jitter = (): number => rng.range(-1.5, 1.5)
+  const jitter = (): number => rng.range(-6, 6)
 
   for (const { slot, partId } of parts) {
     if (slot === 'head') {

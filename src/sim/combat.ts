@@ -1,5 +1,4 @@
 import { PARTS, requirePart } from '@/content'
-import { PART_SCALE } from '@/content/define'
 import type { AttackDef, PartDef, SpawnPoint } from '@/content/define'
 import { directionFromAngle } from '@/core/math2d'
 import { BALANCE } from '@/data/balance'
@@ -116,16 +115,16 @@ export function killSnake(world: World, snake: Snake): void {
   }
 }
 
-/** Turns an authored muzzle into a world point, rotated and scaled with the part. */
+/** Turns an authored muzzle into a world point, rotated with the part. */
 function spawnOrigin(segment: Segment, spawn: SpawnPoint): { x: number; y: number; z: number } {
   const cos = Math.cos(segment.angle)
   const sin = Math.sin(segment.angle)
-  const localX = spawn.x * PART_SCALE
-  const localZ = spawn.z * PART_SCALE
+  const localX = spawn.x
+  const localZ = spawn.z
   return {
     x: segment.x + localX * cos + localZ * sin,
     // Y is visual only: the simulation runs on the XZ plane.
-    y: spawn.y * PART_SCALE,
+    y: spawn.y,
     z: segment.z - localX * sin + localZ * cos,
   }
 }

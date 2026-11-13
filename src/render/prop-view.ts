@@ -18,8 +18,8 @@ const AREA_COLORS: Record<string, string> = {
 const shotGeometry = new THREE.SphereGeometry(BALANCE.projectileRadius, 8, 6)
 const areaGeometry = new THREE.CircleGeometry(1, 24)
 areaGeometry.rotateX(-Math.PI / 2)
-const appleGeometry = new THREE.SphereGeometry(0.18, 10, 8)
-const dropGeometry = new THREE.IcosahedronGeometry(0.2, 0)
+const appleGeometry = new THREE.SphereGeometry(0.72, 10, 8)
+const dropGeometry = new THREE.IcosahedronGeometry(0.8, 0)
 
 const shotMaterials = new Map<string, THREE.MeshBasicMaterial>()
 const areaMaterials = new Map<string, THREE.MeshBasicMaterial>()
@@ -139,8 +139,8 @@ export function createPropViewer(scene: THREE.Scene) {
           pickups.set(pickup.id, mesh)
           scene.add(mesh)
         }
-        const bob = Math.sin(world.time * 3 + pickup.x + pickup.z) * 0.08
-        mesh.position.set(pickup.x, 0.32 + bob, pickup.z)
+        const bob = Math.sin(world.time * 3 + pickup.x + pickup.z) * 0.32
+        mesh.position.set(pickup.x, 1.28 + bob, pickup.z)
         mesh.rotation.y = world.time * 2
       }
       for (const [id, mesh] of pickups) {

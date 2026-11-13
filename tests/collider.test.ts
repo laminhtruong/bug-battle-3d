@@ -20,23 +20,23 @@ function makeSegment(partId: string, x: number, z: number, angle: number): Segme
 }
 
 describe('part colliders', () => {
-  it('scales the Unity BoxColliders into arena units', () => {
+  it('uses the Unity BoxCollider sizes directly', () => {
     const claw = requirePart('head', 'claw01')
     expect(claw.collider.boxes[0]).toMatchObject({
       x: 0,
-      z: 0.0125,
-      halfWidth: 0.25,
-      halfDepth: 0.1625,
+      z: 0.05,
+      halfWidth: 1,
+      halfDepth: 0.65,
       hitbox: false,
     })
     expect(claw.collider.boxes[1]).toMatchObject({
-      x: 0.1625,
-      z: 0.325,
-      halfWidth: 0.0875,
-      halfDepth: 0.1,
+      x: 0.65,
+      z: 1.3,
+      halfWidth: 0.35,
+      halfDepth: 0.4,
       hitbox: true,
     })
-    expect(requirePart('head', 'claw04').collider.reach).toBeGreaterThan(1.3)
+    expect(requirePart('head', 'claw04').collider.reach).toBeGreaterThan(5)
   })
 
   it('tests the box shape, not a circle around the pivot', () => {
@@ -44,9 +44,9 @@ describe('part colliders', () => {
     const segment = makeSegment('claw01', 0, 0, 0)
 
     expect(segmentHitsCircle(part, segment, 0, 0, 0.01)).toBe(true)
-    expect(segmentHitsCircle(part, segment, 0.1625, 0.325, 0.01)).toBe(true)
+    expect(segmentHitsCircle(part, segment, 0.65, 1.3, 0.01)).toBe(true)
     // Between the two claws and beyond the head box, a circle would still hit.
-    expect(segmentHitsCircle(part, segment, 0, 0.325, 0.01)).toBe(false)
+    expect(segmentHitsCircle(part, segment, 0, 1.3, 0.01)).toBe(false)
   })
 
   it('rotates the box footprint with its transform', () => {
@@ -55,8 +55,8 @@ describe('part colliders', () => {
     const box = part.collider.boxes[1]!
 
     expect(box.angle).toBeCloseTo((40 * Math.PI) / 180, 6)
-    // 0.24 along the rotated long axis is inside; across its width is not.
-    const reach = 0.24
+    // 0.7 along the rotated long axis is inside; across its width is not.
+    const reach = 0.7
     const along = [
       box.x + Math.sin(box.angle) * reach,
       box.z + Math.cos(box.angle) * reach,

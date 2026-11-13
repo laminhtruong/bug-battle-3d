@@ -9,7 +9,7 @@
     "kind": "cone",
     "cooldown": 1,
     "cone": {
-      "range": 1.5,
+      "range": 6,
       "halfAngleDeg": 20,
       "duration": 0.3,
       "spawnPoints": [{ "x": 0, "y": 0.46, "z": 1.75 }]

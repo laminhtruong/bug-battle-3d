@@ -9,14 +9,14 @@
     "kind": "projectile",
     "cooldown": 2,
     "projectile": {
-      "speed": 3,
+      "speed": 12,
       "ttl": 0.5,
       "visual": "lightning",
       "spawnPoints": [
         { "x": 1.25, "y": 0.8, "z": -0.05, "angle": 90 },
         { "x": -1.25, "y": 0.8, "z": -0.05, "angle": -90 }
       ],
-      "onLand": { "delay": 0.5, "duration": 0.5, "radius": 1.5 }
+      "onLand": { "delay": 0.5, "duration": 0.5, "radius": 6 }
     }
   }
 }

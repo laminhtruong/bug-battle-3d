@@ -45,7 +45,7 @@ export function createNameTags(): NameTags {
           tags.set(snake.id, tag)
         }
 
-        projected.set(head.x, 0.95, head.z).project(camera)
+        projected.set(head.x, 3.8, head.z).project(camera)
         if (projected.z > 1) {
           tag.style.display = 'none'
           continue

@@ -10,8 +10,9 @@ export interface View {
 
 /**
  * The in-game rig of the original: a virtual camera 10 units above the head and
- * 3.5 behind it, held at a fixed 75 degree pitch with a 60 degree lens. The menu
- * rig sits lower at 45 degrees, which is what this view used to show.
+ * 3.5 behind it, held at a fixed 75 degree pitch. The lens is wider than the
+ * original 60 degrees so the native-size bugs still leave room to see the field.
+ * The menu rig sits lower at 45 degrees, which is what this view used to show.
  */
 const CAMERA_OFFSET = new THREE.Vector3(0, 10, -3.5)
 const CAMERA_AIM = new THREE.Vector3(
@@ -29,7 +30,7 @@ export function createView(canvas: HTMLCanvasElement): View {
   scene.background = new THREE.Color('#8ed0f0')
   scene.fog = new THREE.Fog('#8ed0f0', 42, 90)
 
-  const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 200)
+  const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 200)
   camera.position.copy(CAMERA_OFFSET)
   // The pitch is fixed, so aim once along it instead of at the focus each frame.
   camera.lookAt(camera.position.clone().add(CAMERA_AIM))

@@ -12,11 +12,13 @@ export type Slot = 'head' | 'body'
 
 export const idPattern = /^[a-z0-9]+(-[a-z0-9]+)*$/
 
-/** The Unity prefabs scale art and collider boxes by this factor. */
-export const PART_SCALE = 0.25
+/**
+ * Parts render at the size they are authored at, so raw prefab numbers
+ * (collider boxes, spawn points, offsets) are already arena units.
+ */
 
 /** The Unity prefabs lift the art above the pivot by this many arena units. */
-export const PART_LIFT = 0.125
+export const PART_LIFT = 0.5
 
 export type EulerDegrees = [number, number, number]
 export type Quaternion = [number, number, number, number]
@@ -83,8 +85,8 @@ const onLandSchema = z.object({
 })
 
 /**
- * Default muzzle height in raw prefab units. 2 * PART_SCALE is the height the
- * game used before spawn points could move on Y.
+ * Default muzzle height in raw prefab units. It is the height shots used before
+ * spawn points could move on Y.
  */
 export const DEFAULT_SPAWN_Y = 2
 
@@ -136,9 +138,9 @@ const attackSchema = z.discriminatedUnion('kind', [
 ])
 
 /**
- * A trigger BoxCollider in raw prefab units. The definition scales the values
- * to arena units. The simulation runs on the XZ plane, but Y is kept so the
- * editor can draw the box at the same height as the art.
+ * A trigger BoxCollider in raw prefab units, which are arena units because the
+ * art renders at its authored size. The simulation runs on the XZ plane, but Y
+ * is kept so the editor can draw the box at the same height as the art.
  */
 const prefabBoxSchema = z.object({
   center: z.tuple([z.number(), z.number(), z.number()]),
@@ -236,12 +238,12 @@ function buildCollider(boxes: z.infer<typeof prefabBoxSchema>[]): PartCollider {
     const center = rotateBoxPoint(box.rotation, box.center)
     const forward = rotateBoxPoint(box.rotation, [0, 0, 1])
     return {
-      x: center[0] * PART_SCALE,
-      y: center[1] * PART_SCALE,
-      z: center[2] * PART_SCALE,
-      halfWidth: (box.size[0] * PART_SCALE) / 2,
-      halfHeight: (box.size[1] * PART_SCALE) / 2,
-      halfDepth: (box.size[2] * PART_SCALE) / 2,
+      x: center[0],
+      y: center[1],
+      z: center[2],
+      halfWidth: box.size[0] / 2,
+      halfHeight: box.size[1] / 2,
+      halfDepth: box.size[2] / 2,
       rotation: box.rotation,
       // The 2D footprint only needs the yaw; tilt is negligible on this plane.
       angle: Math.atan2(forward[0], forward[2]),

@@ -84,8 +84,8 @@ straight from the prefab `m_Center` and `m_Size`, so they are exact:
 4. A child named `Body` is only a hurtbox: leave `hitbox` off. A child named
    `Claw` also deals contact damage: add `"hitbox": true`.
 5. Ignore `BulletFire`, `Skeleton`, MeshCollider and any non-trigger collider.
-6. Use the raw Unity numbers. The definition scales them by the prefab's 0.25
-   art scale, so the boxes always line up with the model.
+6. Use the raw Unity numbers. Models render at their authored size, so the
+   numbers are already arena units and the boxes line up with the model.
 7. The centre is relative to the part pivot. Local `+z` points forward, the same
    direction the model faces.
 
@@ -101,7 +101,7 @@ For the spike body, the main body plus a rotated claw looks like this:
 The simulation runs on the XZ plane, so collision uses the rotated centre and
 the box yaw. X/Z tilt barely changes the footprint and is ignored there, but the
 editor still draws the box with the full rotation. Y is kept so the box matches
-the Unity BoxCollider; the editor adds the prefab's 0.125 lift when it draws the
+the Unity BoxCollider; the editor adds the prefab's 0.5 lift when it draws the
 box, so it sits at the same height as the art.
 
 All boxes are hurtboxes, so a projectile or another claw can damage any of them.
@@ -147,8 +147,8 @@ are easy to see.
 }
 ```
 
-Spawn points are raw prefab units, like `boxes` and `offset`. The game scales
-them by the prefab's 0.25 and rotates them with the part. `y` defaults to `2`,
+Spawn points are raw prefab units, like `boxes` and `offset`. The game uses them
+as arena units and rotates them with the part. `y` defaults to `2`,
 the height shots used before spawn points existed, and only changes presentation:
 the simulation still runs on the XZ plane. Omit `y` when it is `2`, `angle` when
 it is zero and `damage` when it is `1`; the schema supplies those defaults.
@@ -180,8 +180,8 @@ without a model file still plays; the renderer falls back to a colored primitive
 
 `src/render/models.ts` loads every registered model in the background. It keeps
 the pivot authored in the model file, drops the arbitrary offset of the source
-FBX scene, then applies the prefab's 0.25 scale and 0.125 lift. The `boxes`
-values use the same scale, so the collider and the art share one pivot. Body
+FBX scene, then applies the prefab's 0.5 lift. The `boxes` values use the same
+units, so the collider and the art share one pivot. Body
 models are skinned, so they are copied with `SkeletonUtils.clone`; a plain
 `clone` would leave them bound to the template bones and they would never draw
 under the snake. Models must keep their first UV set: the parts share one

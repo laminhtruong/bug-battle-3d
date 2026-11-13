@@ -42,11 +42,12 @@ line port; the rules were re-derived from prefabs, scripts and playtests.
 - Snapshots send part ids, not definitions. Both sides must agree on the content
   hash before a match starts.
 - Part models share one palette texture; placeholder primitives show only if a
-  model fails to load. They keep the 0.25 scale and 0.125 lift of the Unity
-  prefabs, parts are 0.3 apart (`Config.BodyDistance` in the original), and each
-  part keeps the pivot authored in its model file. Recentring a part on its
-  bounding box would move heads with long claws or antennae off that pivot, so
-  every head would attach to the chain at a different point.
+  model fails to load. Parts render at the size they are authored at, so the
+  simulation is in those units too: the art keeps the prefab's 0.5 lift, parts
+  are 1.2 apart, and each part keeps the pivot authored in its model file.
+  Recentring a part on its bounding box would move heads with long claws or
+  antennae off that pivot, so every head would attach to the chain at a
+  different point.
 - The original legs were animated by inverse kinematics. The converted bodies
   only carry the baked leg clip that ships with the source file, so they walk
   with that clip instead of IK.

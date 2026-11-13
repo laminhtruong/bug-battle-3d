@@ -7,12 +7,12 @@ import { getPartModel, clonePartModel, getBonesModel, cloneBonesModel, getPartCl
 import { createShadow } from './shadow'
 import type { RenderState } from './state'
 
-const HEAD_GEOMETRY = new THREE.ConeGeometry(0.42, 1.05, 12)
+const HEAD_GEOMETRY = new THREE.ConeGeometry(1.68, 4.2, 12)
 HEAD_GEOMETRY.rotateX(Math.PI / 2)
-const BODY_GEOMETRY = new THREE.IcosahedronGeometry(0.3, 0)
+const BODY_GEOMETRY = new THREE.IcosahedronGeometry(1.2, 0)
 
 /** Stands in for the bones until the real bone model has loaded. */
-const BONES_GEOMETRY = new THREE.SphereGeometry(0.2, 10, 6)
+const BONES_GEOMETRY = new THREE.SphereGeometry(0.8, 10, 6)
 const BONES_MATERIAL = new THREE.MeshBasicMaterial({ color: '#e8e0cc' })
 
 /** How long the part shrinks after the killing hit has finished flashing. */
@@ -128,11 +128,11 @@ function createSegment(slot: PartDef['slot'], id: string): SegmentView {
       key: `${slot}:${id}`,
       node: model,
       bones: bonesNode,
-      shadow: createShadow(head ? 1 : 0.8),
+      shadow: createShadow(head ? 4 : 3.2),
       materials: ownMaterials(model),
       flash: 0,
       dead: false,
-      // The model holder is already scaled down by PART_SCALE.
+      // The art renders at its authored size; the pop animations multiply it.
       baseScale: model.scale.clone(),
       dying: 0,
       exploded: true,
@@ -153,7 +153,7 @@ function createSegment(slot: PartDef['slot'], id: string): SegmentView {
     key: `${slot}:${id}`,
     node: mesh,
     bones: bonesNode,
-    shadow: createShadow(head ? 1 : 0.8),
+    shadow: createShadow(head ? 4 : 3.2),
     materials: ownMaterials(mesh),
     flash: 0,
     dead: false,
@@ -161,7 +161,7 @@ function createSegment(slot: PartDef['slot'], id: string): SegmentView {
     dying: 0,
     exploded: true,
     spawnAge: -1,
-    height: head ? 0.55 : 0.4,
+    height: head ? 2.2 : 1.6,
     model: false,
     boneModel,
     lastX: Number.NaN,
@@ -348,7 +348,7 @@ export function createSnakeViewer(scene: THREE.Scene) {
             entry.lastZ = segment.z
           }
           entry.bones.visible = segment.dead && entry.dying <= 0
-          entry.bones.position.set(segment.x, entry.model ? 0 : 0.2, segment.z)
+          entry.bones.position.set(segment.x, entry.model ? 0 : 0.8, segment.z)
           entry.bones.rotation.y = segment.angle
           entry.shadow.visible = true
           entry.shadow.position.set(segment.x, 0.02, segment.z)

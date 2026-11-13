@@ -9,7 +9,7 @@
     "kind": "projectile",
     "cooldown": 1,
     "projectile": {
-      "speed": 3,
+      "speed": 12,
       "ttl": 0.5,
       "visual": "bullet",
       "spawnPoints": [

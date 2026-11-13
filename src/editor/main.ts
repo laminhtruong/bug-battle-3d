@@ -3,7 +3,6 @@ import {
   DEFAULT_SPAWN_Y,
   idPattern,
   PART_LIFT,
-  PART_SCALE,
   rotateBoxPoint,
   unrotateBoxPoint,
 } from '@/content/define'
@@ -309,13 +308,13 @@ function currentArenaBoxes(): {
     // The prefab rotates the box around the part pivot, so its centre turns too.
     const center = rotateBoxPoint(rotation, box.center)
     return {
-      x: center[0] * PART_SCALE,
+      x: center[0],
       // The prefab lifts the art and its colliders above the pivot.
-      y: center[1] * PART_SCALE + PART_LIFT,
-      z: center[2] * PART_SCALE,
-      halfWidth: (box.size[0] * PART_SCALE) / 2,
-      halfHeight: (box.size[1] * PART_SCALE) / 2,
-      halfDepth: (box.size[2] * PART_SCALE) / 2,
+      y: center[1] + PART_LIFT,
+      z: center[2],
+      halfWidth: box.size[0] / 2,
+      halfHeight: box.size[1] / 2,
+      halfDepth: box.size[2] / 2,
       rotation,
       hitbox: box.hitbox === true,
     }
@@ -402,11 +401,7 @@ const preview = createPreview(canvas, {
       return
     }
     // The gizmo works in world space; the draft stores the prefab centre.
-    const center = unrotateBoxPoint(box.rotation ?? [0, 0, 0], [
-      x / PART_SCALE,
-      (y - PART_LIFT) / PART_SCALE,
-      z / PART_SCALE,
-    ])
+    const center = unrotateBoxPoint(box.rotation ?? [0, 0, 0], [x, y - PART_LIFT, z])
     box.center = [snap(center[0]), snap(center[1]), snap(center[2])]
     syncBoxInputs(index)
     markDirty()
@@ -439,11 +434,7 @@ const preview = createPreview(canvas, {
     if (!box) {
       return
     }
-    box.size = [
-      snap((halfWidth * 2) / PART_SCALE),
-      snap((halfHeight * 2) / PART_SCALE),
-      snap((halfDepth * 2) / PART_SCALE),
-    ]
+    box.size = [snap(halfWidth * 2), snap(halfHeight * 2), snap(halfDepth * 2)]
     syncBoxInputs(index)
     markDirty()
   },
