@@ -13,7 +13,7 @@
       "ttl": 0.5,
       "visual": "poison",
       "spawnPoints": [{ "x": 0, "y": 0.55, "z": 1.75 }],
-      "onLand": { "duration": 0.5, "radius": 6 }
+      "onLand": { "duration": 3, "radius": 3, "interval": 0.75 }
     }
   }
 }

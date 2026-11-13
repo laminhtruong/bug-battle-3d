@@ -295,6 +295,9 @@ function landProjectile(world: World, projectile: Projectile): void {
     damage: projectile.damage,
     duration: onLand.duration,
     age: 0,
+    ...(onLand.interval === undefined
+      ? {}
+      : { interval: onLand.interval, nextTickAge: 0 }),
   })
 }
 
@@ -354,19 +357,30 @@ export function updateAreas(world: World, dt: number): void {
 
   for (const area of world.areas) {
     area.age += dt
-    const owner = world.snakes.find((snake) => snake.id === area.ownerId)
-    for (const snake of world.snakes) {
-      if (!snake.alive || snake.id === area.ownerId) {
-        continue
+    // shortcut: one clock per area, so a segment walking in mid-cycle waits for
+    // the next tick instead of keeping its own interval.
+    const tickDue =
+      area.interval === undefined ||
+      area.nextTickAge === undefined ||
+      area.age >= area.nextTickAge
+    if (tickDue) {
+      if (area.interval !== undefined) {
+        area.nextTickAge = area.age + area.interval
       }
-      for (let index = snake.segments.length - 1; index >= 0; index -= 1) {
-        const segment = snake.segments[index]
-        if (!segment || segment.dead) {
+      const owner = world.snakes.find((snake) => snake.id === area.ownerId)
+      for (const snake of world.snakes) {
+        if (!snake.alive || snake.id === area.ownerId) {
           continue
         }
-        const part = requirePart(segment.slot, segment.partId)
-        if (segmentHitsCircle(part, segment, area.x, area.z, area.radius)) {
-          damageSegment(world, snake, index, area.damage, owner, world.time)
+        for (let index = snake.segments.length - 1; index >= 0; index -= 1) {
+          const segment = snake.segments[index]
+          if (!segment || segment.dead) {
+            continue
+          }
+          const part = requirePart(segment.slot, segment.partId)
+          if (segmentHitsCircle(part, segment, area.x, area.z, area.radius)) {
+            damageSegment(world, snake, index, area.damage, owner, world.time)
+          }
         }
       }
     }

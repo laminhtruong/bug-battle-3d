@@ -83,7 +83,7 @@ export interface Projectile {
   damage: number
   age: number
   ttl: number
-  onLand?: { delay: number; duration: number; radius: number }
+  onLand?: { delay: number; duration: number; radius: number; interval?: number }
   landed: boolean
   delayLeft: number
 }
@@ -98,6 +98,10 @@ export interface Area {
   damage: number
   duration: number
   age: number
+  /** Seconds between damage ticks. Unset means every tick tries to damage. */
+  interval?: number
+  /** Area age at which the next damage tick fires. */
+  nextTickAge?: number
 }
 
 export type PickupKind = 'apple' | 'heal' | 'head' | 'body'

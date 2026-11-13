@@ -16,7 +16,7 @@
         { "x": 1.25, "y": 0.8, "z": -0.05, "angle": 90 },
         { "x": -1.25, "y": 0.8, "z": -0.05, "angle": -90 }
       ],
-      "onLand": { "delay": 0.5, "duration": 0.5, "radius": 6 }
+      "onLand": { "delay": 0.5, "duration": 0.5, "radius": 4 }
     }
   }
 }

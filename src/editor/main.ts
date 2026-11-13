@@ -582,6 +582,7 @@ function attackFields(attack: AttackDef | undefined): string {
             <label>Delay<input data-attack-field="land-delay" type="number" step="0.05" min="0" value="${fmt(projectile.onLand.delay)}"></label>
             <label>Duration<input data-attack-field="land-duration" type="number" step="0.05" min="0.01" value="${fmt(projectile.onLand.duration)}"></label>
             <label>Radius<input data-attack-field="land-radius" type="number" step="0.1" min="0.01" value="${fmt(projectile.onLand.radius)}"></label>
+            <label>Tick<input data-attack-field="land-interval" type="number" step="0.05" min="0" placeholder="off" value="${projectile.onLand.interval === undefined ? '' : fmt(projectile.onLand.interval)}"></label>
           </div>`
         : ''
     }
@@ -923,6 +924,16 @@ function setAttackField(target: HTMLInputElement | HTMLSelectElement): void {
     case 'land-radius':
       if (projectile.onLand) {
         projectile.onLand.radius = toNumber(target.value)
+      }
+      break
+    case 'land-interval':
+      if (projectile.onLand) {
+        const interval = toNumber(target.value)
+        if (interval > 0) {
+          projectile.onLand.interval = interval
+        } else {
+          delete projectile.onLand.interval
+        }
       }
       break
     default:

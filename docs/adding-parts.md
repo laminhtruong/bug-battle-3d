@@ -143,7 +143,8 @@ the height shots used before spawn points existed, and only changes presentation
 the simulation still runs on the XZ plane. Omit `y` when it is `2`, `angle` when
 it is zero and `damage` when it is `1`; the schema supplies those defaults.
 `onLand` is optional and turns the shot into a delayed area hazard. `visual` is
-one of `bullet`, `poison` or `lightning`.
+one of `bullet`, `poison` or `lightning`. `interval` sets the seconds between
+damage ticks; omit it to damage as often as the hurt cooldown allows.
 
 An immediate cone hit: `damage` is fixed at 1 for cones. The optional
 `spawnPoints` move the cone origin; without them it starts at the part pivot and

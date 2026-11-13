@@ -82,6 +82,8 @@ const onLandSchema = z.object({
   delay: z.number().min(0).default(0),
   duration: z.number().positive(),
   radius: z.number().positive(),
+  /** Seconds between damage ticks. Omit to damage on every tick. */
+  interval: z.number().positive().optional(),
 })
 
 /**

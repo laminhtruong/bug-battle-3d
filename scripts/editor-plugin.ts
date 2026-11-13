@@ -91,6 +91,7 @@ function cleanAttack(attack: AttackDef): unknown {
               ...(onLand.delay !== 0 ? { delay: onLand.delay } : {}),
               duration: onLand.duration,
               radius: onLand.radius,
+              ...(onLand.interval === undefined ? {} : { interval: onLand.interval }),
             },
           }
         : {}),

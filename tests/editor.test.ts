@@ -53,7 +53,7 @@ describe('part editor files', () => {
               { x: 0, y: DEFAULT_SPAWN_Y, z: 1.96, angle: 0 },
               { x: 1.96, y: DEFAULT_SPAWN_Y, z: 0, angle: 90 },
             ],
-            onLand: { delay: 0, duration: 0.5, radius: 1.5 },
+            onLand: { delay: 0, duration: 0.5, radius: 1.5, interval: 0.75 },
           },
         },
       },
@@ -70,7 +70,7 @@ describe('part editor files', () => {
           { x: 0, z: 1.96 },
           { x: 1.96, z: 0, angle: 90 },
         ],
-        onLand: { duration: 0.5, radius: 1.5 },
+        onLand: { duration: 0.5, radius: 1.5, interval: 0.75 },
       },
     })
     const part = defineHead(JSON.parse(source))

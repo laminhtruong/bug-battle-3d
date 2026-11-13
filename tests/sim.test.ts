@@ -93,9 +93,37 @@ describe('world', () => {
       tickWorld(world, STEP)
     }
 
+    expect(world.snakes.some((snake) => snake.control === 'enemy' && !before.has(snake.id))).toBe(
+      true,
+    )
+  })
+
+  it('rolls a drop per part, never apples, when a bug dies', () => {
+    const lucky = createWorld({ seed: 46, arena: classicArena })
+    const luckyEnemy = lucky.snakes.find((snake) => snake.control === 'enemy')
+    if (!luckyEnemy) {
+      throw new Error('expected a wandering bug')
+    }
+    const parts = luckyEnemy.segments.length
+    lucky.pickups = []
+    lucky.rng.next = () => 0.1
+    killSnake(lucky, luckyEnemy)
+
     expect(
-      world.snakes.some((snake) => snake.control === 'enemy' && !before.has(snake.id)),
-    ).toBe(true)
+      lucky.pickups.filter((pickup) => pickup.kind === 'head' || pickup.kind === 'body'),
+    ).toHaveLength(parts)
+    expect(lucky.pickups.some((pickup) => pickup.kind === 'apple')).toBe(false)
+
+    const unlucky = createWorld({ seed: 47, arena: classicArena })
+    const unluckyEnemy = unlucky.snakes.find((snake) => snake.control === 'enemy')
+    if (!unluckyEnemy) {
+      throw new Error('expected a wandering bug')
+    }
+    unlucky.pickups = []
+    unlucky.rng.next = () => 0.9
+    killSnake(unlucky, unluckyEnemy)
+
+    expect(unlucky.pickups).toHaveLength(0)
   })
 
   it('keeps a wandering bug on its route past a nearby player', () => {
@@ -127,9 +155,7 @@ describe('world', () => {
     const bot = getSnake(world, 'bot-2')
     const human = getSnake(world, 'human')
     // Keep only the two snakes the bot could steer at.
-    world.snakes = world.snakes.filter(
-      (snake) => snake.id === bot.id || snake.id === human.id,
-    )
+    world.snakes = world.snakes.filter((snake) => snake.id === bot.id || snake.id === human.id)
     world.pickups = []
     placeHead(bot, 0, 0)
     placeHead(human, 0, 10)
@@ -202,9 +228,7 @@ describe('world', () => {
     const world = createWorld({
       seed: 49,
       arena: classicArena,
-      players: [
-        { id: 'human', name: 'You', control: 'human', slot: 0, headId: DEFAULT_HEAD_ID },
-      ],
+      players: [{ id: 'human', name: 'You', control: 'human', slot: 0, headId: DEFAULT_HEAD_ID }],
     })
     const bot = getSnake(world, 'bot-2')
     const human = getSnake(world, 'human')
@@ -251,7 +275,9 @@ describe('world', () => {
     expect(bot.ai.seenZ).not.toBe(human.z)
     expect(bot.steerX).toBeGreaterThan(0)
     expect(Math.abs(bot.steerZ)).toBeLessThan(0.01)
-    expect(world.events).toContainEqual(expect.objectContaining({ type: 'attack', snakeId: bot.id }))
+    expect(world.events).toContainEqual(
+      expect.objectContaining({ type: 'attack', snakeId: bot.id }),
+    )
   })
 
   it('kills a headless bot with only bones instead of letting it chase', () => {
@@ -692,9 +718,7 @@ describe('world', () => {
     const world = createWorld({ seed: 32, arena: classicArena })
     const boss = spawnBoss(world)
     const player = getSnake(world, 'bot-1')
-    world.snakes = world.snakes.filter(
-      (snake) => snake.id === boss.id || snake.id === player.id,
-    )
+    world.snakes = world.snakes.filter((snake) => snake.id === boss.id || snake.id === player.id)
     boss.id = 'boss-3'
     boss.x = 0
     boss.z = 0
@@ -892,9 +916,7 @@ describe('arena targets', () => {
       tickWorld(world, STEP)
     }
 
-    const crates = world.snakes.filter(
-      (snake) => snake.control === 'powerup' && snake.alive,
-    )
+    const crates = world.snakes.filter((snake) => snake.control === 'powerup' && snake.alive)
     expect(crates).toHaveLength(arena.powerupTarget)
     for (const first of crates) {
       for (const second of crates) {
@@ -915,9 +937,7 @@ describe('arena targets', () => {
 
     killSnake(world, boss)
 
-    const loot = world.pickups.filter(
-      (pickup) => pickup.kind === 'head' || pickup.kind === 'body',
-    )
+    const loot = world.pickups.filter((pickup) => pickup.kind === 'head' || pickup.kind === 'body')
     expect(loot).toHaveLength(BALANCE.bossLootCount)
     expect(loot.some((pickup) => pickup.kind === 'head' && pickup.partId === headId)).toBe(true)
     expect(world.bossSpawnAt).toBe(world.time + classicArena.bossEverySec)
@@ -1186,6 +1206,80 @@ describe('combat', () => {
     updateAreas(world, STEP)
 
     expect(target.segments[0]?.hp).toBe(hp - 1)
+  })
+
+  it('keeps a landed poison puddle dangerous after a second', () => {
+    const world = createWorld({ seed: 13, arena: classicArena })
+    const target = getSnake(world, 'bot-1')
+    const part = requirePart('head', 'poison')
+    if (part.attack?.kind !== 'projectile' || !part.attack.projectile.onLand) {
+      throw new Error('poison head has no area hazard')
+    }
+    const onLand = part.attack.projectile.onLand
+    // The poison decal stays on the floor for three seconds, so the puddle must
+    // keep hurting well after the shot lands.
+    for (const segment of target.segments) {
+      segment.x = 40
+      segment.z = 40
+    }
+    world.areas.push({
+      id: 'poison-puddle',
+      ownerId: 'bot-2',
+      partId: 'poison',
+      x: 0,
+      z: 0,
+      radius: onLand.radius,
+      damage: 1,
+      duration: onLand.duration,
+      age: 0,
+    })
+
+    for (let index = 0; index < BALANCE.tickRate; index += 1) {
+      updateAreas(world, STEP)
+    }
+    expect(world.areas).toHaveLength(1)
+
+    placeHead(target, 0, 0)
+    const hp = target.segments[0]?.hp ?? 0
+    updateAreas(world, STEP)
+
+    expect(target.segments[0]?.hp).toBe(hp - 1)
+  })
+
+  it('ticks poison area damage on its interval', () => {
+    const world = createWorld({ seed: 13, arena: classicArena })
+    const target = getSnake(world, 'bot-1')
+    placeHead(target, 0, 0)
+    const head = target.segments[0]!
+    head.hp = 10
+    head.maxHp = 10
+    world.areas.push({
+      id: 'poison-puddle',
+      ownerId: 'bot-2',
+      partId: 'poison',
+      x: 0,
+      z: 0,
+      radius: 3,
+      damage: 1,
+      duration: 3,
+      age: 0,
+      interval: 0.75,
+      nextTickAge: 0,
+    })
+
+    // Half a second in, the puddle has only ticked once.
+    for (let index = 0; index < Math.round(0.5 / STEP); index += 1) {
+      world.time += STEP
+      updateAreas(world, STEP)
+    }
+    expect(head.hp).toBe(9)
+
+    // Past 0.75s the second tick lands, so it is not damage every frame.
+    for (let index = 0; index < Math.round(0.8 / STEP); index += 1) {
+      world.time += STEP
+      updateAreas(world, STEP)
+    }
+    expect(head.hp).toBe(8)
   })
 
   it('respects the hurt cooldown', () => {
