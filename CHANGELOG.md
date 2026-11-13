@@ -18,11 +18,14 @@ All notable changes to this project are documented here. The format follows
   from the original Unity audio and played from the simulation events.
 - Blob shadows under the segments and name labels above the players.
 - A dev-only web editor for heads and bodies: part CRUD, stats, model, art
-  offset, undo/redo, a Unity-style view gizmo and collider box editing. It writes
-  the same `src/content` files the game loads.
+  offset, undo/redo, a Unity-style view gizmo and collider box editing. It reads
+  and writes the same `src/content` JSON files the game loads.
 
 ### Changed
 
+- Head and body definitions now live in JSON files under `src/content/heads` and
+  `src/content/bodies`. The game registry and the editor both read them, and the
+  editor writes JSON, so content can be authored without touching TypeScript.
 - Part collision now uses the trigger BoxColliders authored in the Unity art
   prefabs, scaled with the models, instead of one circle per segment. Long claws
   and sideways spikes hit where the art says they should. Every box is a

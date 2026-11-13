@@ -40,7 +40,7 @@ docs: explain room codes
 
 See [docs/adding-parts.md](docs/adding-parts.md). In short:
 
-1. Add one file to `src/content/heads` or `src/content/bodies`.
+1. Add one JSON file to `src/content/heads` or `src/content/bodies`.
 2. Give it a unique kebab-case id per slot.
 3. Copy the trigger BoxColliders from the Unity prefab into `boxes`; mark
    `Claw` boxes with `hitbox: true`.

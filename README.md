@@ -87,12 +87,12 @@ and align the art on the pivot with the X/Z arrows or the X/Z fields. Y is
 locked to the prefab lift. Collider boxes stay hidden until you tick **Edit** in
 the Colliders section, where you can set their centre, size and rotation. The
 axis widget snaps the camera like Unity, and undo/redo is available with `Ctrl+Z`
-/ `Ctrl+Shift+Z`. It writes the same `src/content` TypeScript files the game
+/ `Ctrl+Shift+Z`. It reads and writes the same `src/content` JSON files the game
 loads, so `npm run check` still validates everything afterwards.
 
 ## Adding content
 
-A head or a body is a single file under `src/content/heads` or
+A head or a body is a single JSON file under `src/content/heads` or
 `src/content/bodies`. The registry discovers it automatically and validates it
 with zod. Its `boxes` are the trigger BoxColliders copied from the Unity prefab,
 so collision keeps the original claw and body shapes. See

@@ -1,7 +1,7 @@
 # Adding a head or a body
 
-A part is pure data. Adding one means adding one file; the registry discovers it,
-validates it with zod and hashes it for network compatibility.
+A part is pure data. Adding one means adding one JSON file; the registry discovers
+it, validates it with zod and hashes it for network compatibility.
 
 ## Using the editor
 
@@ -21,43 +21,38 @@ Vite dev server for its file API.
 
 ## Steps
 
-1. Create `src/content/heads/my-head.ts` or `src/content/bodies/my-body.ts`.
-2. Export a default object that matches the schema below.
+1. Create `src/content/heads/my-head.json` or `src/content/bodies/my-body.json`.
+2. Write an object that matches the schema below.
 3. Give it a unique kebab-case id within its slot.
 4. Run `npm run check`.
 
-```ts
-import { defineBody } from '../define'
-
-export default defineBody({
-  id: 'my-body',
-  name: 'My Body',
-  hp: 2,
-  score: 5,
-  contact: { damage: 0 },
-  boxes: [
-    // Unity BoxCollider m_Center and m_Size.
-    { center: [0, -0.1, -0.05], size: [1.5, 1.45, 1.15] },
-  ],
-  attack: {
-    kind: 'projectile',
-    cooldown: 1.4,
-    mount: 'forward',
-    projectile: {
-      speed: 12,
-      ttl: 1.2,
-      visual: 'bullet',
-      damage: 1,
-    },
-  },
-})
+```json
+{
+  "id": "my-body",
+  "name": "My Body",
+  "hp": 2,
+  "score": 5,
+  "contact": { "damage": 0 },
+  "boxes": [{ "center": [0, -0.1, -0.05], "size": [1.5, 1.45, 1.15] }],
+  "attack": {
+    "kind": "projectile",
+    "cooldown": 1.4,
+    "mount": "forward",
+    "projectile": {
+      "speed": 12,
+      "ttl": 1.2,
+      "visual": "bullet",
+      "damage": 1
+    }
+  }
+}
 ```
 
 ## Rules
 
 - `id` must match `^[a-z0-9]+(-[a-z0-9]+)*$`.
 - Head and body ids may repeat. `head:gun` and `body:gun` are different parts.
-- `slot` is set by the factory (`defineHead` or `defineBody`), never by hand.
+- The slot comes from the folder (`heads` or `bodies`), never from the file.
 - `boxes` is required and must contain at least one Unity BoxCollider. It is the
   part's hit shape; there is no fallback circle.
 - `attack` is optional. Parts without an attack only deal contact damage through
@@ -88,19 +83,20 @@ straight from the prefab `m_Center` and `m_Size`, so they are exact:
    an identity rotation. Both the centre and the box axes turn around the part
    pivot.
 4. A child named `Body` is only a hurtbox: leave `hitbox` off. A child named
-   `Claw` also deals contact damage: add `hitbox: true`.
+   `Claw` also deals contact damage: add `"hitbox": true`.
 5. Ignore `BulletFire`, `Skeleton`, MeshCollider and any non-trigger collider.
 6. Use the raw Unity numbers. The definition scales them by the prefab's 0.25
    art scale, so the boxes always line up with the model.
 7. The centre is relative to the part pivot. Local `+z` points forward, the same
    direction the model faces.
 
-```ts
-// Spike body: the main body plus a rotated claw.
-boxes: [
-  { center: [0, 0, -0.05], size: [1.5, 0.9, 1.15] },
-  { center: [4.1, 0.25, 1.38], size: [1.5, 0.25, 0.6], rotation: [0, 20, 0], hitbox: true },
-],
+For the spike body, the main body plus a rotated claw looks like this:
+
+```json
+"boxes": [
+  { "center": [0, 0, -0.05], "size": [1.5, 0.9, 1.15] },
+  { "center": [4.1, 0.25, 1.38], "size": [1.5, 0.25, 0.6], "rotation": [0, 20, 0], "hitbox": true }
+]
 ```
 
 The simulation runs on the XZ plane, so collision uses the rotated centre and
@@ -111,34 +107,40 @@ box, so it sits at the same height as the art.
 
 All boxes are hurtboxes, so a projectile or another claw can damage any of them.
 Only `hitbox` boxes cause contact damage, with the part's `contact.damage`.
-That is why a gun head has `contact: { damage: 0 }`: its Unity prefab has only a
-`Body` collider, while every claw head has `Claw` boxes.
+That is why a gun head has `"contact": { "damage": 0 }`: its Unity prefab has only
+a `Body` collider, while every claw head has `Claw` boxes.
 
 If a part has no Unity prefab yet, start from a box that covers the visible
 model. The box may be smaller than the art, but it must not be empty.
 
 ## Attack shapes
 
-```ts
-// Projectile, with an optional hazard left where it lands.
-attack: {
-  kind: 'projectile',
-  cooldown: 1,
-  mount: 'forward', // or 'sides' to fire left and right
-  projectile: {
-    speed: 14,
-    ttl: 1.1,
-    visual: 'poison',
-    damage: 1,
-    onLand: { delay: 0.1, duration: 4, radius: 1.6 },
-  },
-}
+A projectile, with an optional hazard left where it lands:
 
-// Immediate cone hit around the part.
-attack: {
-  kind: 'cone',
-  cooldown: 0.9,
-  cone: { range: 2.2, halfAngleDeg: 45, duration: 0.3 },
+```json
+"attack": {
+  "kind": "projectile",
+  "cooldown": 1,
+  "mount": "forward",
+  "projectile": {
+    "speed": 14,
+    "ttl": 1.1,
+    "visual": "poison",
+    "damage": 1,
+    "onLand": { "delay": 0.1, "duration": 4, "radius": 1.6 }
+  }
+}
+```
+
+`mount` is `"forward"` or `"sides"` to fire left and right.
+
+An immediate cone hit around the part:
+
+```json
+"attack": {
+  "kind": "cone",
+  "cooldown": 0.9,
+  "cone": { "range": 2.2, "halfAngleDeg": 45, "duration": 0.3 }
 }
 ```
 
