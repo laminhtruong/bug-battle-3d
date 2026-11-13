@@ -60,6 +60,10 @@ body {
   padding: 18px;
 }
 
+.hud-top[hidden] {
+  display: none;
+}
+
 .hud-timer {
   display: flex;
   flex-direction: column;
@@ -130,7 +134,6 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   padding: 20px;
   overflow-y: auto;
   background:
@@ -160,12 +163,16 @@ body {
   backdrop-filter: blur(14px);
 }
 
-.menu-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 22px;
-  width: min(400px, 100%);
-  margin: auto;
+.screen[data-screen='menu'] {
+  display: grid;
+  grid-template-rows: 1fr auto 1fr;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+}
+
+.brand {
+  align-self: end;
+  margin-bottom: 16px;
 }
 
 .screen h2 {
@@ -178,8 +185,9 @@ body {
 }
 
 .brand-logo img {
-  width: min(300px, 100%);
+  width: clamp(180px, 30vh, 320px);
   height: auto;
+  filter: drop-shadow(0 18px 36px rgba(255, 196, 60, 0.14));
 }
 
 .screen h2 {
@@ -189,15 +197,18 @@ body {
 }
 
 .tagline {
-  margin: 8px 0 0;
+  margin: -4px 0 0;
   color: var(--muted);
-  font-size: 15px;
+  font-size: 14px;
+  letter-spacing: 0.01em;
 }
 
-.hint {
-  margin: 2px 0 0;
+.screen-hint {
+  align-self: start;
+  margin: 14px 0 0;
   color: var(--muted);
   font-size: 12.5px;
+  text-align: center;
 }
 
 /* ---------- Controls ---------- */

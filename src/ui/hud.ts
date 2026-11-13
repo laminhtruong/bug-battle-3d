@@ -56,30 +56,28 @@ export function createHud(handlers: HudHandlers): Hud {
       <ol class="hud-board"></ol>
     </div>
     <section class="screen" data-screen="menu">
-      <div class="menu-stack">
-        <header class="brand">
-          <h1 class="brand-logo">
-            <img src="/assets/textures/ui/logo.png" alt="${EN.title}" />
-          </h1>
-          <p class="tagline">${EN.tagline}</p>
-        </header>
-        <div class="panel">
-          <label class="field">
-            <span>${EN.name}</span>
-            <input class="name-input" maxlength="16" value="${EN.you}" />
-          </label>
-          <button class="button" data-action="local" type="button">${EN.play}</button>
-          <p class="divider"><span>${EN.orPlayOnline}</span></p>
-          <div class="menu-row">
-            <button class="button secondary" data-action="create" type="button">${EN.createRoom}</button>
-          </div>
-          <div class="menu-row">
-            <input class="code-input" maxlength="6" placeholder="${EN.roomCode}" />
-            <button class="button secondary" data-action="join" type="button">${EN.joinRoom}</button>
-          </div>
-          <p class="hint">${EN.hint}</p>
+      <header class="brand">
+        <h1 class="brand-logo">
+          <img src="/assets/textures/ui/logo.png" alt="${EN.title}" />
+        </h1>
+      </header>
+      <div class="panel">
+        <p class="tagline">${EN.tagline}</p>
+        <label class="field">
+          <span>${EN.name}</span>
+          <input class="name-input" maxlength="16" value="${EN.you}" />
+        </label>
+        <button class="button" data-action="local" type="button">${EN.play}</button>
+        <p class="divider"><span>${EN.orPlayOnline}</span></p>
+        <div class="menu-row">
+          <button class="button secondary" data-action="create" type="button">${EN.createRoom}</button>
+        </div>
+        <div class="menu-row">
+          <input class="code-input" maxlength="6" placeholder="${EN.roomCode}" />
+          <button class="button secondary" data-action="join" type="button">${EN.joinRoom}</button>
         </div>
       </div>
+      <p class="screen-hint">${EN.hint}</p>
     </section>
     <section class="screen" data-screen="lobby" hidden>
       <div class="panel">
