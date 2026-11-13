@@ -8,11 +8,11 @@ export default defineBody({
   contact: { damage: 1 },
   boxes: [
     { center: [0, 0, -0.05], size: [1.5, 0.9, 1.15] },
-    { center: [1.45, 0.16, -0.13], size: [1.45, 0.25, 0.3], hitbox: true },
-    { center: [-1.45, 0.16, -0.13], size: [1.45, 0.25, 0.3], hitbox: true },
+    { center: [1.45, 0.16, -0.13], size: [1.45, 0.25, 0.3], rotation: [0, -10, 0], hitbox: true },
+    { center: [-1.45, 0.16, -0.13], size: [1.45, 0.25, 0.3], rotation: [0, 10, 0], hitbox: true },
     { center: [2.9, 0.25, 0.25], size: [1.5, 0.25, 0.2], hitbox: true },
     { center: [-2.9, 0.25, 0.25], size: [1.5, 0.25, 0.2], hitbox: true },
-    { center: [4.1, 0.25, 1.38], size: [1.5, 0.25, 0.6], hitbox: true },
-    { center: [-4.1, 0.25, 1.38], size: [1.5, 0.25, 0.6], hitbox: true },
+    { center: [4.1, 0.25, 1.38], size: [1.5, 0.25, 0.6], rotation: [0, 20, 0], hitbox: true },
+    { center: [-4.1, 0.25, 1.38], size: [1.5, 0.25, 0.6], rotation: [0, -20, 0], hitbox: true },
   ],
 })

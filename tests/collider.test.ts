@@ -49,6 +49,26 @@ describe('part colliders', () => {
     expect(segmentHitsCircle(part, segment, 0, 0.325, 0.01)).toBe(false)
   })
 
+  it('rotates the box footprint with its transform', () => {
+    const part = requirePart('head', 'claw02')
+    const segment = makeSegment('claw02', 0, 0, 0)
+    const box = part.collider.boxes[1]!
+
+    expect(box.angle).toBeCloseTo((40 * Math.PI) / 180, 6)
+    // 0.24 along the rotated long axis is inside; across its width is not.
+    const reach = 0.24
+    const along = [
+      box.x + Math.sin(box.angle) * reach,
+      box.z + Math.cos(box.angle) * reach,
+    ] as const
+    const across = [
+      box.x + Math.cos(box.angle) * reach,
+      box.z - Math.sin(box.angle) * reach,
+    ] as const
+    expect(segmentHitsCircle(part, segment, along[0], along[1], 0.01)).toBe(true)
+    expect(segmentHitsCircle(part, segment, across[0], across[1], 0.01)).toBe(false)
+  })
+
   it('keeps contact boxes directional', () => {
     const part = requirePart('head', 'claw01')
     const forward = makeSegment('claw01', 0, 0, 0)

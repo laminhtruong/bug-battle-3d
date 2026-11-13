@@ -37,14 +37,21 @@ export function segmentHitsCircle(
 ): boolean {
   const cos = Math.cos(segment.angle)
   const sin = Math.sin(segment.angle)
-  const dx = x - segment.x
-  const dz = z - segment.z
-  const localX = dx * cos - dz * sin
-  const localZ = dx * sin + dz * cos
 
   for (const box of part.collider.boxes) {
-    const nearestX = Math.min(box.x + box.halfWidth, Math.max(box.x - box.halfWidth, localX))
-    const nearestZ = Math.min(box.z + box.halfDepth, Math.max(box.z - box.halfDepth, localZ))
+    const boxCos = Math.cos(box.angle)
+    const boxSin = Math.sin(box.angle)
+    // Both the segment and the box turn, so their angles add on the plane.
+    const cosA = cos * boxCos - sin * boxSin
+    const sinA = sin * boxCos + cos * boxSin
+    const centerX = localToWorldX(box.x, box.z, segment, cos, sin)
+    const centerZ = localToWorldZ(box.x, box.z, segment, cos, sin)
+    const dx = x - centerX
+    const dz = z - centerZ
+    const localX = dx * cosA - dz * sinA
+    const localZ = dx * sinA + dz * cosA
+    const nearestX = Math.min(box.halfWidth, Math.max(-box.halfWidth, localX))
+    const nearestZ = Math.min(box.halfDepth, Math.max(-box.halfDepth, localZ))
     if (Math.hypot(localX - nearestX, localZ - nearestZ) <= radius) {
       return true
     }
@@ -83,23 +90,30 @@ export function segmentHitsCone(
   }
 
   for (const box of part.collider.boxes) {
+    const boxCos = Math.cos(box.angle)
+    const boxSin = Math.sin(box.angle)
+    const cosA = cos * boxCos - sin * boxSin
+    const sinA = sin * boxCos + cos * boxSin
+    const centerX = localToWorldX(box.x, box.z, segment, cos, sin)
+    const centerZ = localToWorldZ(box.x, box.z, segment, cos, sin)
+
     // The cone can start inside the part it is touching.
-    const dx = originX - segment.x
-    const dz = originZ - segment.z
-    const localX = dx * cos - dz * sin
-    const localZ = dx * sin + dz * cos
-    if (Math.abs(localX - box.x) <= box.halfWidth && Math.abs(localZ - box.z) <= box.halfDepth) {
+    const dx = originX - centerX
+    const dz = originZ - centerZ
+    const localX = dx * cosA - dz * sinA
+    const localZ = dx * sinA + dz * cosA
+    if (Math.abs(localX) <= box.halfWidth && Math.abs(localZ) <= box.halfDepth) {
       return true
     }
 
     // Four corners, four edge midpoints and the centre cover the box well
     // enough for a 25 degree cone without a full polygon clip.
-    for (const sampleX of [box.x - box.halfWidth, box.x, box.x + box.halfWidth]) {
-      for (const sampleZ of [box.z - box.halfDepth, box.z, box.z + box.halfDepth]) {
+    for (const sampleX of [-box.halfWidth, 0, box.halfWidth]) {
+      for (const sampleZ of [-box.halfDepth, 0, box.halfDepth]) {
         if (
           insideCone(
-            localToWorldX(sampleX, sampleZ, segment, cos, sin),
-            localToWorldZ(sampleX, sampleZ, segment, cos, sin),
+            centerX + sampleX * cosA + sampleZ * sinA,
+            centerZ - sampleX * sinA + sampleZ * cosA,
           )
         ) {
           return true
@@ -127,21 +141,27 @@ function boxOverlapsBox(
   const dx = secondX - firstX
   const dz = secondZ - firstZ
 
+  // Add each box's own yaw to its segment angle before testing the axes.
+  const firstBoxCos = firstCos * Math.cos(first.angle) - firstSin * Math.sin(first.angle)
+  const firstBoxSin = firstSin * Math.cos(first.angle) + firstCos * Math.sin(first.angle)
+  const secondBoxCos = secondCos * Math.cos(second.angle) - secondSin * Math.sin(second.angle)
+  const secondBoxSin = secondSin * Math.cos(second.angle) + secondCos * Math.sin(second.angle)
+
   const axes = [
-    [firstCos, -firstSin],
-    [firstSin, firstCos],
-    [secondCos, -secondSin],
-    [secondSin, secondCos],
+    [firstBoxCos, -firstBoxSin],
+    [firstBoxSin, firstBoxCos],
+    [secondBoxCos, -secondBoxSin],
+    [secondBoxSin, secondBoxCos],
   ] as const
 
   for (const [axisX, axisZ] of axes) {
     const distance = Math.abs(dx * axisX + dz * axisZ)
     const firstRadius =
-      first.halfWidth * Math.abs(axisX * firstCos - axisZ * firstSin) +
-      first.halfDepth * Math.abs(axisX * firstSin + axisZ * firstCos)
+      first.halfWidth * Math.abs(axisX * firstBoxCos - axisZ * firstBoxSin) +
+      first.halfDepth * Math.abs(axisX * firstBoxSin + axisZ * firstBoxCos)
     const secondRadius =
-      second.halfWidth * Math.abs(axisX * secondCos - axisZ * secondSin) +
-      second.halfDepth * Math.abs(axisX * secondSin + axisZ * secondCos)
+      second.halfWidth * Math.abs(axisX * secondBoxCos - axisZ * secondBoxSin) +
+      second.halfDepth * Math.abs(axisX * secondBoxSin + axisZ * secondBoxCos)
     if (distance > firstRadius + secondRadius) {
       return false
     }
