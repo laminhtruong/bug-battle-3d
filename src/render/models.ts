@@ -6,10 +6,11 @@ import type { Slot } from '@/content/define'
 
 /**
  * Source models are authored at roughly four units per bug. The original Unity
- * prefabs scale their model by 0.25, so the arena units match its gameplay
- * distances without extra conversion.
+ * prefabs scale their model by 0.25 and lift it 0.125 above the pivot, so the
+ * arena units match its gameplay distances without extra conversion.
  */
 const MODEL_SCALE = 0.25
+const MODEL_LIFT = 0.125
 
 /**
  * Parts share one 32x32 palette texture: their UVs point at flat colour swatches,
@@ -32,7 +33,35 @@ function modelId(slot: Slot, id: string): string {
   return `${slot}:${getPart(slot, id)?.model ?? id}`
 }
 
-/** Centers a loaded scene so its feet sit on the group origin. */
+/**
+ * Places a part the way the original prefabs do: the pivot authored in the
+ * model file stays the attachment point. Centring on the bounding box would
+ * drag a head with long claws or antennae off that pivot, so the chain would
+ * join it at the wrong spot, and every head would sit differently.
+ */
+function preparePart(root: THREE.Object3D): THREE.Group {
+  root.traverse((node) => {
+    if (node instanceof THREE.Mesh) {
+      node.material = partMaterial
+    }
+  })
+  // The FBX export keeps the arbitrary object offset of the source scene in
+  // the nodes under its RootNode; the original prefabs use the mesh alone, so
+  // drop those offsets but keep the unit scale.
+  for (const file of root.children) {
+    for (const part of file.children.length > 0 ? file.children : [file]) {
+      part.position.set(0, 0, 0)
+    }
+  }
+  root.position.y = MODEL_LIFT / MODEL_SCALE
+
+  const holder = new THREE.Group()
+  holder.add(root)
+  holder.scale.setScalar(MODEL_SCALE)
+  return holder
+}
+
+/** Centers the bone remains so they sit on the group origin. */
 function normalize(root: THREE.Object3D): THREE.Group {
   root.traverse((node) => {
     if (node instanceof THREE.Mesh) {
@@ -61,7 +90,7 @@ function load(slot: Slot, id: string): Promise<void> {
   const request = loader
     .loadAsync(`/assets/models/parts/${slot}/${model}.glb`)
     .then((gltf) => {
-      templates.set(key, normalize(gltf.scene))
+      templates.set(key, preparePart(gltf.scene))
       const clip = gltf.animations[0]
       if (clip) {
         clips.set(key, clip)

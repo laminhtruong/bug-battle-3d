@@ -62,7 +62,6 @@ function createSegment(slot: PartDef['slot'], id: string): SegmentView {
   bonesNode.visible = false
   const model = clonePartModel(slot, id)
   if (model) {
-    // Models are normalised so their feet sit on the group origin.
     const clip = getPartClip(slot, id)
     const mixer = clip ? new THREE.AnimationMixer(model) : undefined
     if (clip && mixer) {
