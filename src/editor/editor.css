@@ -388,7 +388,7 @@ input:focus {
   font-size: 10px;
 }
 
-/* Six fields stay in two rows of three even with the index and delete cells. */
+/* Centre, size and rotation each get a row of three next to the index cell. */
 .box-row > label:nth-child(2) {
   grid-row: 1;
   grid-column: 2;
@@ -419,12 +419,27 @@ input:focus {
   grid-column: 4;
 }
 
+.box-row > label:nth-child(8) {
+  grid-row: 3;
+  grid-column: 2;
+}
+
+.box-row > label:nth-child(9) {
+  grid-row: 3;
+  grid-column: 3;
+}
+
+.box-row > label:nth-child(10) {
+  grid-row: 3;
+  grid-column: 4;
+}
+
 .box-row input[type='number'] {
   padding: 3px 4px;
 }
 
 .box-row .check {
-  grid-row: 3;
+  grid-row: 4;
   grid-column: 2 / span 3;
   flex-direction: row;
   align-self: center;
@@ -436,7 +451,7 @@ input:focus {
 
 .box-index {
   grid-column: 1;
-  grid-row: 1 / span 2;
+  grid-row: 1 / span 3;
   align-self: stretch;
   width: 21px;
   height: auto;
@@ -464,7 +479,7 @@ input:focus {
 }
 
 .box-row .icon {
-  grid-row: 3;
+  grid-row: 4;
   grid-column: 5;
   align-self: center;
   justify-self: end;

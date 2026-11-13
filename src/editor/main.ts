@@ -447,9 +447,9 @@ function boxRows(): string {
         <label>SX<input data-box-field="size-x" data-box-index="${index}" type="number" step="0.05" min="0.01" value="${fmt(box.size[0])}"></label>
         <label>SY<input data-box-field="size-y" data-box-index="${index}" type="number" step="0.05" min="0.01" value="${fmt(box.size[1])}"></label>
         <label>SZ<input data-box-field="size-z" data-box-index="${index}" type="number" step="0.05" min="0.01" value="${fmt(box.size[2])}"></label>
-        <label>RX<input data-box-field="rotation-x" data-box-index="${index}" type="number" step="1" value="${fmt(rotation[0])}"></label>
+        <label>RX<input data-box-field="rotation-x" data-box-index="${index}" type="number" step="1" value="${fmt(rotation[0])}" disabled title="Locked"></label>
         <label>RY<input data-box-field="rotation-y" data-box-index="${index}" type="number" step="1" value="${fmt(rotation[1])}"></label>
-        <label>RZ<input data-box-field="rotation-z" data-box-index="${index}" type="number" step="1" value="${fmt(rotation[2])}"></label>
+        <label>RZ<input data-box-field="rotation-z" data-box-index="${index}" type="number" step="1" value="${fmt(rotation[2])}" disabled title="Locked"></label>
         <label class="check"><input data-box-field="hitbox" data-box-index="${index}" type="checkbox" ${box.hitbox ? 'checked' : ''}>claw</label>
         <button type="button" class="icon danger" data-action="delete-box" data-index="${index}" ${boxes.length <= 1 ? 'disabled' : ''}>x</button>
       </div>`
@@ -502,7 +502,7 @@ function renderInspector(): void {
       </div>
       ${
         editColliders
-          ? `<p class="hint">C is the centre, S is the size, like the Unity BoxCollider. Green is a hurtbox, red is a hitbox.</p>
+          ? `<p class="hint">C is the centre, S is the size, like the Unity BoxCollider. Green is a hurtbox, red is a hitbox. RX and RZ are locked; only RY can be edited.</p>
              <div class="boxes">${boxRows()}</div>`
           : '<p class="hint">Hidden. Drag the arrows to move the art, or tick Edit to change the boxes.</p>'
       }
@@ -631,14 +631,8 @@ function setBoxField(target: HTMLInputElement): void {
     case 'size-z':
       box.size = [box.size[0], box.size[1], toNumber(target.value)]
       break
-    case 'rotation-x':
-      box.rotation = [toNumber(target.value), box.rotation?.[1] ?? 0, box.rotation?.[2] ?? 0]
-      break
     case 'rotation-y':
       box.rotation = [box.rotation?.[0] ?? 0, toNumber(target.value), box.rotation?.[2] ?? 0]
-      break
-    case 'rotation-z':
-      box.rotation = [box.rotation?.[0] ?? 0, box.rotation?.[1] ?? 0, toNumber(target.value)]
       break
     case 'hitbox':
       box.hitbox = target.checked
