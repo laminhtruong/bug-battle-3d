@@ -134,7 +134,9 @@ Early playable version (`0.1.0`):
   returns 30 seconds after it dies, dropping ten of its own parts.
 - Core combat: contact damage, projectile heads and bodies, fire cones, poison and
   lightning areas.
-- Respawn after three seconds, score from apples and destroyed parts.
+- Respawn after three seconds at a fresh random arena spot, with the default
+  build again: one head and three normal bodies. Bots keep their random gear
+  rolls. Score from apples and destroyed parts.
 - Online play and local play share the same simulation.
 
 Not included: campaign, quests, shop, progression, accounts, leaderboards.

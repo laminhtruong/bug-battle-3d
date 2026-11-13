@@ -173,6 +173,9 @@ export function respawnSnake(world: World, snake: Snake): void {
   const bodyCount = BALANCE.food.startSegments - 1
   if (bot) {
     snake.baseHeadId = pickGearIds(world, 'head', HEAD_IDS, 1)[0] ?? snake.baseHeadId
+  } else {
+    // A human death resets the build, so a picked-up head cannot survive it.
+    snake.baseHeadId = DEFAULT_HEAD_ID
   }
   snake.segments = makeSegments(
     snake.baseHeadId,
@@ -191,24 +194,20 @@ export function randomPointInArena(rng: Rng, arena: World['arena'], margin = 8):
   }
 }
 
-/** Picks the arena spawn point farthest from every living player. */
+/** A player does not appear on top of loot it did not choose. */
+function clearOfPickups(world: World, x: number, z: number): boolean {
+  const gap = BALANCE.pickupRadius + 2
+  return world.pickups.every((pickup) => Math.hypot(pickup.x - x, pickup.z - z) > gap)
+}
+
+/** Random arena spot, kept clear of living players, crates and loose loot. */
 export function pickSpawnPoint(world: World): Vec2 {
-  let best: Vec2 = world.arena.spawns[0] ?? { x: 0, z: 0 }
-  let bestDistance = -1
-  for (const candidate of world.arena.spawns) {
-    let nearest = Number.POSITIVE_INFINITY
-    for (const snake of world.snakes) {
-      if (!snake.alive || !isPlayerControl(snake.control)) {
-        continue
-      }
-      nearest = Math.min(nearest, Math.hypot(candidate.x - snake.x, candidate.z - snake.z))
-    }
-    if (nearest > bestDistance) {
-      bestDistance = nearest
-      best = candidate
-    }
-  }
-  return { x: best.x, z: best.z }
+  return pickMapPoint(
+    world,
+    12,
+    BALANCE.playerSpawnMinDistance,
+    (x, z) => clearOfCrates(world, x, z) && clearOfPickups(world, x, z),
+  )
 }
 
 function isSafeMapSpawn(world: World, x: number, z: number, minDistance: number): boolean {

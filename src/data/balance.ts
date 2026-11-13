@@ -41,6 +41,8 @@ export const BALANCE = {
     ttlSec: 20,
   },
   pickupRadius: 2.8,
+  /** A player never appears closer than this to another living player. */
+  playerSpawnMinDistance: 24,
   /** Destructible power-ups scattered around the map. */
   powerupHpMin: 5,
   powerupHpMax: 10,

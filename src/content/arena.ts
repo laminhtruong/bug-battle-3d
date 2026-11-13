@@ -4,8 +4,6 @@ export interface ArenaDef {
   name: string
   width: number
   depth: number
-  /** Fixed player spawn points, in world units. */
-  spawns: readonly { x: number; z: number }[]
   /** Floor texture key under public/assets. */
   floorTexture: string
   durationSec: number

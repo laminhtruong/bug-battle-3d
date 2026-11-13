@@ -58,14 +58,6 @@ describe('content registry', () => {
 })
 
 describe('classic arena', () => {
-  it('keeps spawns inside the bounds', () => {
-    expect(classicArena.spawns.length).toBe(4)
-    for (const spawn of classicArena.spawns) {
-      expect(Math.abs(spawn.x)).toBeLessThan(classicArena.width / 2)
-      expect(Math.abs(spawn.z)).toBeLessThan(classicArena.depth / 2)
-    }
-  })
-
   it('only references known part ids', () => {
     expect(classicArena.powerupTarget).toBeGreaterThan(0)
     expect(classicArena.enemyCap).toBeGreaterThan(0)

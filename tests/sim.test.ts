@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { BALANCE } from '@/data/balance'
-import { DEFAULT_HEAD_ID, requirePart } from '@/content'
+import { DEFAULT_BODY_ID, DEFAULT_HEAD_ID, requirePart } from '@/content'
 import { createWorld } from '@/sim/world'
 import { updateAi } from '@/sim/ai'
 import { classicArena } from '@/content/arenas/classic'
@@ -49,6 +49,32 @@ describe('world', () => {
     )
     expect(world.pickups.length).toBeGreaterThanOrEqual(classicArena.appleTarget)
     expect(world.snakes.some((snake) => snake.control === 'boss')).toBe(false)
+  })
+
+  it('spawns each player at a random, spaced out arena point', () => {
+    const spot = (seed: number) =>
+      createWorld({ seed, arena: classicArena })
+        .snakes.filter((snake) => isPlayerControl(snake.control))
+        .map((snake) => `${snake.x.toFixed(2)},${snake.z.toFixed(2)}`)
+
+    expect(spot(71)).not.toEqual(spot(72))
+
+    const world = createWorld({ seed: 71, arena: classicArena })
+    const players = world.snakes.filter((snake) => isPlayerControl(snake.control))
+    for (const snake of players) {
+      expect(Math.abs(snake.x)).toBeLessThan(classicArena.width / 2)
+      expect(Math.abs(snake.z)).toBeLessThan(classicArena.depth / 2)
+    }
+    for (const first of players) {
+      for (const second of players) {
+        if (first.slot >= second.slot) {
+          continue
+        }
+        expect(Math.hypot(first.x - second.x, first.z - second.z)).toBeGreaterThanOrEqual(
+          BALANCE.playerSpawnMinDistance,
+        )
+      }
+    }
   })
 
   it('refills a wandering bug after it dies', () => {
@@ -353,6 +379,9 @@ describe('world', () => {
     const world = createWorld({ seed: 32, arena: classicArena })
     const boss = spawnBoss(world)
     const player = getSnake(world, 'bot-1')
+    world.snakes = world.snakes.filter(
+      (snake) => snake.id === boss.id || snake.id === player.id,
+    )
     boss.id = 'boss-3'
     boss.x = 0
     boss.z = 0
@@ -391,8 +420,15 @@ describe('world', () => {
   })
 
   it('respawns a player after the death delay', () => {
-    const world = createWorld({ seed: 8, arena: classicArena })
-    const player = getSnake(world, 'bot-1')
+    const world = createWorld({
+      seed: 8,
+      arena: classicArena,
+      players: [{ id: 'you', name: 'You', control: 'human', slot: 0, headId: DEFAULT_HEAD_ID }],
+    })
+    const player = getSnake(world, 'you')
+    // A head picked up during the life must not survive a death.
+    player.baseHeadId = 'claw04'
+    player.segments[0]!.partId = 'claw04'
     damageSegment(world, player, 0, 99, undefined, world.time)
     expect(player.alive).toBe(false)
     expect(player.segments).toHaveLength(0)
@@ -406,6 +442,10 @@ describe('world', () => {
 
     expect(player.alive).toBe(true)
     expect(player.segments.length).toBe(BALANCE.food.startSegments)
+    expect(player.segments[0]?.partId).toBe(DEFAULT_HEAD_ID)
+    expect(player.segments.slice(1).map((segment) => segment.partId)).toEqual(
+      Array.from({ length: BALANCE.food.startSegments - 1 }, () => DEFAULT_BODY_ID),
+    )
   })
 
   it('only moves while the stick is pushed', () => {
@@ -651,6 +691,7 @@ describe('combat', () => {
     const world = createWorld({ seed: 16, arena: classicArena })
     const attacker = getSnake(world, 'bot-1')
     const target = getSnake(world, 'bot-2')
+    world.snakes = [attacker, target]
     attacker.segments[0]!.partId = 'claw04'
     target.segments[0]!.partId = 'gun'
     attacker.segments[0]!.angle = 0

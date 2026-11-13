@@ -30,6 +30,11 @@ All notable changes to this project are documented here. The format follows
 - Boss AI leads its target, weaves to a flank while its attack reloads and lines
   up when ready. It roams the map until a player comes close, then chases from a
   longer range than a bot; it never goes after pickups or power-ups.
+- Players no longer appear on four fixed corners: every spawn and respawn picks
+  a random arena point, kept away from other players, crates and loose loot.
+  A human respawn also resets the build to the default head and three normal
+  bodies, so gear picked up during a life does not survive a death. Bots keep
+  rolling their random gear on respawn.
 - Bots hunt part drops, power-ups and apples in range, and chase a nearby player
   for a short run before resting. They read a moving target through a short
   reaction delay, so a sudden turn is not mirrored on the spot. They stop at
