@@ -10,11 +10,11 @@
     "cooldown": 1.5,
     "cone": {
       "range": 12,
-      "halfAngleDeg": 25,
+      "halfAngleDeg": 20,
       "duration": 0.3,
       "spawnPoints": [
-        { "x": 1, "y": 0.76, "z": -0.072, "angle": 90 },
-        { "x": -1, "y": 0.76, "z": -0.072, "angle": -90 }
+        { "x": 1, "y": 0.75, "z": -0.05, "angle": 90 },
+        { "x": -1, "y": 0.75, "z": -0.05, "angle": -90 }
       ]
     }
   }
