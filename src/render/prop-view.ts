@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { BALANCE } from '@/data/balance'
-import { clonePartModel } from './models'
+import { clonePartModel, clonePropModel, getPropModel } from './models'
 import type { RenderPickup, RenderState } from './state'
 import { getPartMaterial } from './snake-view'
 
@@ -74,6 +74,13 @@ function pickupGeometry(pickup: RenderPickup): THREE.BufferGeometry {
 
 /** Part drops wear their real model once it has loaded; otherwise a placeholder. */
 function pickupObject(pickup: RenderPickup): THREE.Object3D {
+  if (pickup.kind === 'apple') {
+    const model = clonePropModel('apple')
+    if (model) {
+      model.userData.prop = true
+      return model
+    }
+  }
   if (pickup.kind === 'head' || pickup.kind === 'body') {
     const model = clonePartModel(pickup.kind, pickup.partId ?? 'normal')
     if (model) {
@@ -134,13 +141,24 @@ export function createPropViewer(scene: THREE.Scene) {
       for (const pickup of world.pickups) {
         seenPickups.add(pickup.id)
         let mesh = pickups.get(pickup.id)
+        // The apple model can finish loading after the first apple spawned.
+        const stale =
+          pickup.kind === 'apple' &&
+          !mesh?.userData.prop &&
+          getPropModel('apple') !== undefined
+        if (mesh && stale) {
+          scene.remove(mesh)
+          mesh = undefined
+        }
         if (!mesh) {
           mesh = pickupObject(pickup)
           pickups.set(pickup.id, mesh)
           scene.add(mesh)
         }
         const bob = Math.sin(world.time * 3 + pickup.x + pickup.z) * 0.32
-        mesh.position.set(pickup.x, 1.28 + bob, pickup.z)
+        // The apple model stands on its own pivot; part drops are centred meshes.
+        const lift = pickup.kind === 'apple' ? 0.45 : 1.28
+        mesh.position.set(pickup.x, lift + bob, pickup.z)
         mesh.rotation.y = world.time * 2
       }
       for (const [id, mesh] of pickups) {

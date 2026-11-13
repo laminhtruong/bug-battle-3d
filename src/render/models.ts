@@ -28,6 +28,18 @@ const requests = new Map<string, Promise<void>>()
 const boneTemplates = new Map<Slot, THREE.Group>()
 const boneRequests = new Map<Slot, Promise<void>>()
 
+export type PropId = 'apple' | 'powerup'
+
+/** Scales and rotations copied from the Unity prop prefabs. */
+const PROPS: Record<PropId, { scale: number; rotationX?: number; rotationY?: number }> = {
+  apple: { scale: 0.75, rotationX: Math.PI / 2 },
+  // The prefab is 0.45; doubled so the crate still reads at this camera distance.
+  powerup: { scale: 0.9, rotationY: Math.PI },
+}
+
+const propTemplates = new Map<PropId, THREE.Group>()
+const propRequests = new Map<PropId, Promise<void>>()
+
 function modelId(slot: Slot, id: string): string {
   // Art offsets are per part, so two parts sharing one file are separate templates.
   return `${slot}:${id}`
@@ -77,6 +89,28 @@ function normalize(root: THREE.Object3D): THREE.Group {
   const box = new THREE.Box3().setFromObject(root)
   const center = box.getCenter(new THREE.Vector3())
   root.position.set(-center.x, -box.min.y, -center.z)
+
+  const holder = new THREE.Group()
+  holder.add(root)
+  return holder
+}
+
+/**
+ * Map props keep the scale and rotation of their Unity prefabs. The geometry is
+ * dropped onto y = 0, because the simulation only owns the XZ position.
+ */
+function prepareProp(root: THREE.Object3D, prop: PropId): THREE.Group {
+  root.traverse((node) => {
+    if (node instanceof THREE.Mesh) {
+      node.material = partMaterial
+    }
+  })
+  const def = PROPS[prop]
+  root.rotation.set(def.rotationX ?? 0, def.rotationY ?? 0, 0)
+  root.scale.setScalar(def.scale)
+  root.updateMatrixWorld(true)
+  const box = new THREE.Box3().setFromObject(root)
+  root.position.y -= box.min.y
 
   const holder = new THREE.Group()
   holder.add(root)
@@ -157,6 +191,8 @@ export function preloadPartModels(): void {
   }
   void loadBones('head')
   void loadBones('body')
+  void loadProp('apple')
+  void loadProp('powerup')
 }
 
 /** Returns the bones of a slot, or undefined while they are still loading. */
@@ -167,5 +203,31 @@ export function getBonesModel(slot: Slot): THREE.Group | undefined {
 /** Copies the bones of a slot for one segment. */
 export function cloneBonesModel(slot: Slot): THREE.Object3D | undefined {
   const template = boneTemplates.get(slot)
+  return template ? cloneSkinned(template) : undefined
+}
+
+function loadProp(prop: PropId): Promise<void> {
+  const running = propRequests.get(prop)
+  if (running) {
+    return running
+  }
+  const request = loader
+    .loadAsync(`/assets/models/props/${prop}.glb`)
+    .then((gltf) => {
+      propTemplates.set(prop, prepareProp(gltf.scene, prop))
+    })
+    .catch(() => {
+      // Without the model the prop keeps the primitive placeholder.
+    })
+  propRequests.set(prop, request)
+  return request
+}
+
+export function getPropModel(prop: PropId): THREE.Group | undefined {
+  return propTemplates.get(prop)
+}
+
+export function clonePropModel(prop: PropId): THREE.Object3D | undefined {
+  const template = getPropModel(prop)
   return template ? cloneSkinned(template) : undefined
 }

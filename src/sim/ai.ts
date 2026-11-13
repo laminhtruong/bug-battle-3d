@@ -12,6 +12,8 @@ const BOT_POWERUP_RANGE = 45
 const BOSS_AIM_COOLDOWN = 0.35
 /** Closer than this the boss stops flanking and attacks. */
 const BOSS_FLANK_RANGE = 10
+/** A wandering bug only leaves its route when a player is this close. */
+const ENEMY_AGGRO_RANGE = 34
 
 /** Pushes the steering away from the walls so targets near an edge stay reachable. */
 function steerAway(world: World, snake: Snake, x: number, z: number): void {
@@ -140,6 +142,46 @@ function bossPhase(boss: Snake): number {
   return Number.isFinite(digits) ? digits : 0
 }
 
+/** Aims where the target will be after the attacker can close the gap. */
+function leadPoint(snake: Snake, target: Snake): { x: number; z: number; distance: number } {
+  const distance = Math.hypot(target.x - snake.x, target.z - snake.z)
+  const lead = Math.min(1, distance / Math.max(1, snake.speed))
+  return {
+    x: target.x + Math.sin(target.angle) * target.speed * lead * 0.35,
+    z: target.z + Math.cos(target.angle) * target.speed * lead * 0.35,
+    distance,
+  }
+}
+
+function nearestPlayer(world: World, snake: Snake, range: number): Snake | undefined {
+  let nearest: Snake | undefined
+  let nearestDistance = range
+  for (const candidate of world.snakes) {
+    if (!candidate.alive || !isPlayerControl(candidate.control)) {
+      continue
+    }
+    const distance = Math.hypot(candidate.x - snake.x, candidate.z - snake.z)
+    if (distance < nearestDistance) {
+      nearest = candidate
+      nearestDistance = distance
+    }
+  }
+  return nearest
+}
+
+/** Wanderers keep their route until a player comes close, then give chase. */
+function updateEnemy(world: World, enemy: Snake): void {
+  const target = nearestPlayer(world, enemy, ENEMY_AGGRO_RANGE)
+  if (!target) {
+    updateWander(world, enemy)
+    return
+  }
+  const aim = leadPoint(enemy, target)
+  enemy.ai.targetX = aim.x
+  enemy.ai.targetZ = aim.z
+  steerAway(world, enemy, aim.x, aim.z)
+}
+
 /**
  * The boss leads its target and weaves to a flank while its attack reloads.
  * Once the attack is ready it lines up, so it is not a straight chase.
@@ -151,18 +193,15 @@ function updateBoss(world: World, boss: Snake): void {
     return
   }
 
-  const distance = Math.hypot(target.x - boss.x, target.z - boss.z)
-  const lead = Math.min(1, distance / Math.max(1, boss.speed))
-  const predictedX = target.x + Math.sin(target.angle) * target.speed * lead * 0.35
-  const predictedZ = target.z + Math.cos(target.angle) * target.speed * lead * 0.35
+  const aim = leadPoint(boss, target)
   const head = boss.segments[0]
   const linedUp = head !== undefined && !head.dead && head.cooldown <= BOSS_AIM_COOLDOWN
 
-  let aimX = predictedX
-  let aimZ = predictedZ
-  if (!linedUp && distance > BOSS_FLANK_RANGE) {
-    const direction = normalize(predictedX - boss.x, predictedZ - boss.z)
-    const side = Math.sin(world.time * 0.9 + bossPhase(boss)) * Math.min(16, distance * 0.5)
+  let aimX = aim.x
+  let aimZ = aim.z
+  if (!linedUp && aim.distance > BOSS_FLANK_RANGE) {
+    const direction = normalize(aim.x - boss.x, aim.z - boss.z)
+    const side = Math.sin(world.time * 0.9 + bossPhase(boss)) * Math.min(16, aim.distance * 0.5)
     aimX += -direction.z * side
     aimZ += direction.x * side
   }
@@ -172,10 +211,12 @@ function updateBoss(world: World, boss: Snake): void {
   steerAway(world, boss, aimX, aimZ)
 }
 
-/** Bots and bosses share the same steering interface as remote players. */
+/** Bots, bosses and wanderers share the same steering interface as remote players. */
 export function updateAi(world: World, snake: Snake): void {
   if (snake.control === 'boss') {
     updateBoss(world, snake)
+  } else if (snake.control === 'enemy') {
+    updateEnemy(world, snake)
   } else if (snake.control === 'bot') {
     updateBot(world, snake)
   }

@@ -19,8 +19,8 @@ line port; the rules were re-derived from prefabs, scripts and playtests.
 - Ads, in-app purchases and Firebase.
 - Doozy UI, DOTween, Jambox SDK.
 - Quests, shop, progression, daily rewards and accounts.
-- The old map scenes and their zone logic. Only floor visuals and textures are
-  reused, on a new single 192 by 192 arena.
+- The old map scenes and their zone logic. Only floor visuals, the apple and
+  power-up props, and textures are reused, on a new single 192 by 192 arena.
 
 ## How the rewrite differs
 
@@ -54,9 +54,13 @@ line port; the rules were re-derived from prefabs, scripts and playtests.
 - Sound effects are per player. The host tags every effect with the snake it
   belongs to and each client keeps the ones of its own snake, so the arena of
   bots stays silent.
-- There are no free-roaming bugs. The map holds destructible power-ups, and one
+- Wandering bugs keep their original role: they patrol, shoot forward and chase
+  a player that comes close. The map also holds destructible power-ups, and one
   boss at a time uses a tactical AI: it picks the weakest player, leads the
   target, flanks while reloading and lines up its shot when ready.
+- The apple and power-up targets reuse the original Unity props: `item_full`
+  for the apple and `box` for the power-up, both at their prefab scale and
+  rotation, textured with the shared bug palette.
 
 ## Rules taken from the original
 

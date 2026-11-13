@@ -120,6 +120,12 @@ export function killSnake(world: World, snake: Snake): void {
     world.bossSpawnAt = world.time + world.arena.bossEverySec
   } else {
     spawnDrops(world, snake.x, snake.z, remaining)
+    if (snake.control === 'enemy') {
+      world.enemySpawnAt = Math.max(
+        world.enemySpawnAt,
+        world.time + BALANCE.enemyRespawnSec,
+      )
+    }
   }
 }
 
@@ -236,7 +242,12 @@ export function fireAttacks(world: World, dt: number): void {
     if (!snake.alive || snake.control === 'powerup') {
       continue
     }
-    const cooldownScale = snake.control === 'boss' ? BALANCE.bossCooldownScale : 1
+    const cooldownScale =
+      snake.control === 'boss'
+        ? BALANCE.bossCooldownScale
+        : snake.control === 'enemy'
+          ? BALANCE.enemyCooldownScale
+          : 1
     for (const segment of snake.segments) {
       if (segment.dead) {
         continue

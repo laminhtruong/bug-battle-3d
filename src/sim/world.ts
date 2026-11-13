@@ -4,9 +4,11 @@ import { createRng } from '@/core/rng'
 import { BALANCE } from '@/data/balance'
 import {
   countApples,
+  countEnemies,
   countPowerups,
   createPlayerSnake,
   spawnApple,
+  spawnEnemy,
   spawnPowerup,
 } from './spawn'
 import type { PlayerSetup } from './spawn'
@@ -34,6 +36,7 @@ export function createWorld({ seed, arena, players = [] }: WorldOptions): World 
     pickups: [],
     events: [],
     bossSpawnAt: arena.bossEverySec,
+    enemySpawnAt: 0,
     powerupSpawnAt: 0,
     appleSpawnAt: 0,
     nextId: 0,
@@ -53,6 +56,9 @@ export function createWorld({ seed, arena, players = [] }: WorldOptions): World 
 
   for (const setup of setups) {
     createPlayerSnake(world, setup)
+  }
+  while (countEnemies(world) < arena.enemyCap) {
+    spawnEnemy(world)
   }
   while (countPowerups(world) < arena.powerupTarget) {
     spawnPowerup(world)

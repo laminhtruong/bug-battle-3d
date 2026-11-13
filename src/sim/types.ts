@@ -3,7 +3,7 @@ import type { Rng } from '@/core/rng'
 import type { ArenaDef } from '@/content/arena'
 import type { Slot } from '@/content/define'
 
-export type SnakeControl = 'human' | 'bot' | 'powerup' | 'boss'
+export type SnakeControl = 'human' | 'bot' | 'enemy' | 'powerup' | 'boss'
 
 /** Player-controlled and player-like snakes, as opposed to map targets. */
 export function isPlayerControl(control: SnakeControl): boolean {
@@ -157,6 +157,8 @@ export interface World {
   events: WorldEvent[]
   /** Absolute time of the next boss spawn. */
   bossSpawnAt: number
+  /** Absolute time of the next wandering-bug refill. */
+  enemySpawnAt: number
   /** Absolute time of the next power-up spawn. */
   powerupSpawnAt: number
   /** Absolute time of the next apple spawn. */

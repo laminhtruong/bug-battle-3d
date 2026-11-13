@@ -7,6 +7,7 @@ export const BALANCE = {
   maxPlayers: 4,
   playerSpeed: 12,
   bossSpeed: 12.5,
+  enemySpeed: 8.8,
   /** Radians per second. High enough to feel direct, low enough to avoid snapping. */
   turnRate: 16,
   bodySpacing: 1.2,
@@ -20,6 +21,8 @@ export const BALANCE = {
   respawnDelaySec: 3,
   /** The boss attacks a little slower than a player, but carries many parts. */
   bossCooldownScale: 1.2,
+  /** Wandering bugs attack slower than players, as in the original. */
+  enemyCooldownScale: 1.5,
   food: {
     /** Head plus three normal bodies. */
     startSegments: 4,
@@ -45,6 +48,9 @@ export const BALANCE = {
   /** Boss loot: its head plus nine of its ten bodies. */
   bossLootCount: 10,
   bossSpawnMinDistance: 48,
+  /** Wanderers refill at most one at a time, this long after one dies. */
+  enemyRespawnSec: 2,
+  enemySpawnMinDistance: 32,
   appleRespawnSec: 0.8,
   roundSec: 90,
   leaderboardSize: 4,

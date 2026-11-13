@@ -4,9 +4,9 @@ The Unity project this game is ported from ships original art created by the
 project author. The author has confirmed the rights to publish it. No paid Unity
 plugin code or asset is copied into this repository.
 
-The current build ships the original part models as GLB plus the floor and palette
-textures. This document records what the art is, where it comes from and how it
-was converted.
+The current build ships the original part models as GLB, the apple and power-up
+props, plus the floor and palette textures. This document records what the art
+is, where it comes from and how it was converted.
 
 ## Naming rules
 
@@ -24,6 +24,8 @@ public/assets/
   models/parts/body/<id>.glb
   models/bones/head.glb
   models/bones/body.glb
+  models/props/apple.glb
+  models/props/powerup.glb
   textures/parts/bug-atlas.png
   textures/arenas/classic/floor-base.png
   audio/sfx/<name>.mp3
@@ -58,6 +60,11 @@ Verified from the Unity prefabs to their mesh GUIDs.
 | `body_09` | `poison`     | body |
 | `body_10` | `lightning`  | body |
 
+| Original prefab | Published id | Model           |
+| --------------- | ------------ | --------------- |
+| `PowerUp`       | `powerup`    | `box.fbx`       |
+| `FoodApple`     | `apple`      | `item_full.fbx` |
+
 | Original texture | Target                                   |
 | ---------------- | ---------------------------------------- |
 | `bug.png`        | `textures/parts/bug-atlas.png`           |
@@ -79,7 +86,7 @@ quest and shop systems.
 
 ## Conversion
 
-The part models were converted once from the Unity FBX sources with
+The models were converted once from the Unity FBX sources with
 [FBX2glTF](https://github.com/facebookincubator/FBX2glTF) 0.9.7 (BSD-3-Clause),
 keeping only position, normal and the first UV set:
 
@@ -87,12 +94,17 @@ keeping only position, normal and the first UV set:
 FBX2glTF -b -k position -k normal -k uv0 -o public/assets/models/parts/head/claw01.glb head_01.fbx
 FBX2glTF -b -k position -k normal -k uv0 -o public/assets/models/bones/head.glb head_00.fbx
 FBX2glTF -b -k position -k normal -k uv0 -o public/assets/models/bones/body.glb body_00.fbx
+FBX2glTF -b -k position -k normal -k uv0 -o public/assets/models/props/powerup.glb box.fbx
+FBX2glTF -b -k position -k normal -k uv0 -o public/assets/models/props/apple.glb item_full.fbx
 ```
 
 The FBX files live outside this repository, so the GLBs are committed instead.
 `src/render/models.ts` applies the shared palette texture and keeps each model at
 its authored size; the source scenes place the parts far from the origin at that
-same scale. Placeholder primitives stay as a fallback while a model loads. Do not
+same scale. Props also keep the scale and rotation of their Unity prefabs:
+`apple` is `item_full.fbx` at 0.75 turned 90 degrees, and `powerup` is `box.fbx`
+at 0.9 (the prefab uses 0.45, doubled so the crate still reads at this camera
+distance). Placeholder primitives stay as a fallback while a model loads. Do not
 commit raw FBX, PSD or Unity package files.
 
 FBX2glTF 0.9.7 writes NaN weights for vertices that the source FBX leaves

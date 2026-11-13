@@ -43,8 +43,52 @@ describe('world', () => {
     const players = world.snakes.filter((snake) => isPlayerControl(snake.control))
     expect(players).toHaveLength(BALANCE.maxPlayers)
     expect(players.map((snake) => snake.slot)).toEqual([0, 1, 2, 3])
+    expect(world.snakes.filter((snake) => snake.control === 'enemy')).toHaveLength(
+      classicArena.enemyCap,
+    )
     expect(world.pickups.length).toBeGreaterThanOrEqual(classicArena.appleTarget)
     expect(world.snakes.some((snake) => snake.control === 'boss')).toBe(false)
+  })
+
+  it('refills a wandering bug after it dies', () => {
+    const world = createWorld({ seed: 44, arena: classicArena })
+    const enemy = world.snakes.find((snake) => snake.control === 'enemy')
+    if (!enemy) {
+      throw new Error('expected a wandering bug')
+    }
+    killSnake(world, enemy)
+    expect(enemy.alive).toBe(false)
+    expect(
+      world.snakes.filter((snake) => snake.control === 'enemy' && snake.alive),
+    ).toHaveLength(classicArena.enemyCap - 1)
+
+    for (let index = 0; index <= BALANCE.enemyRespawnSec * BALANCE.tickRate + 5; index += 1) {
+      tickWorld(world, STEP)
+    }
+
+    expect(
+      world.snakes.filter((snake) => snake.control === 'enemy' && snake.alive),
+    ).toHaveLength(classicArena.enemyCap)
+  })
+
+  it('makes a wandering bug chase a nearby player', () => {
+    const world = createWorld({ seed: 45, arena: classicArena })
+    const enemy = world.snakes.find((snake) => snake.control === 'enemy')
+    const player = getSnake(world, 'bot-1')
+    if (!enemy) {
+      throw new Error('expected a wandering bug')
+    }
+    // Move the other players away so the test only sees bot-1.
+    for (const other of world.snakes.filter((snake) => isPlayerControl(snake.control))) {
+      placeHead(other, 90, 90)
+    }
+    placeHead(player, 0, 10)
+    placeHead(enemy, 0, 0)
+    enemy.ai.retargetAt = world.time + 10
+
+    updateAi(world, enemy)
+
+    expect(enemy.steerZ).toBeGreaterThan(0.5)
   })
 
   it('starts every bug with a head and three normal bodies', () => {

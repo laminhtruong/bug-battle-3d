@@ -2,9 +2,9 @@
 
 A browser remake of a small Unity snake arena game, rebuilt with three.js and TypeScript.
 
-Grow your bug by eating apples and breaking power-ups, then fight the boss that
-arrives every 30 seconds. One 90 second round, up to four players, bots fill
-empty slots.
+Grow your bug by eating apples and breaking power-ups, fight wandering bugs, and
+take down the boss that arrives every 30 seconds. One 90 second round, up to four
+players, bots fill empty slots.
 
 - **Local play** against three bots.
 - **Online play** with a five character room code. The host runs the simulation.
@@ -118,6 +118,9 @@ Early playable version (`0.1.0`):
 
 - One arena, four players plus bots, 90 second rounds.
 - Every player starts with a head and three normal bodies.
+- Eight wandering bugs patrol the map, chase a player that comes close, and are
+  replaced a couple of seconds after they die.
+- Twenty apples spawn around the arena and refill during the round.
 - Sixteen destructible power-ups sit around the arena with 5 to 10 health. Breaking
   one drops a head 30% of the time and a body otherwise.
 - A boss with a strong head and ten mixed bodies appears every 30 seconds and

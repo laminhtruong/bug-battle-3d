@@ -3,7 +3,16 @@ import { fnv1a } from '@/core/rng'
 import { BALANCE } from '@/data/balance'
 import type { PartDef } from '@/content/define'
 import { createEffects } from './effects'
-import { getPartModel, clonePartModel, getBonesModel, cloneBonesModel, getPartClip } from './models'
+import {
+  getPartModel,
+  clonePartModel,
+  getBonesModel,
+  cloneBonesModel,
+  getPartClip,
+  getPropModel,
+  clonePropModel,
+} from './models'
+import type { PropId } from './models'
 import { createShadow } from './shadow'
 import type { RenderState } from './state'
 
@@ -70,6 +79,8 @@ interface SegmentView {
   height: number
   model: boolean
   boneModel: boolean
+  /** A map prop instead of a bug part; it leaves no bones behind. */
+  prop: boolean
   /** Plays the leg walk cycle of a body while the snake moves. */
   mixer?: THREE.AnimationMixer
   lastX: number
@@ -109,15 +120,15 @@ function ownMaterials(node: THREE.Object3D): THREE.MeshToonMaterial[] {
   return materials
 }
 
-function createSegment(slot: PartDef['slot'], id: string): SegmentView {
+function createSegment(slot: PartDef['slot'], id: string, prop?: PropId): SegmentView {
   const head = slot === 'head'
   const bones = cloneBonesModel(slot)
   const boneModel = bones !== undefined
   const bonesNode = bones ?? new THREE.Mesh(BONES_GEOMETRY, BONES_MATERIAL)
   bonesNode.visible = false
-  const model = clonePartModel(slot, id)
+  const model = prop ? clonePropModel(prop) : clonePartModel(slot, id)
   if (model) {
-    const clip = getPartClip(slot, id)
+    const clip = prop ? undefined : getPartClip(slot, id)
     const mixer = clip ? new THREE.AnimationMixer(model) : undefined
     if (clip && mixer) {
       // The source walk cycle reads too slow at 1x.
@@ -125,10 +136,10 @@ function createSegment(slot: PartDef['slot'], id: string): SegmentView {
       mixer.clipAction(clip).play()
     }
     return {
-      key: `${slot}:${id}`,
+      key: prop ? `prop:${prop}` : `${slot}:${id}`,
       node: model,
       bones: bonesNode,
-      shadow: createShadow(head ? 4 : 3.2),
+      shadow: createShadow(prop ? 1.6 : head ? 4 : 3.2),
       materials: ownMaterials(model),
       flash: 0,
       dead: false,
@@ -140,6 +151,7 @@ function createSegment(slot: PartDef['slot'], id: string): SegmentView {
       height: 0,
       model: true,
       boneModel,
+      prop: prop !== undefined,
       ...(mixer ? { mixer } : {}),
       lastX: Number.NaN,
       lastZ: Number.NaN,
@@ -150,7 +162,7 @@ function createSegment(slot: PartDef['slot'], id: string): SegmentView {
     mesh.scale.set(1, 0.85, 1.1)
   }
   return {
-    key: `${slot}:${id}`,
+    key: prop ? `prop:${prop}` : `${slot}:${id}`,
     node: mesh,
     bones: bonesNode,
     shadow: createShadow(head ? 4 : 3.2),
@@ -164,6 +176,7 @@ function createSegment(slot: PartDef['slot'], id: string): SegmentView {
     height: head ? 2.2 : 1.6,
     model: false,
     boneModel,
+    prop: prop !== undefined,
     lastX: Number.NaN,
     lastZ: Number.NaN,
   }
@@ -218,7 +231,7 @@ function updateRemains(view: SnakeView, dt: number, effects: Effects): boolean {
       const shrink = 1 - entry.dying / DESTROY_SEC
       entry.node.scale.copy(entry.baseScale).multiplyScalar(Math.max(0.001, 1 - shrink * shrink))
     }
-    entry.bones.visible = !gone && entry.dying <= 0
+    entry.bones.visible = !entry.prop && !gone && entry.dying <= 0
     entry.shadow.visible = !gone
   }
   return gone
@@ -255,13 +268,15 @@ export function createSnakeViewer(scene: THREE.Scene) {
           if (!segment) {
             continue
           }
-          const key = `${segment.slot}:${segment.partId}`
+          const prop: PropId | undefined = snake.control === 'powerup' ? 'powerup' : undefined
+          const key = prop ? `prop:${prop}` : `${segment.slot}:${segment.partId}`
           let entry = view.segments[index]
           const keyChanged = entry?.key !== key
           // Models load asynchronously, so a segment can swap from primitive to model.
           const upgraded =
             !keyChanged &&
-            ((!entry?.model && getPartModel(segment.slot, segment.partId)) ||
+            ((!entry?.model &&
+              (prop ? getPropModel(prop) : getPartModel(segment.slot, segment.partId))) ||
               (!entry?.boneModel && getBonesModel(segment.slot)))
           let created = false
           let pop = false
@@ -276,7 +291,7 @@ export function createSnakeViewer(scene: THREE.Scene) {
               }
             }
             // Models load asynchronously, so a segment can swap from primitive to model.
-            entry = createSegment(segment.slot, segment.partId)
+            entry = createSegment(segment.slot, segment.partId, prop)
             view.segments[index] = entry
             view.group.add(entry.node)
             view.group.add(entry.bones)
@@ -347,7 +362,7 @@ export function createSnakeViewer(scene: THREE.Scene) {
             entry.lastX = segment.x
             entry.lastZ = segment.z
           }
-          entry.bones.visible = segment.dead && entry.dying <= 0
+          entry.bones.visible = !entry.prop && segment.dead && entry.dying <= 0
           entry.bones.position.set(segment.x, entry.model ? 0 : 0.8, segment.z)
           entry.bones.rotation.y = segment.angle
           entry.shadow.visible = true

@@ -8,9 +8,14 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
-- Arena redesign: every bug starts with a head and three normal bodies, ten
+- Arena redesign: every bug starts with a head and three normal bodies, sixteen
   destructible power-ups with 5 to 10 health sit around the map, and a boss with
   a strong head and ten varied bodies spawns every 30 seconds.
+- Eight wandering bugs patrol the map and give chase when a player comes close.
+  They respawn a couple of seconds after they die, and apples keep spawning
+  randomly around the arena.
+- The apple and power-up targets now use the original Unity models (`item_full`
+  and `box`) with the shared bug palette, instead of placeholder primitives.
 - A destroyed power-up drops one item: a head 30% of the time, otherwise a body.
   A dead boss drops exactly ten of its own parts, including its head, and comes
   back 30 seconds later.
@@ -78,6 +83,8 @@ All notable changes to this project are documented here. The format follows
   as the host. This bumped the wire protocol to version 5.
 - Snapshots also carry the new `powerup` and `boss` snake controls, so the wire
   protocol is now version 6.
+- Wandering bugs use the `enemy` control again, so the wire protocol is now
+  version 7.
 - The renderer blends between the last two simulation ticks, and guests blend
   between two host snapshots, so movement is smooth on any display refresh rate
   instead of stepping at 30 Hz.

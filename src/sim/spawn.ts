@@ -181,6 +181,28 @@ function pickMapPoint(world: World, margin: number, minDistance: number): Vec2 {
   return point
 }
 
+/** A wandering bug: it lives on the map and fights back when a player is close. */
+export function spawnEnemy(world: World): void {
+  const { arena, rng } = world
+  const point = pickMapPoint(world, 12, BALANCE.enemySpawnMinDistance)
+  const heads = arena.enemyHeads.length > 0 ? arena.enemyHeads : [DEFAULT_HEAD_ID]
+  const bodies = arena.enemyBodies.length > 0 ? arena.enemyBodies : [DEFAULT_BODY_ID]
+  const bodyIds = Array.from({ length: rng.int(2, 5) }, () => rng.pick(bodies))
+
+  createSnake(world, {
+    id: nextEntityId(world, 'enemy'),
+    name: 'Bug',
+    control: 'enemy',
+    slot: -1,
+    headId: rng.pick(heads),
+    bodyIds,
+    x: point.x,
+    z: point.z,
+    angle: rng.range(-Math.PI, Math.PI),
+    speed: BALANCE.enemySpeed,
+  })
+}
+
 /** Heads without contact damage, so a power-up is a target, not a hazard. */
 const POWERUP_HEADS = HEADS.filter((part) => part.contact.damage === 0)
 
@@ -350,6 +372,10 @@ export function spawnBossDrops(
 
 export function countPowerups(world: World): number {
   return world.snakes.filter((snake) => snake.control === 'powerup' && snake.alive).length
+}
+
+export function countEnemies(world: World): number {
+  return world.snakes.filter((snake) => snake.control === 'enemy' && snake.alive).length
 }
 
 export function countApples(world: World): number {

@@ -68,7 +68,14 @@ describe('classic arena', () => {
 
   it('only references known part ids', () => {
     expect(classicArena.powerupTarget).toBeGreaterThan(0)
+    expect(classicArena.enemyCap).toBeGreaterThan(0)
     expect(classicArena.bossEverySec).toBeGreaterThan(0)
+    for (const id of classicArena.enemyHeads) {
+      expect(getPart('head', id)).toBeDefined()
+    }
+    for (const id of classicArena.enemyBodies) {
+      expect(getPart('body', id)).toBeDefined()
+    }
     for (const id of classicArena.bossHeads) {
       expect(getPart('head', id)).toBeDefined()
     }

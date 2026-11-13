@@ -4,10 +4,12 @@ import { updateAi } from './ai'
 import { fireAttacks, updateAreas, updateContact, updateProjectiles } from './combat'
 import {
   countApples,
+  countEnemies,
   countPowerups,
   respawnSnake,
   spawnApple,
   spawnBoss,
+  spawnEnemy,
   spawnPowerup,
 } from './spawn'
 import { segmentHitsCircle } from './collider'
@@ -129,6 +131,14 @@ function updateBossSpawn(world: World): void {
   world.bossSpawnAt = world.time + world.arena.bossEverySec
 }
 
+function updateEnemySpawns(world: World): void {
+  if (world.time < world.enemySpawnAt || countEnemies(world) >= world.arena.enemyCap) {
+    return
+  }
+  spawnEnemy(world)
+  world.enemySpawnAt = world.time + BALANCE.enemyRespawnSec
+}
+
 function updatePowerupSpawns(world: World): void {
   if (
     world.time < world.powerupSpawnAt ||
@@ -183,6 +193,7 @@ export function tickWorld(world: World, dt: number): void {
   updateContact(world)
   collectPickups(world)
   updateBossSpawn(world)
+  updateEnemySpawns(world)
   updatePowerupSpawns(world)
   updateAppleSpawns(world)
 }
