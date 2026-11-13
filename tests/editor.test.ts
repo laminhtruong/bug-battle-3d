@@ -11,6 +11,7 @@ const claw = defineHead({
   boxes: [
     { center: [0, 0, 0.05], size: [2, 1.5, 1.3] },
     { center: [0.65, 0, 1.3], size: [0.7, 0.3, 0.8], hitbox: true },
+    { center: [0.1, -0.3, 2], size: [1, 0.3, 2], rotation: [0, 40, 0], hitbox: true },
   ],
 })
 
@@ -22,6 +23,7 @@ describe('part editor drafts', () => {
     expect(draft.boxes).toEqual([
       { center: [0, 0, 0.05], size: [2, 1.5, 1.3] },
       { center: [0.65, 0, 1.3], size: [0.7, 0.3, 0.8], hitbox: true },
+      { center: [0.1, -0.3, 2], size: [1, 0.3, 2], rotation: [0, 40, 0], hitbox: true },
     ])
     expect(draft.offset).toBeUndefined()
   })
@@ -46,6 +48,7 @@ describe('part editor drafts', () => {
     expect(source).toContain("id: 'claw01'")
     expect(source).toContain('center: [0, 0, 0.05]')
     expect(source).toContain('size: [2, 1.5, 1.3]')
+    expect(source).toContain('rotation: [0, 40, 0]')
     expect(source).toContain('hitbox: true')
     expect(source).not.toContain('hitbox: false')
     expect(source).not.toContain('offset:')

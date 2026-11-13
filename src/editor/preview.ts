@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
-import { PART_LIFT, PART_SCALE } from '@/content/define'
+import { PART_LIFT, PART_SCALE, boxQuaternion } from '@/content/define'
 import type { Slot } from '@/content/define'
 import { BALANCE } from '@/data/balance'
 import { createViewGizmo } from './gizmo'
@@ -16,6 +16,8 @@ export interface PreviewBox {
   halfWidth: number
   halfHeight: number
   halfDepth: number
+  /** Unity transform rotation in degrees, ZXY order. */
+  rotation: [number, number, number]
   hitbox: boolean
 }
 
@@ -431,6 +433,8 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
       })
       const mesh = new THREE.Mesh(geometry, material)
       mesh.position.set(box.x, box.y, box.z)
+      const [qx, qy, qz, qw] = boxQuaternion(box.rotation)
+      mesh.quaternion.set(qx, qy, qz, qw)
       mesh.userData.index = index
       mesh.renderOrder = 10
       const edges = new THREE.LineSegments(

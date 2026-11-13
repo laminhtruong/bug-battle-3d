@@ -3,6 +3,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import path from 'node:path'
 import { format, resolveConfig } from 'prettier'
 import type { Plugin, ViteDevServer } from 'vite'
+import { unrotateBoxPoint } from '../src/content/define.ts'
 import type { PartDef, Slot } from '../src/content/define'
 
 /**
@@ -21,6 +22,8 @@ let projectRoot = process.cwd()
 export interface PrefabBoxDraft {
   center: [number, number, number]
   size: [number, number, number]
+  /** Unity transform rotation in degrees, ZXY order. */
+  rotation?: [number, number, number]
   hitbox?: boolean
 }
 
@@ -56,15 +59,21 @@ export function partToDraft(part: PartDef, scale: number): PartDraft {
     hp: part.hp,
     score: part.score,
     contact: { damage: part.contact.damage },
-    boxes: part.collider.boxes.map((box) => ({
-      center: [snap(box.x / scale), snap(box.y / scale), snap(box.z / scale)],
-      size: [
-        snap((box.halfWidth * 2) / scale),
-        snap((box.halfHeight * 2) / scale),
-        snap((box.halfDepth * 2) / scale),
-      ],
-      ...(box.hitbox ? { hitbox: true } : {}),
-    })),
+    boxes: part.collider.boxes.map((box) => {
+      const center = unrotateBoxPoint(box.rotation, [box.x / scale, box.y / scale, box.z / scale])
+      return {
+        center: center.map(snap) as [number, number, number],
+        size: [
+          snap((box.halfWidth * 2) / scale),
+          snap((box.halfHeight * 2) / scale),
+          snap((box.halfDepth * 2) / scale),
+        ],
+        ...(box.rotation.some((value) => value !== 0)
+          ? { rotation: box.rotation.map(snap) as [number, number, number] }
+          : {}),
+        ...(box.hitbox ? { hitbox: true } : {}),
+      }
+    }),
     ...(offset[0] || offset[1] ? { offset: [snap(offset[0]), snap(offset[1])] } : {}),
     ...(part.attack ? { attack: part.attack } : {}),
   }
@@ -84,6 +93,7 @@ export async function draftToSource(slot: Slot, draft: PartDraft, file: string):
     boxes: draft.boxes.map((box) => ({
       center: box.center,
       size: box.size,
+      ...(box.rotation?.some((value) => value !== 0) ? { rotation: box.rotation } : {}),
       ...(box.hitbox ? { hitbox: true } : {}),
     })),
     ...(draft.attack ? { attack: draft.attack } : {}),
