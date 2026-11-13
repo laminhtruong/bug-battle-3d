@@ -1,8 +1,10 @@
 import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitest/config'
+import { editorPlugin } from './scripts/editor-plugin.ts'
 
 export default defineConfig({
   base: './',
+  plugins: [editorPlugin()],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
