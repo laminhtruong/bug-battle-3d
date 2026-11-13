@@ -31,10 +31,12 @@ All notable changes to this project are documented here. The format follows
   muzzle arrows, and clicking the part art switches back to the art arrows.
 - Cone attacks draw a 3D cone volume in the editor, so the effect origin,
   direction and reach are visible while authoring.
-- A hurt part flashes its emission white twice. The killing hit finishes that
-  flash before the part shrinks away and pops the original 12-spark effect, so
-  it never vanishes mid-flash. New, restored and respawned parts pop back in
+- A hurt part flashes its emission white once per hit. The killing hit finishes
+  that flash before the part shrinks away and pops the original 12-spark effect,
+  so it never vanishes mid-flash. New, restored and respawned parts pop back in
   instead of appearing abruptly.
+- Legs play the source walk cycle, trimmed to its repeating part so the loop has
+  no snap, at double speed.
 - A dying snake flashes white on the killing hit, then shrinks into its bones and
   leaves them on the floor for a moment before vanishing.
 

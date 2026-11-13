@@ -99,7 +99,10 @@ function load(slot: Slot, id: string): Promise<void> {
       templates.set(key, preparePart(gltf.scene, part?.offset))
       const clip = gltf.animations[0]
       if (clip) {
-        clips.set(key, clip)
+        // The source action opens with a lead-in before the walk cycle repeats,
+        // so loop only the repeating part (24 fps, frames 20 to 60). The start
+        // is half a frame early because glTF key times are float32.
+        clips.set(key, THREE.AnimationUtils.subclip(clip, clip.name, 19.5, 61, 24))
       }
     })
     .catch(() => {

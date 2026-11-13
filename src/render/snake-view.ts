@@ -120,6 +120,8 @@ function createSegment(slot: PartDef['slot'], id: string): SegmentView {
     const clip = getPartClip(slot, id)
     const mixer = clip ? new THREE.AnimationMixer(model) : undefined
     if (clip && mixer) {
+      // The source walk cycle reads too slow at 1x.
+      mixer.timeScale = 2
       mixer.clipAction(clip).play()
     }
     return {
