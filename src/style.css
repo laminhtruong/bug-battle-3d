@@ -160,20 +160,18 @@ body {
   backdrop-filter: blur(14px);
 }
 
-.brand h1,
 .screen h2 {
   margin: 0;
 }
 
-.brand h1 {
-  font-size: clamp(34px, 6vw, 50px);
-  font-weight: 900;
-  letter-spacing: -0.035em;
-  line-height: 1.05;
-  background: linear-gradient(180deg, #ffffff, #b9d5e5);
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
+.brand-logo {
+  margin: 0;
+  line-height: 0;
+}
+
+.brand-logo img {
+  width: min(270px, 100%);
+  height: auto;
 }
 
 .screen h2 {

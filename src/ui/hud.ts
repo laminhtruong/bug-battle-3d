@@ -58,7 +58,9 @@ export function createHud(handlers: HudHandlers): Hud {
     <section class="screen" data-screen="menu">
       <div class="panel">
         <header class="brand">
-          <h1>${EN.title}</h1>
+          <h1 class="brand-logo">
+            <img src="/assets/textures/ui/logo.png" alt="${EN.title}" />
+          </h1>
           <p class="tagline">${EN.tagline}</p>
         </header>
         <label class="field">

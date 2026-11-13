@@ -29,6 +29,7 @@ public/assets/
   models/props/powerup.glb
   textures/parts/bug-atlas.png
   textures/arenas/classic/floor-base.png
+  textures/ui/logo.png
   audio/sfx/<name>.mp3
 ```
 
