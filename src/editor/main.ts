@@ -6,7 +6,8 @@ import {
   rotateBoxPoint,
   unrotateBoxPoint,
 } from '@/content/define'
-import type { Slot } from '@/content/define'
+import type { AttackDef, Slot } from '@/content/define'
+import { ATTACK_PRESETS, ATTACK_VISUALS, attackPreset } from './attacks'
 import { createPreview } from './preview'
 import type { Tool } from './preview'
 
@@ -26,7 +27,7 @@ interface PartDraft {
   contact: { damage: number }
   boxes: PrefabBox[]
   offset?: [number, number]
-  attack?: unknown
+  attack?: AttackDef
 }
 interface LoadedPart {
   slot: Slot
@@ -139,6 +140,7 @@ let parts: LoadedPart[] = []
 let current: LoadedPart | undefined
 const modelsBySlot: Record<Slot, string[]> = { head: [], body: [] }
 let selectedBox = 0
+let selectedSpawn = 0
 let dirty = false
 let editColliders = false
 let activeTool: Tool = 'move'
@@ -218,6 +220,7 @@ function undo(): void {
   pendingHistory = undefined
   dirty = true
   selectedBox = Math.min(selectedBox, current.draft.boxes.length - 1)
+  clampSelectedSpawn()
   renderInspector()
   applyPreview()
   renderList()
@@ -238,6 +241,7 @@ function redo(): void {
   pendingHistory = undefined
   dirty = true
   selectedBox = Math.min(selectedBox, current.draft.boxes.length - 1)
+  clampSelectedSpawn()
   renderInspector()
   applyPreview()
   renderList()
@@ -266,6 +270,15 @@ function setDirty(value: boolean): void {
   if (button) {
     button.disabled = !value
   }
+}
+
+function clampSelectedSpawn(): void {
+  const attack = current?.draft.attack
+  if (attack?.kind !== 'projectile') {
+    selectedSpawn = 0
+    return
+  }
+  selectedSpawn = Math.max(0, Math.min(selectedSpawn, attack.projectile.spawnPoints.length - 1))
 }
 
 function currentArenaBoxes(): {
@@ -338,9 +351,33 @@ function syncBoxInputs(index: number): void {
   set('rotation-z', rotation[2])
 }
 
+function syncSpawnInputs(index: number): void {
+  const attack = current?.draft.attack
+  if (attack?.kind !== 'projectile') {
+    return
+  }
+  const point = attack.projectile.spawnPoints[index]
+  const row = inspector.querySelector<HTMLElement>(`.spawn-row[data-spawn-index="${index}"]`)
+  if (!point || !row) {
+    return
+  }
+  const set = (field: string, value: number): void => {
+    const input = row.querySelector<HTMLInputElement>(`[data-spawn-field="${field}"]`)
+    if (input) {
+      input.value = fmt(value)
+    }
+  }
+  set('x', point.x)
+  set('z', point.z)
+  set('angle', point.angle)
+}
+
 const preview = createPreview(canvas, {
   onSelect(index) {
     selectBox(index)
+  },
+  onSelectSpawn(index) {
+    selectSpawn(index)
   },
   onDragStart() {
     beginHistory()
@@ -368,6 +405,20 @@ const preview = createPreview(canvas, {
     syncOffsetInputs()
     markDirty()
   },
+  onSpawnMove(index, x, z) {
+    const attack = current?.draft.attack
+    if (attack?.kind !== 'projectile') {
+      return
+    }
+    const point = attack.projectile.spawnPoints[index]
+    if (!point) {
+      return
+    }
+    point.x = snap(x)
+    point.z = snap(z)
+    syncSpawnInputs(index)
+    markDirty()
+  },
   onScale(index, halfWidth, halfHeight, halfDepth) {
     const box = current?.draft.boxes[index]
     if (!box) {
@@ -391,12 +442,18 @@ function applyPreview(): void {
     preview.clear()
     return
   }
+  const attack = current.draft.attack
   preview.show({
     slot: current.slot,
     model: current.draft.model || current.draft.id,
     offset: current.draft.offset ?? [0, 0],
     boxes: currentArenaBoxes(),
     selected: selectedBox,
+    spawns:
+      attack?.kind === 'projectile'
+        ? attack.projectile.spawnPoints.map((point) => ({ ...point }))
+        : [],
+    selectedSpawn,
     showReference: true,
     editColliders,
   })
@@ -420,15 +477,90 @@ function renderList(): void {
   }
 }
 
-function attackSummary(attack: unknown): string {
-  if (!attack || typeof attack !== 'object') {
-    return 'No attack. Anything set here is preserved when you save.'
+function visualOptions(current: string): string {
+  const known = ATTACK_VISUALS as readonly string[]
+  const visuals = known.includes(current) ? known : [...known, current]
+  return visuals
+    .map(
+      (visual) =>
+        `<option value="${escapeHtml(visual)}" ${visual === current ? 'selected' : ''}>${escapeHtml(visual)}</option>`,
+    )
+    .join('')
+}
+
+function attackPresetSelect(attack: AttackDef | undefined): string {
+  const preset = attackPreset(attack)
+  const known = ATTACK_PRESETS.some((candidate) => candidate.id === preset)
+  return `<label>Preset
+    <select data-field="attack-preset">
+      <option value="" ${preset === '' ? 'selected' : ''}>No attack</option>
+      ${ATTACK_PRESETS.map(
+        (candidate) =>
+          `<option value="${candidate.id}" ${candidate.id === preset ? 'selected' : ''}>${candidate.label}</option>`,
+      ).join('')}
+      ${preset && !known ? '<option value="custom" selected>Custom</option>' : ''}
+    </select>
+  </label>`
+}
+
+function spawnRows(attack: Extract<AttackDef, { kind: 'projectile' }>): string {
+  const points = attack.projectile.spawnPoints
+  return points
+    .map(
+      (
+        point,
+        index,
+      ) => `<div class="spawn-row${index === selectedSpawn ? ' selected' : ''}" data-spawn-index="${index}">
+        <button type="button" class="box-index" data-action="select-spawn" data-index="${index}">${index + 1}</button>
+        <label>X<input data-spawn-field="x" data-spawn-index="${index}" type="number" step="0.05" value="${fmt(point.x)}"></label>
+        <label>Z<input data-spawn-field="z" data-spawn-index="${index}" type="number" step="0.05" value="${fmt(point.z)}"></label>
+        <label>A<input data-spawn-field="angle" data-spawn-index="${index}" type="number" step="5" value="${fmt(point.angle)}" title="Firing direction in degrees, relative to the part"></label>
+        <button type="button" class="icon danger" data-action="delete-spawn" data-index="${index}" ${points.length <= 1 ? 'disabled' : ''}>x</button>
+      </div>`,
+    )
+    .join('')
+}
+
+function attackFields(attack: AttackDef | undefined): string {
+  if (!attack) {
+    return '<p class="hint">No attack. Pick a preset to add one.</p>'
   }
-  const kind = (attack as { kind?: unknown }).kind
-  if (kind === 'projectile' || kind === 'cone') {
-    return `${kind} attack. The editor keeps it unchanged.`
+  if (attack.kind === 'cone') {
+    return `<div class="row">
+        <label>Cooldown<input data-attack-field="cooldown" type="number" step="0.05" min="0.01" value="${fmt(attack.cooldown)}"></label>
+        <label>Range<input data-attack-field="range" type="number" step="0.1" min="0.01" value="${fmt(attack.cone.range)}"></label>
+      </div>
+      <div class="row">
+        <label>Half angle<input data-attack-field="half-angle" type="number" step="1" min="1" max="180" value="${fmt(attack.cone.halfAngleDeg)}"></label>
+        <label>Duration<input data-attack-field="duration" type="number" step="0.05" min="0.01" value="${fmt(attack.cone.duration)}"></label>
+      </div>`
   }
-  return 'Custom attack. The editor keeps it unchanged.'
+  const projectile = attack.projectile
+  return `<div class="row">
+      <label>Cooldown<input data-attack-field="cooldown" type="number" step="0.05" min="0.01" value="${fmt(attack.cooldown)}"></label>
+      <label>Speed<input data-attack-field="speed" type="number" step="0.5" min="0.01" value="${fmt(projectile.speed)}"></label>
+    </div>
+    <div class="row">
+      <label>TTL<input data-attack-field="ttl" type="number" step="0.05" min="0.01" value="${fmt(projectile.ttl)}"></label>
+      <label>Damage<input data-attack-field="damage" type="number" step="1" min="1" value="${projectile.damage}"></label>
+    </div>
+    <label>Visual<select data-attack-field="visual">${visualOptions(projectile.visual)}</select></label>
+    <label class="check"><input data-attack-field="on-land" type="checkbox" ${projectile.onLand ? 'checked' : ''}>Leaves a hazard on land</label>
+    ${
+      projectile.onLand
+        ? `<div class="row">
+            <label>Delay<input data-attack-field="land-delay" type="number" step="0.05" min="0" value="${fmt(projectile.onLand.delay)}"></label>
+            <label>Duration<input data-attack-field="land-duration" type="number" step="0.05" min="0.01" value="${fmt(projectile.onLand.duration)}"></label>
+            <label>Radius<input data-attack-field="land-radius" type="number" step="0.1" min="0.01" value="${fmt(projectile.onLand.radius)}"></label>
+          </div>`
+        : ''
+    }
+    <div class="group-head spawn-head">
+      <h4>Spawn points</h4>
+      <button type="button" data-action="add-spawn">+ point</button>
+    </div>
+    <p class="hint">Drag a point in the view. A is the firing direction in degrees, relative to the part.</p>
+    <div class="spawns">${spawnRows(attack)}</div>`
 }
 
 function boxRows(): string {
@@ -509,7 +641,8 @@ function renderInspector(): void {
     </section>
     <section class="group">
       <h3>Attack</h3>
-      <p class="hint">${attackSummary(draft.attack)}</p>
+      ${attackPresetSelect(draft.attack)}
+      ${attackFields(draft.attack)}
     </section>
     <div class="actions">
       <button type="button" class="primary" data-action="save">Save</button>
@@ -544,6 +677,21 @@ function selectBox(index: number): void {
   preview.select(selectedBox)
 }
 
+function selectSpawn(index: number): void {
+  if (!current || !Number.isInteger(index)) {
+    return
+  }
+  const attack = current.draft.attack
+  if (attack?.kind !== 'projectile') {
+    return
+  }
+  selectedSpawn = Math.max(0, Math.min(index, attack.projectile.spawnPoints.length - 1))
+  for (const row of inspector.querySelectorAll<HTMLElement>('.spawn-row')) {
+    row.classList.toggle('selected', Number(row.dataset.spawnIndex) === selectedSpawn)
+  }
+  preview.selectSpawn(selectedSpawn)
+}
+
 function selectPart(slot: Slot, id: string): void {
   const target = parts.find((part) => part.slot === slot && part.draft.id === id)
   if (!target || target === current) {
@@ -554,6 +702,7 @@ function selectPart(slot: Slot, id: string): void {
   }
   current = target
   selectedBox = 0
+  selectedSpawn = 0
   dirty = false
   pendingHistory = undefined
   renderList()
@@ -561,12 +710,16 @@ function selectPart(slot: Slot, id: string): void {
   applyPreview()
 }
 
-function setField(target: HTMLInputElement): void {
+function setField(target: HTMLInputElement | HTMLSelectElement): void {
   if (!current) {
     return
   }
   if (target.dataset.field === 'collider-edit') {
-    setEditColliders(target.checked)
+    setEditColliders((target as HTMLInputElement).checked)
+    return
+  }
+  if (target.dataset.field === 'attack-preset') {
+    setAttackPreset(target.value)
     return
   }
   commitPendingHistory()
@@ -645,6 +798,126 @@ function setBoxField(target: HTMLInputElement): void {
   markDirty()
 }
 
+function setAttackPreset(value: string): void {
+  if (!current || value === 'custom') {
+    return
+  }
+  beginHistory()
+  const preset = ATTACK_PRESETS.find((candidate) => candidate.id === value)
+  current.draft.attack = preset?.create()
+  selectedSpawn = 0
+  renderInspector()
+  applyPreview()
+  markDirty()
+}
+
+function setAttackField(target: HTMLInputElement | HTMLSelectElement): void {
+  const attack = current?.draft.attack
+  const field = target.dataset.attackField
+  if (!attack || !field) {
+    return
+  }
+  commitPendingHistory()
+  if (field === 'on-land') {
+    if (attack.kind !== 'projectile') {
+      return
+    }
+    if ((target as HTMLInputElement).checked) {
+      attack.projectile.onLand = { delay: 0, duration: 0.5, radius: 1.5 }
+    } else {
+      delete attack.projectile.onLand
+    }
+    renderInspector()
+    markDirty()
+    return
+  }
+  if (attack.kind === 'cone') {
+    switch (field) {
+      case 'cooldown':
+        attack.cooldown = toNumber(target.value)
+        break
+      case 'range':
+        attack.cone.range = toNumber(target.value)
+        break
+      case 'half-angle':
+        attack.cone.halfAngleDeg = toNumber(target.value)
+        break
+      case 'duration':
+        attack.cone.duration = toNumber(target.value)
+        break
+      default:
+        return
+    }
+    markDirty()
+    return
+  }
+  const projectile = attack.projectile
+  switch (field) {
+    case 'cooldown':
+      attack.cooldown = toNumber(target.value)
+      break
+    case 'speed':
+      projectile.speed = toNumber(target.value)
+      break
+    case 'ttl':
+      projectile.ttl = toNumber(target.value)
+      break
+    case 'damage':
+      projectile.damage = toNumber(target.value)
+      break
+    case 'visual':
+      projectile.visual = target.value
+      break
+    case 'land-delay':
+      if (projectile.onLand) {
+        projectile.onLand.delay = toNumber(target.value)
+      }
+      break
+    case 'land-duration':
+      if (projectile.onLand) {
+        projectile.onLand.duration = toNumber(target.value)
+      }
+      break
+    case 'land-radius':
+      if (projectile.onLand) {
+        projectile.onLand.radius = toNumber(target.value)
+      }
+      break
+    default:
+      return
+  }
+  markDirty()
+}
+
+function setSpawnField(target: HTMLInputElement): void {
+  const attack = current?.draft.attack
+  if (attack?.kind !== 'projectile') {
+    return
+  }
+  const index = Number(target.dataset.spawnIndex)
+  const point = attack.projectile.spawnPoints[index]
+  if (!point) {
+    return
+  }
+  commitPendingHistory()
+  switch (target.dataset.spawnField) {
+    case 'x':
+      point.x = toNumber(target.value)
+      break
+    case 'z':
+      point.z = toNumber(target.value)
+      break
+    case 'angle':
+      point.angle = toNumber(target.value)
+      break
+    default:
+      return
+  }
+  selectedSpawn = index
+  applyPreview()
+  markDirty()
+}
+
 function validate(draft: PartDraft): string | undefined {
   if (!idPattern.test(draft.id)) {
     return 'Id must be kebab-case, for example my-head.'
@@ -694,6 +967,7 @@ async function save(): Promise<void> {
     current.isNew = false
     current.file = data.part.file
     current.draft = data.part.draft
+    clampSelectedSpawn()
     pendingHistory = undefined
     setDirty(false)
     renderList()
@@ -732,6 +1006,35 @@ function deleteBox(index: number): void {
   markDirty()
 }
 
+function addSpawn(): void {
+  const attack = current?.draft.attack
+  if (attack?.kind !== 'projectile') {
+    return
+  }
+  beginHistory()
+  attack.projectile.spawnPoints.push({ x: 0, z: 1.96, angle: 0 })
+  selectedSpawn = attack.projectile.spawnPoints.length - 1
+  renderInspector()
+  applyPreview()
+  markDirty()
+}
+
+function deleteSpawn(index: number): void {
+  const attack = current?.draft.attack
+  if (attack?.kind !== 'projectile' || attack.projectile.spawnPoints.length <= 1) {
+    return
+  }
+  beginHistory()
+  attack.projectile.spawnPoints.splice(index, 1)
+  if (selectedSpawn > index) {
+    selectedSpawn -= 1
+  }
+  clampSelectedSpawn()
+  renderInspector()
+  applyPreview()
+  markDirty()
+}
+
 function addPart(slot: Slot): void {
   const id = window.prompt(`New ${slot} id (kebab-case)`)?.trim()
   if (!id) {
@@ -760,6 +1063,7 @@ function addPart(slot: Slot): void {
   parts.push(part)
   current = part
   selectedBox = 0
+  selectedSpawn = 0
   dirty = true
   pendingHistory = undefined
   renderList()
@@ -786,6 +1090,7 @@ async function removePart(): Promise<void> {
     histories.delete(removed)
     current = parts[0]
     selectedBox = 0
+    selectedSpawn = 0
     dirty = false
     pendingHistory = undefined
     renderList()
@@ -856,6 +1161,24 @@ inspector.addEventListener('click', (event) => {
     }
     return
   }
+  if (action === 'add-spawn') {
+    addSpawn()
+    return
+  }
+  if (action === 'delete-spawn') {
+    const index = Number(target.closest<HTMLElement>('[data-index]')?.dataset.index)
+    if (Number.isInteger(index)) {
+      deleteSpawn(index)
+    }
+    return
+  }
+  if (action === 'select-spawn') {
+    const index = Number(target.closest<HTMLElement>('[data-index]')?.dataset.index)
+    if (Number.isInteger(index)) {
+      selectSpawn(index)
+    }
+    return
+  }
   const row = target.closest<HTMLElement>('[data-box-index]')
   if (row) {
     const index = Number(row.dataset.boxIndex)
@@ -870,7 +1193,7 @@ inspector.addEventListener('focusin', (event) => {
   if (!current || target.dataset.field === 'collider-edit') {
     return
   }
-  if (target.closest('[data-field], [data-box-field]')) {
+  if (target.closest('[data-field], [data-box-field], [data-attack-field], [data-spawn-field]')) {
     pendingHistory = { part: current, snapshot: cloneDraft(current.draft) }
   }
 })
@@ -881,6 +1204,10 @@ inspector.addEventListener('input', (event) => {
     setField(target)
   } else if (target.dataset.boxField) {
     setBoxField(target)
+  } else if (target.dataset.attackField) {
+    setAttackField(target)
+  } else if (target.dataset.spawnField) {
+    setSpawnField(target)
   }
 })
 

@@ -38,7 +38,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
   color: inherit;
 }
@@ -319,7 +320,8 @@ input {
   margin-bottom: 0;
 }
 
-input {
+input,
+select {
   width: 100%;
   padding: 5px 7px;
   border: 1px solid var(--line);
@@ -332,7 +334,8 @@ input:disabled {
   opacity: 0.6;
 }
 
-input:focus {
+input:focus,
+select:focus {
   outline: 1px solid #4f7f97;
 }
 
@@ -480,6 +483,63 @@ input:focus {
 
 .box-row .icon {
   grid-row: 4;
+  grid-column: 5;
+  align-self: center;
+  justify-self: end;
+}
+
+.spawn-head {
+  margin-top: 6px;
+}
+
+.spawn-head h4 {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.spawns {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.spawn-row {
+  display: grid;
+  grid-template-columns: 22px repeat(3, minmax(0, 1fr)) 22px;
+  align-items: end;
+  gap: 4px;
+  padding: 5px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: var(--panel-2);
+  cursor: pointer;
+}
+
+.spawn-row.selected {
+  border-color: #7a6a24;
+}
+
+.spawn-row label {
+  margin: 0;
+  gap: 1px;
+  font-size: 10px;
+}
+
+.spawn-row input[type='number'] {
+  padding: 3px 4px;
+}
+
+.spawn-row .box-index {
+  grid-row: 1;
+  grid-column: 1;
+  align-self: stretch;
+}
+
+.spawn-row .icon {
+  grid-row: 1;
   grid-column: 5;
   align-self: center;
   justify-self: end;

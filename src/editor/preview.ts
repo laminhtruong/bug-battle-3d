@@ -21,6 +21,13 @@ export interface PreviewBox {
   hitbox: boolean
 }
 
+/** A muzzle in raw prefab units, relative to the part pivot. */
+export interface PreviewSpawn {
+  x: number
+  z: number
+  angle: number
+}
+
 export interface PreviewState {
   slot: Slot
   model: string
@@ -28,23 +35,29 @@ export interface PreviewState {
   offset: [number, number]
   boxes: PreviewBox[]
   selected: number
+  spawns: PreviewSpawn[]
+  selectedSpawn: number
   showReference: boolean
   editColliders: boolean
 }
 
 export interface PreviewHandlers {
   onSelect(index: number): void
+  onSelectSpawn(index: number): void
   onDragStart(): void
   onMove(index: number, x: number, y: number, z: number): void
   onScale(index: number, halfWidth: number, halfHeight: number, halfDepth: number): void
   /** Raw prefab offset for the art. */
   onOffset(x: number, z: number): void
+  /** Raw prefab position for a muzzle. */
+  onSpawnMove(index: number, x: number, z: number): void
   onDragEnd(): void
 }
 
 export interface Preview {
   show(state: PreviewState): void
   select(index: number): void
+  selectSpawn(index: number): void
   setTool(tool: Tool): void
   clear(): void
   dispose(): void
@@ -57,10 +70,13 @@ const AXIS_X_COLOR = 0xff5a4d
 const AXIS_Y_COLOR = 0x63c76a
 const AXIS_Z_COLOR = 0x4d8dff
 const CENTER_COLOR = 0xffd34d
+const SPAWN_COLOR = 0xffa94d
 const AXIS_X = new THREE.Vector3(1, 0, 0)
 const AXIS_Y = new THREE.Vector3(0, 1, 0)
 const AXIS_Z = new THREE.Vector3(0, 0, 1)
 const OFFSET_GIZMO_Y = 0.35
+const SPAWN_Y = 0.5
+const SPAWN_RADIUS = 0.075
 
 interface BoxEntry {
   mesh: THREE.Mesh
@@ -69,6 +85,12 @@ interface BoxEntry {
   halfHeight: number
   halfDepth: number
   hitbox: boolean
+}
+
+interface SpawnEntry {
+  group: THREE.Group
+  mesh: THREE.Mesh
+  line: THREE.Line
 }
 
 type Drag =
@@ -87,6 +109,7 @@ type Drag =
       startT: number
     }
   | { kind: 'offset-free'; dx: number; dz: number }
+  | { kind: 'spawn'; index: number; dx: number; dz: number }
   | {
       kind: 'scale'
       index: number
@@ -175,15 +198,18 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
   const modelHolder = new THREE.Group()
   const referenceHolder = new THREE.Group()
   const boxGroup = new THREE.Group()
+  const spawnGroup = new THREE.Group()
   const gizmoGroup = new THREE.Group()
   referenceHolder.position.z = -BALANCE.headSpacing
-  scene.add(modelHolder, referenceHolder, boxGroup, gizmoGroup)
+  scene.add(modelHolder, referenceHolder, boxGroup, spawnGroup, gizmoGroup)
 
   let modelKey = ''
   let modelToken = 0
   let referenceLoaded = false
   let boxes: BoxEntry[] = []
+  let spawns: SpawnEntry[] = []
   let selected = -1
+  let selectedSpawn = -1
   let tool: Tool = 'move'
   let editColliders = false
   let drag: Drag | null = null
@@ -460,6 +486,47 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
     paint()
   }
 
+  function paintSpawns(): void {
+    spawns.forEach((entry, index) => {
+      const color = index === selectedSpawn ? SELECTED_COLOR : SPAWN_COLOR
+      ;(entry.mesh.material as THREE.MeshBasicMaterial).color.setHex(color)
+      ;(entry.line.material as THREE.LineBasicMaterial).color.setHex(color)
+    })
+  }
+
+  function rebuildSpawns(state: PreviewState): void {
+    spawnGroup.clear()
+    spawns = state.spawns.map((spawn, index) => {
+      const group = new THREE.Group()
+      group.position.set(spawn.x * PART_SCALE, SPAWN_Y, spawn.z * PART_SCALE)
+      const mesh = new THREE.Mesh(
+        new THREE.SphereGeometry(SPAWN_RADIUS, 12, 10),
+        new THREE.MeshBasicMaterial({
+          color: SPAWN_COLOR,
+          transparent: true,
+          opacity: 0.95,
+          depthTest: false,
+        }),
+      )
+      mesh.renderOrder = 18
+      mesh.userData.spawnIndex = index
+      const radians = (spawn.angle * Math.PI) / 180
+      const direction = new THREE.Vector3(Math.sin(radians), 0, Math.cos(radians)).multiplyScalar(
+        0.32,
+      )
+      const line = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), direction]),
+        new THREE.LineBasicMaterial({ color: SPAWN_COLOR, depthTest: false }),
+      )
+      line.renderOrder = 17
+      group.add(mesh, line)
+      spawnGroup.add(group)
+      return { group, mesh, line }
+    })
+    selectedSpawn = spawns.length === 0 ? -1 : Math.min(state.selectedSpawn, spawns.length - 1)
+    paintSpawns()
+  }
+
   function setPointer(event: PointerEvent): void {
     const rect = canvas.getBoundingClientRect()
     pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
@@ -581,6 +648,39 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
       return
     }
 
+    const spawnHit =
+      spawns.length > 0
+        ? raycaster.intersectObjects(
+            spawns.map((entry) => entry.mesh),
+            false,
+          )[0]
+        : undefined
+    if (spawnHit) {
+      const index = spawnHit.object.userData.spawnIndex as number
+      const entry = spawns[index]
+      if (!entry) {
+        return
+      }
+      selectedSpawn = index
+      paintSpawns()
+      handlers.onSelectSpawn(index)
+      setDragPlane(SPAWN_Y)
+      if (!raycaster.ray.intersectPlane(dragPlane, dragPoint)) {
+        return
+      }
+      dragChanged = false
+      drag = {
+        kind: 'spawn',
+        index,
+        dx: entry.group.position.x - dragPoint.x,
+        dz: entry.group.position.z - dragPoint.z,
+      }
+      controls.enabled = false
+      canvas.setPointerCapture(event.pointerId)
+      event.stopImmediatePropagation()
+      return
+    }
+
     if (!editColliders) {
       return
     }
@@ -663,6 +763,25 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
       modelHolder.position.z = dragPoint.z + drag.dz
       markDragStart()
       handlers.onOffset(modelHolder.position.x / PART_SCALE, modelHolder.position.z / PART_SCALE)
+      return
+    }
+    if (drag.kind === 'spawn') {
+      setDragPlane(SPAWN_Y)
+      if (!raycaster.ray.intersectPlane(dragPlane, dragPoint)) {
+        return
+      }
+      const entry = spawns[drag.index]
+      if (!entry) {
+        return
+      }
+      entry.group.position.x = dragPoint.x + drag.dx
+      entry.group.position.z = dragPoint.z + drag.dz
+      markDragStart()
+      handlers.onSpawnMove(
+        drag.index,
+        entry.group.position.x / PART_SCALE,
+        entry.group.position.z / PART_SCALE,
+      )
       return
     }
     const entry = boxes[drag.index]
@@ -775,6 +894,7 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
       modelHolder.position.set(state.offset[0] * PART_SCALE, 0, state.offset[1] * PART_SCALE)
       setReference(state.showReference, state.slot)
       rebuildBoxes(state)
+      rebuildSpawns(state)
       buildGizmo()
       updateGizmoTransform()
     },
@@ -782,6 +902,10 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
       selected = Math.min(index, boxes.length - 1)
       paint()
       updateGizmoTransform()
+    },
+    selectSpawn(index) {
+      selectedSpawn = spawns.length === 0 ? -1 : Math.max(0, Math.min(index, spawns.length - 1))
+      paintSpawns()
     },
     setTool(next) {
       tool = next
@@ -794,7 +918,10 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
       modelHolder.clear()
       referenceHolder.visible = false
       boxGroup.clear()
+      spawnGroup.clear()
       boxes = []
+      spawns = []
+      selectedSpawn = -1
       gizmoGroup.visible = false
     },
     dispose() {

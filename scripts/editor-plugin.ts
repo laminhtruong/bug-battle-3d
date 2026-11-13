@@ -4,7 +4,7 @@ import path from 'node:path'
 import { format, resolveConfig } from 'prettier'
 import type { Plugin } from 'vite'
 import { parsePartInput } from '../src/content/define.ts'
-import type { Slot } from '../src/content/define'
+import type { AttackDef, Slot } from '../src/content/define'
 
 /**
  * Dev-only API behind the part editor. It reads and writes the same JSON files
@@ -36,13 +36,45 @@ export interface PartDraft {
   contact: { damage: number }
   boxes: PrefabBoxDraft[]
   offset?: [number, number]
-  attack?: unknown
+  attack?: AttackDef
 }
 
 export interface LoadedPartDraft {
   slot: Slot
   file: string
   draft: PartDraft
+}
+
+/** Drops defaults that the schema supplies, so editor saves stay small. */
+function cleanAttack(attack: AttackDef): unknown {
+  if (attack.kind === 'cone') {
+    return attack
+  }
+  const { speed, ttl, visual, damage, spawnPoints, onLand } = attack.projectile
+  return {
+    kind: 'projectile',
+    cooldown: attack.cooldown,
+    projectile: {
+      speed,
+      ttl,
+      visual,
+      ...(damage !== 1 ? { damage } : {}),
+      spawnPoints: spawnPoints.map(({ x, z, angle }) => ({
+        x,
+        z,
+        ...(angle !== 0 ? { angle } : {}),
+      })),
+      ...(onLand
+        ? {
+            onLand: {
+              ...(onLand.delay !== 0 ? { delay: onLand.delay } : {}),
+              duration: onLand.duration,
+              radius: onLand.radius,
+            },
+          }
+        : {}),
+    },
+  }
 }
 
 /** Builds the JSON source for a part file, without defaults noise. */
@@ -62,7 +94,7 @@ export async function draftToJson(draft: PartDraft, file: string): Promise<strin
       ...(box.rotation?.some((value) => value !== 0) ? { rotation: box.rotation } : {}),
       ...(box.hitbox ? { hitbox: true } : {}),
     })),
-    ...(draft.attack ? { attack: draft.attack } : {}),
+    ...(draft.attack ? { attack: cleanAttack(draft.attack) } : {}),
   }
   const config = (await resolveConfig(file)) ?? {}
   return format(JSON.stringify(value), {

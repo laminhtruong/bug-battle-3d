@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { defineHead } from '@/content/define'
+import { ATTACK_PRESETS, attackPreset } from '@/editor/attacks'
 import { draftToJson } from '../scripts/editor-plugin'
 import type { PartDraft } from '../scripts/editor-plugin'
 
@@ -34,5 +35,57 @@ describe('part editor files', () => {
     expect(part.model).toBe('claw-model')
     expect(part.offset).toEqual([1.5, -0.5])
     expect(part.collider.boxes[2]?.rotation).toEqual([0, 40, 0])
+  })
+
+  it('writes attack spawn points without schema defaults', async () => {
+    const source = await draftToJson(
+      {
+        ...claw,
+        attack: {
+          kind: 'projectile',
+          cooldown: 1,
+          projectile: {
+            speed: 5,
+            ttl: 0.5,
+            visual: 'bullet',
+            damage: 1,
+            spawnPoints: [
+              { x: 0, z: 1.96, angle: 0 },
+              { x: 1.96, z: 0, angle: 90 },
+            ],
+            onLand: { delay: 0, duration: 0.5, radius: 1.5 },
+          },
+        },
+      },
+      'claw01.json',
+    )
+    expect(JSON.parse(source).attack).toEqual({
+      kind: 'projectile',
+      cooldown: 1,
+      projectile: {
+        speed: 5,
+        ttl: 0.5,
+        visual: 'bullet',
+        spawnPoints: [
+          { x: 0, z: 1.96 },
+          { x: 1.96, z: 0, angle: 90 },
+        ],
+        onLand: { duration: 0.5, radius: 1.5 },
+      },
+    })
+    const part = defineHead(JSON.parse(source))
+    expect(part.attack?.kind).toBe('projectile')
+    if (part.attack?.kind === 'projectile') {
+      expect(part.attack.projectile.spawnPoints[1]?.angle).toBe(90)
+    }
+  })
+
+  it('turns every editor preset into a valid attack', () => {
+    for (const preset of ATTACK_PRESETS) {
+      const attack = preset.create()
+      expect(attackPreset(attack)).toBe(preset.id)
+      const part = defineHead({ ...claw, attack })
+      expect(part.attack?.kind).toBe(attack.kind)
+    }
   })
 })
