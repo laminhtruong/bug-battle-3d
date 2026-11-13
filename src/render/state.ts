@@ -11,6 +11,8 @@ export interface RenderSegment {
   angle: number
   /** Absolute time until which the part flashes from the last hit. */
   hurtUntil: number
+  /** Seconds until the next attack; the view flares a cone when it resets. */
+  cooldown: number
 }
 
 export interface RenderSnake {

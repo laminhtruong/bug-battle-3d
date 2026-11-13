@@ -81,6 +81,12 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- Fire, lightning, poison and bullet visuals now come from the original Unity
+  prefabs through `three.quarks`: head and body flames ride the part they
+  belong to, lightning lands with the prefab's ring, glow, shards and flat
+  ground bolts, poison leaves the source decal, cloud and skull, and shots use
+  the prefab colours and radii. The snapshot also carries each segment's attack
+  cooldown, which the flames use as their trigger.
 - Cone attacks now store their effect origin in `spawnPoints` too, defaulting to
   the part pivot and forward, so old content keeps its behaviour.
 - Projectile attacks now store their muzzles in `spawnPoints` instead of a

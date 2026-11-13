@@ -1,12 +1,13 @@
 # Assets
 
 The Unity project this game is ported from ships original art created by the
-project author. The author has confirmed the rights to publish it. No paid Unity
-plugin code or asset is copied into this repository.
+project author. The author has confirmed the rights to publish it. The particle
+textures under `textures/fx/` come from the same project and require the Epic
+Toon FX license described below; no paid plugin code is copied.
 
 The current build ships the original part models as GLB, the apple and power-up
-props, plus the floor and palette textures. This document records what the art
-is, where it comes from and how it was converted.
+props, plus the floor, palette and FX textures. This document records what the
+art is, where it comes from and how it was converted.
 
 ## Naming rules
 
@@ -37,6 +38,15 @@ explodes: a skull for the head and a small bone for the body.
 Sound effects ship under `audio/sfx/`. Each file is played from a simulation
 event and is tagged with the snake it belongs to, so a player only hears the
 effects of their own snake.
+
+## FX textures
+
+The fire, lightning and poison particle textures under
+`public/assets/textures/fx/` are copied from the original Unity project's
+particle materials. Most are from the Epic Toon FX pack; `decal-poison.png` is
+the project author's own art. These files are not covered by this repository's
+MIT license. Keep or redistribute them only if you hold the applicable Epic
+Toon FX license.
 
 ## Rename map
 

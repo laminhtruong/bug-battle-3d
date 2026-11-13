@@ -25,6 +25,7 @@ export function createSnapshot(world: World, sfx: SoundEvent[] = []): Snapshot {
         z: segment.z,
         angle: segment.angle,
         hurtUntil: segment.hurtUntil,
+        cooldown: segment.cooldown,
       })),
     })),
     projectiles: world.projectiles.map((projectile) => ({
@@ -51,11 +52,7 @@ export function createSnapshot(world: World, sfx: SoundEvent[] = []): Snapshot {
       if (pickup.partId) {
         entry.partId = pickup.partId
       }
-      if (
-        pickup.fromX !== undefined &&
-        pickup.fromZ !== undefined &&
-        pickup.landAt !== undefined
-      ) {
+      if (pickup.fromX !== undefined && pickup.fromZ !== undefined && pickup.landAt !== undefined) {
         entry.fromX = pickup.fromX
         entry.fromZ = pickup.fromZ
         entry.landAt = pickup.landAt

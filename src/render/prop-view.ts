@@ -1,29 +1,24 @@
 import * as THREE from 'three'
+import { requirePart } from '@/content'
 import { clamp } from '@/core/math2d'
 import { BALANCE } from '@/data/balance'
 import { clonePartModel, clonePropModel, getPropModel } from './models'
+import { createParticles } from './particles'
 import type { RenderPickup, RenderState } from './state'
 import { getPartMaterial } from './snake-view'
 
-const SHOT_COLORS: Record<string, string> = {
-  bullet: '#ffd43b',
-  poison: '#69db7c',
-  lightning: '#74c0fc',
+const SHOT_STYLES: Record<string, { color: string; radius: number }> = {
+  // Bullet prefabs: a built-in sphere with the part's flat material colour.
+  bullet: { color: '#4ddef2', radius: 0.4 },
+  lightning: { color: '#fd5cfd', radius: 0.467 },
+  poison: { color: '#00e501', radius: 0.467 },
 }
 
-const AREA_COLORS: Record<string, string> = {
-  poison: '#69db7c',
-  lightning: '#74c0fc',
-}
-
-const shotGeometry = new THREE.SphereGeometry(BALANCE.projectileRadius, 8, 6)
-const areaGeometry = new THREE.CircleGeometry(1, 24)
-areaGeometry.rotateX(-Math.PI / 2)
+const shotGeometry = new THREE.SphereGeometry(1, 12, 8)
 const appleGeometry = new THREE.SphereGeometry(0.72, 10, 8)
 const dropGeometry = new THREE.IcosahedronGeometry(0.8, 0)
 
 const shotMaterials = new Map<string, THREE.MeshBasicMaterial>()
-const areaMaterials = new Map<string, THREE.MeshBasicMaterial>()
 const pickupMaterials = new Map<string, THREE.Material>()
 
 function shotMaterial(visual: string): THREE.MeshBasicMaterial {
@@ -32,24 +27,9 @@ function shotMaterial(visual: string): THREE.MeshBasicMaterial {
     return cached
   }
   const material = new THREE.MeshBasicMaterial({
-    color: SHOT_COLORS[visual] ?? '#ffffff',
+    color: SHOT_STYLES[visual]?.color ?? '#ffffff',
   })
   shotMaterials.set(visual, material)
-  return material
-}
-
-function areaMaterial(partId: string): THREE.MeshBasicMaterial {
-  const cached = areaMaterials.get(partId)
-  if (cached) {
-    return cached
-  }
-  const material = new THREE.MeshBasicMaterial({
-    color: AREA_COLORS[partId] ?? '#ffa94d',
-    transparent: true,
-    opacity: 0.35,
-    depthWrite: false,
-  })
-  areaMaterials.set(partId, material)
   return material
 }
 
@@ -103,47 +83,122 @@ function flightProgress(pickup: RenderPickup, time: number): number {
 
 export function createPropViewer(scene: THREE.Scene) {
   const shots = new Map<string, THREE.Mesh>()
-  const areas = new Map<string, THREE.Mesh>()
   const pickups = new Map<string, THREE.Object3D>()
+  const particles = createParticles(scene)
+  const cooldowns = new Map<string, number>()
+  // One parent per segment, so the flames follow the part instead of the floor.
+  const fireAnchors = new Map<string, THREE.Object3D>()
+  const seenAreas = new Set<string>()
+  let lastTime = 0
+
+  function fireAnchor(key: string): THREE.Object3D {
+    let anchor = fireAnchors.get(key)
+    if (!anchor) {
+      anchor = new THREE.Group()
+      scene.add(anchor)
+      fireAnchors.set(key, anchor)
+    }
+    return anchor
+  }
+
+  /** Fires the flame burst the tick a cone part's cooldown wraps. */
+  function syncFlames(world: RenderState): void {
+    const seen = new Set<string>()
+    for (const snake of world.snakes) {
+      for (let index = 0; index < snake.segments.length; index += 1) {
+        const segment = snake.segments[index]!
+        if (segment.dead) {
+          continue
+        }
+        const part = requirePart(segment.slot, segment.partId)
+        const attack = part.attack
+        if (!attack || attack.kind !== 'cone') {
+          continue
+        }
+        const key = `${snake.id}:${index}`
+        seen.add(key)
+        const anchor = fireAnchor(key)
+        anchor.position.set(segment.x, 0, segment.z)
+        anchor.rotation.y = segment.angle
+        const previous = cooldowns.get(key)
+        cooldowns.set(key, segment.cooldown)
+        if (previous === undefined || segment.cooldown <= previous) {
+          continue
+        }
+        for (const spawn of attack.cone.spawnPoints) {
+          const angle = (spawn.angle * Math.PI) / 180
+          if (segment.slot === 'head') {
+            particles.flameHead(anchor, spawn.x, spawn.y, spawn.z, angle)
+          } else {
+            particles.flameBody(anchor, spawn.x, spawn.y, spawn.z, angle)
+          }
+        }
+      }
+    }
+    for (const key of cooldowns.keys()) {
+      if (!seen.has(key)) {
+        cooldowns.delete(key)
+      }
+    }
+    for (const [key, anchor] of fireAnchors) {
+      if (!seen.has(key)) {
+        // Flames still playing keep their last pose and fade out on their own.
+        scene.remove(anchor)
+        fireAnchors.delete(key)
+      }
+    }
+  }
 
   return {
-    sync(world: RenderState): void {
+    sync(world: RenderState, dt = 0): void {
+      // A new match restarts the clock and reuses entity ids.
+      if (world.time < lastTime) {
+        cooldowns.clear()
+        seenAreas.clear()
+        for (const anchor of fireAnchors.values()) {
+          scene.remove(anchor)
+        }
+        fireAnchors.clear()
+      }
+      lastTime = world.time
+      syncFlames(world)
+
       const seenShots = new Set<string>()
       for (const projectile of world.projectiles) {
         seenShots.add(projectile.id)
         let mesh = shots.get(projectile.id)
         if (!mesh) {
           mesh = new THREE.Mesh(shotGeometry, shotMaterial(projectile.visual))
+          mesh.scale.setScalar(SHOT_STYLES[projectile.visual]?.radius ?? 0.5)
           shots.set(projectile.id, mesh)
           scene.add(mesh)
         }
         mesh.material = shotMaterial(projectile.visual)
         mesh.position.set(projectile.x, projectile.y, projectile.z)
+        particles.shot(projectile.id, projectile.visual, projectile.x, projectile.y, projectile.z)
       }
       for (const [id, mesh] of shots) {
         if (!seenShots.has(id)) {
           scene.remove(mesh)
           shots.delete(id)
+          particles.dropShot(id)
         }
       }
 
-      const seenAreas = new Set<string>()
+      const liveAreas = new Set<string>()
       for (const area of world.areas) {
-        seenAreas.add(area.id)
-        let mesh = areas.get(area.id)
-        if (!mesh) {
-          mesh = new THREE.Mesh(areaGeometry, areaMaterial(area.partId))
-          areas.set(area.id, mesh)
-          scene.add(mesh)
+        liveAreas.add(area.id)
+        if (seenAreas.has(area.id)) {
+          continue
         }
-        mesh.material = areaMaterial(area.partId)
-        mesh.position.set(area.x, 0.05, area.z)
-        mesh.scale.setScalar(area.radius)
+        seenAreas.add(area.id)
+        if (area.partId === 'lightning' || area.partId === 'poison') {
+          particles.impact(area.partId, area.x, 0.5, area.z)
+        }
       }
-      for (const [id, mesh] of areas) {
-        if (!seenAreas.has(id)) {
-          scene.remove(mesh)
-          areas.delete(id)
+      for (const id of seenAreas) {
+        if (!liveAreas.has(id)) {
+          seenAreas.delete(id)
         }
       }
 
@@ -153,9 +208,7 @@ export function createPropViewer(scene: THREE.Scene) {
         let mesh = pickups.get(pickup.id)
         // The apple model can finish loading after the first apple spawned.
         const stale =
-          pickup.kind === 'apple' &&
-          !mesh?.userData.prop &&
-          getPropModel('apple') !== undefined
+          pickup.kind === 'apple' && !mesh?.userData.prop && getPropModel('apple') !== undefined
         if (mesh && stale) {
           scene.remove(mesh)
           mesh = undefined
@@ -184,6 +237,8 @@ export function createPropViewer(scene: THREE.Scene) {
           pickups.delete(id)
         }
       }
+
+      particles.update(dt)
     },
   }
 }

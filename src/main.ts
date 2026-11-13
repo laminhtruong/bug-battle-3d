@@ -279,7 +279,7 @@ startLoop({
       }
       const shown = smoother.sample(renderState, blend)
       snakeViewer.sync(shown, dt)
-      propViewer.sync(shown)
+      propViewer.sync(shown, dt)
       updateFocus(shown)
       view.updateCamera(focusX, focusZ, dt)
       if (mode !== 'idle') {

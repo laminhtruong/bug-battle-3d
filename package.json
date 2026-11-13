@@ -26,6 +26,7 @@
   "dependencies": {
     "peerjs": "^1.5.5",
     "three": "^0.187.0",
+    "three.quarks": "^0.17.1",
     "zod": "^4.6.7"
   },
   "devDependencies": {

@@ -5,7 +5,7 @@ import { SOUND_NAMES } from '@/data/sounds'
  * Wire protocol. Bump the version when the message shape changes; hosts and
  * guests with different versions refuse to start instead of desyncing.
  */
-export const PROTOCOL_VERSION = 8
+export const PROTOCOL_VERSION = 9
 
 const MAX_CLIENT_MESSAGE = 4096
 const MAX_HOST_MESSAGE = 200_000
@@ -50,6 +50,7 @@ const segmentSchema = z.object({
   z: z.number(),
   angle: z.number(),
   hurtUntil: z.number(),
+  cooldown: z.number(),
 })
 
 const snakeSchema = z.object({
