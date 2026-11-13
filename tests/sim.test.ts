@@ -13,6 +13,7 @@ import {
   updateProjectiles,
 } from '@/sim/combat'
 import { spawnBoss, spawnPowerup } from '@/sim/spawn'
+import { updateMovement } from '@/sim/snake'
 import { tickWorld } from '@/sim/tick'
 import { isPlayerControl } from '@/sim/types'
 import type { Projectile, Snake, World } from '@/sim/types'
@@ -194,6 +195,94 @@ describe('world', () => {
       expect(powerup.segments[0]?.hp).toBeGreaterThanOrEqual(BALANCE.powerupHpMin)
       expect(powerup.segments[0]?.hp).toBeLessThanOrEqual(BALANCE.powerupHpMax)
     }
+  })
+
+  it('makes a bot stand off and aim at a power-up instead of circling it', () => {
+    const world = createWorld({ seed: 53, arena: classicArena })
+    const bot = getSnake(world, 'bot-1')
+    const powerup = world.snakes.find((snake) => snake.control === 'powerup')
+    if (!powerup) {
+      throw new Error('expected a power-up')
+    }
+    world.snakes = [bot, powerup]
+    world.pickups = []
+    // A gun head shoots from range, so the bot should not walk into the crate.
+    const gun = requirePart('head', 'gun')
+    const head = bot.segments[0]!
+    head.partId = 'gun'
+    head.hp = gun.hp
+    head.maxHp = gun.hp
+    placeHead(powerup, 0, 30)
+    placeHead(bot, 0, 0)
+    bot.angle = 0
+    bot.ai.chaseRestUntil = world.time + 20
+
+    updateAi(world, bot)
+
+    // Far away it closes in at full speed.
+    expect(bot.steerZ).toBeCloseTo(1, 5)
+
+    placeHead(bot, 0, 24)
+    bot.angle = Math.PI
+    updateAi(world, bot)
+
+    // In range it turns toward the crate but barely moves.
+    expect(bot.steerZ).toBeGreaterThan(0)
+    expect(Math.hypot(bot.steerX, bot.steerZ)).toBeLessThan(0.01)
+    for (let index = 0; index < 20; index += 1) {
+      updateMovement(bot, classicArena.width / 2, classicArena.depth / 2, STEP)
+    }
+    expect(Math.abs(bot.angle)).toBeLessThan(0.2)
+    expect(Math.hypot(bot.x, bot.z - 24)).toBeLessThan(0.1)
+  })
+
+  it('makes a bot run from danger while it is hunting a power-up', () => {
+    const world = createWorld({ seed: 54, arena: classicArena })
+    const bot = getSnake(world, 'bot-1')
+    const rival = getSnake(world, 'bot-2')
+    const powerup = world.snakes.find((snake) => snake.control === 'powerup')
+    if (!powerup) {
+      throw new Error('expected a power-up')
+    }
+    world.snakes = [bot, rival, powerup]
+    world.pickups = []
+    placeHead(powerup, 0, 30)
+    placeHead(bot, 0, 24)
+    placeHead(rival, 0, 28)
+    bot.angle = 0
+    bot.ai.chaseRestUntil = world.time + 20
+
+    updateAi(world, bot)
+
+    // The rival is too close, so the bot backs away from it instead of shooting.
+    expect(bot.steerZ).toBeLessThan(-0.5)
+  })
+
+  it('stops a head at a power-up and lets it walk back out', () => {
+    const world = createWorld({ seed: 55, arena: classicArena })
+    const snake = getSnake(world, 'bot-1')
+    const solids = [{ x: 0, z: 8 }]
+    const halfWidth = classicArena.width / 2
+    const halfDepth = classicArena.depth / 2
+
+    placeHead(snake, 0, 0)
+    snake.steerX = 0
+    snake.steerZ = 1
+    for (let index = 0; index < 90; index += 1) {
+      updateMovement(snake, halfWidth, halfDepth, STEP, solids)
+    }
+
+    // The crate is solid, so the head stops outside it.
+    expect(snake.z).toBeLessThanOrEqual(8 - BALANCE.powerupSolidRadius + 0.01)
+    expect(snake.z).toBeGreaterThan(8 - BALANCE.powerupSolidRadius - 1)
+
+    // Standing inside (a spawn overlap) still lets the snake walk away.
+    placeHead(snake, 0, 7)
+    snake.angle = Math.PI
+    snake.steerX = 0
+    snake.steerZ = -1
+    updateMovement(snake, halfWidth, halfDepth, STEP, solids)
+    expect(snake.z).toBeLessThan(7)
   })
 
   it('is deterministic for a seed', () => {

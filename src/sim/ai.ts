@@ -1,4 +1,5 @@
 import { normalize } from '@/core/math2d'
+import { requirePart } from '@/content'
 import { isPlayerControl } from './types'
 import type { Pickup, Snake, World } from './types'
 
@@ -8,6 +9,10 @@ const RETARGET_MAX_SEC = 5
 /** Bots grab parts before apples, and only look this far for each. */
 const BOT_GEAR_RANGE = 40
 const BOT_POWERUP_RANGE = 45
+/** A bot shoots a crate from this fraction of its head attack reach. */
+const BOT_SHOOT_REACH = 0.6
+/** A player closer than this makes a bot drop its crate and run. */
+const BOT_DANGER_RANGE = 12
 /** A bot chases a nearby player for a short run, then leaves it alone for a while. */
 const BOT_CHASE_RANGE = 22
 const BOT_CHASE_SEC = 3
@@ -96,6 +101,31 @@ function nearestPowerup(world: World, snake: Snake, range: number): Snake | unde
   return nearest
 }
 
+/** How far the head attack reaches, or 0 when the head only bites. */
+function attackReach(snake: Snake): number {
+  const head = snake.segments[0]
+  if (!head || head.dead) {
+    return 0
+  }
+  const attack = requirePart(head.slot, head.partId).attack
+  if (!attack) {
+    return 0
+  }
+  const reach =
+    attack.kind === 'cone'
+      ? attack.cone.range
+      : attack.projectile.speed * attack.projectile.ttl
+  return reach * BOT_SHOOT_REACH
+}
+
+/** Turns toward a point without travelling, so the head aims its attack. */
+function faceOnly(snake: Snake, x: number, z: number): void {
+  const direction = normalize(x - snake.x, z - snake.z)
+  // The tiny push keeps the turn logic alive while the snake stands still.
+  snake.steerX = direction.x * 0.001
+  snake.steerZ = direction.z * 0.001
+}
+
 /**
  * Bots gear up before they eat: part drops and power-ups are worth more than an
  * apple, and they only chase an apple when there is nothing better nearby.
@@ -130,7 +160,21 @@ function updateBot(world: World, bot: Snake): void {
   }
   const powerup = nearestPowerup(world, bot, BOT_POWERUP_RANGE)
   if (powerup) {
-    steerAway(world, bot, powerup.x, powerup.z)
+    const threat = nearestPlayer(world, bot, BOT_DANGER_RANGE)
+    if (threat) {
+      // Back off from the threat instead of standing next to it.
+      const dx = bot.x - threat.x
+      const dz = bot.z - threat.z
+      const length = Math.hypot(dx, dz) || 1
+      steerAway(world, bot, bot.x + (dx / length) * 8, bot.z + (dz / length) * 8)
+      return
+    }
+    const distance = Math.hypot(powerup.x - bot.x, powerup.z - bot.z)
+    if (distance > attackReach(bot)) {
+      steerAway(world, bot, powerup.x, powerup.z)
+    } else {
+      faceOnly(bot, powerup.x, powerup.z)
+    }
     return
   }
   const apple = nearestPickup(world, bot, BOT_GEAR_RANGE, ['apple'])

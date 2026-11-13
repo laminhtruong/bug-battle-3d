@@ -1,4 +1,5 @@
 import { angleFromDirection, clamp, directionFromAngle, shortestAngleDelta } from '@/core/math2d'
+import type { Vec2 } from '@/core/math2d'
 import { requirePart } from '@/content'
 import type { Slot } from '@/content/define'
 import { BALANCE } from '@/data/balance'
@@ -17,15 +18,39 @@ export function segmentDistance(index: number): number {
   return BALANCE.headSpacing + (index - 1) * BALANCE.bodySpacing
 }
 
+/** True when stepping from the start point to the next point enters a solid. */
+function entersSolid(
+  startX: number,
+  startZ: number,
+  x: number,
+  z: number,
+  solids: readonly Vec2[],
+): boolean {
+  for (const solid of solids) {
+    const distance = Math.hypot(x - solid.x, z - solid.z)
+    if (distance >= BALANCE.powerupSolidRadius) {
+      continue
+    }
+    // Moving away is always allowed, so a snake cannot be trapped inside one.
+    if (Math.hypot(startX - solid.x, startZ - solid.z) > distance) {
+      return true
+    }
+  }
+  return false
+}
+
 /**
  * Moves the head, records the path and rebuilds every segment from it.
  * The snake only moves while the player pushes the stick, like the original.
+ * Power-ups are solid: the move is split per axis so the snake slides around
+ * a crate instead of walking through it.
  */
 export function updateMovement(
   snake: Snake,
   halfWidth: number,
   halfDepth: number,
   dt: number,
+  solids: readonly Vec2[] = [],
 ): void {
   const push = Math.hypot(snake.steerX, snake.steerZ)
   if (push > 1e-4) {
@@ -38,8 +63,20 @@ export function updateMovement(
   const margin = BALANCE.edgeMargin
   // A light push moves slower, exactly like the joystick of the original.
   const speed = snake.speed * Math.min(1, push)
-  snake.x = clamp(snake.x + direction.x * speed * dt, -halfWidth + margin, halfWidth - margin)
-  snake.z = clamp(snake.z + direction.z * speed * dt, -halfDepth + margin, halfDepth - margin)
+  const startX = snake.x
+  const startZ = snake.z
+  const limitX = halfWidth - margin
+  const limitZ = halfDepth - margin
+  let nextX = clamp(startX + direction.x * speed * dt, -limitX, limitX)
+  let nextZ = clamp(startZ + direction.z * speed * dt, -limitZ, limitZ)
+  if (entersSolid(startX, startZ, nextX, startZ, solids)) {
+    nextX = startX
+  }
+  if (entersSolid(startX, startZ, nextX, nextZ, solids)) {
+    nextZ = startZ
+  }
+  snake.x = nextX
+  snake.z = nextZ
 
   appendTrail(snake.trail, snake.x, snake.z, TRAIL_MAX_DISTANCE)
   syncSegments(snake)

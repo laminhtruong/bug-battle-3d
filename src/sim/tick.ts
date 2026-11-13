@@ -176,6 +176,9 @@ export function tickWorld(world: World, dt: number): void {
 
   const halfWidth = world.arena.width / 2
   const halfDepth = world.arena.depth / 2
+  const solids = world.snakes
+    .filter((snake) => snake.alive && snake.control === 'powerup')
+    .map((snake) => ({ x: snake.x, z: snake.z }))
   for (const snake of world.snakes) {
     if (!snake.alive || snake.control === 'powerup') {
       continue
@@ -183,7 +186,7 @@ export function tickWorld(world: World, dt: number): void {
     if (snake.control !== 'human') {
       updateAi(world, snake)
     }
-    updateMovement(snake, halfWidth, halfDepth, dt)
+    updateMovement(snake, halfWidth, halfDepth, dt, solids)
   }
 
   updateRespawns(world)
