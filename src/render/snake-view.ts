@@ -15,6 +15,18 @@ const BODY_GEOMETRY = new THREE.IcosahedronGeometry(0.3, 0)
 const BONES_GEOMETRY = new THREE.SphereGeometry(0.2, 10, 6)
 const BONES_MATERIAL = new THREE.MeshBasicMaterial({ color: '#e8e0cc' })
 
+/** How long the part shrinks after the killing hit has finished flashing. */
+const DESTROY_SEC = 0.18
+/** How long a new or restored part takes to pop back in. */
+const SPAWN_SEC = 0.28
+
+/** Overshoots a little past 1, like a bubble appearing. */
+function spawnScale(age: number): number {
+  const t = Math.min(1, age / SPAWN_SEC)
+  const back = 1.70158
+  return 1 + (back + 1) * (t - 1) ** 3 + back * (t - 1) ** 2
+}
+
 const materialCache = new Map<string, THREE.MeshToonMaterial>()
 
 /** Placeholder colour, used until the real model for a part has loaded. */
@@ -41,6 +53,13 @@ interface SegmentView {
   materials: THREE.MeshToonMaterial[]
   flash: number
   dead: boolean
+  /** Scale the art was authored with, before the pop animations multiply it. */
+  baseScale: THREE.Vector3
+  /** Countdown through the final flash and the shrink; 0 means settled. */
+  dying: number
+  exploded: boolean
+  /** Seconds into the pop-in; -1 while the segment is settled. */
+  spawnAge: number
   height: number
   model: boolean
   boneModel: boolean
@@ -53,6 +72,7 @@ interface SegmentView {
 interface SnakeView {
   group: THREE.Group
   segments: SegmentView[]
+  alive: boolean
 }
 
 /** Copies a segment's material, so the hurt flash cannot light up the whole snake. */
@@ -99,6 +119,10 @@ function createSegment(slot: PartDef['slot'], id: string): SegmentView {
       materials: ownMaterials(model),
       flash: 0,
       dead: false,
+      baseScale: new THREE.Vector3(1, 1, 1),
+      dying: 0,
+      exploded: true,
+      spawnAge: -1,
       height: 0,
       model: true,
       boneModel,
@@ -119,6 +143,10 @@ function createSegment(slot: PartDef['slot'], id: string): SegmentView {
     materials: ownMaterials(mesh),
     flash: 0,
     dead: false,
+    baseScale: mesh.scale.clone(),
+    dying: 0,
+    exploded: true,
+    spawnAge: -1,
     height: head ? 0.55 : 0.4,
     model: false,
     boneModel,
@@ -128,7 +156,7 @@ function createSegment(slot: PartDef['slot'], id: string): SegmentView {
 }
 
 function createSnakeView(): SnakeView {
-  return { group: new THREE.Group(), segments: [] }
+  return { group: new THREE.Group(), segments: [], alive: true }
 }
 
 /** Keeps one object per visible segment, reusing them between ticks. */
@@ -149,6 +177,15 @@ export function createSnakeViewer(scene: THREE.Scene) {
         }
 
         view.group.visible = snake.alive
+        if (view.alive && !snake.alive) {
+          // Everything pops in again when the snake respawns.
+          for (const entry of view.segments) {
+            entry.dead = true
+            entry.dying = 0
+            entry.spawnAge = -1
+          }
+        }
+        view.alive = snake.alive
         if (!snake.alive) {
           continue
         }
@@ -159,12 +196,15 @@ export function createSnakeViewer(scene: THREE.Scene) {
           }
           const key = `${segment.slot}:${segment.partId}`
           let entry = view.segments[index]
+          const keyChanged = entry?.key !== key
           // Models load asynchronously, so a segment can swap from primitive to model.
           const upgraded =
-            (!entry?.model && getPartModel(segment.slot, segment.partId)) ||
-            (!entry?.boneModel && getBonesModel(segment.slot))
+            !keyChanged &&
+            ((!entry?.model && getPartModel(segment.slot, segment.partId)) ||
+              (!entry?.boneModel && getBonesModel(segment.slot)))
           let created = false
-          if (entry?.key !== key || upgraded) {
+          let pop = false
+          if (keyChanged || upgraded) {
             if (entry) {
               entry.mixer?.stopAllAction()
               view.group.remove(entry.node)
@@ -181,16 +221,60 @@ export function createSnakeViewer(scene: THREE.Scene) {
             view.group.add(entry.bones)
             view.group.add(entry.shadow)
             created = true
+            // Swapping a placeholder for the real model is not a new part.
+            pop = !upgraded
           }
-          // A part that arrives already broken should not pop again.
-          if (!created && segment.dead && !entry.dead) {
-            effects.explode(segment.x, segment.z)
+          if (!entry) {
+            continue
           }
-          entry.dead = segment.dead
 
-          entry.node.visible = !segment.dead
+          const remaining = segment.hurtUntil - world.time
+          if (created) {
+            entry.dead = segment.dead
+            entry.dying = 0
+            entry.exploded = true
+            entry.spawnAge = segment.dead || !pop ? -1 : 0
+          } else if (segment.dead && !entry.dead) {
+            // The killing hit finishes its flash first; only then the part shrinks.
+            entry.dead = true
+            entry.dying = Math.max(0, remaining) + DESTROY_SEC
+            entry.exploded = false
+            entry.spawnAge = -1
+          } else if (!segment.dead && entry.dead) {
+            // A restored head or a regrown body pops back in.
+            entry.dead = false
+            entry.dying = 0
+            entry.spawnAge = 0
+          }
+
+          if (entry.dying > 0) {
+            entry.dying = Math.max(0, entry.dying - dt)
+            if (!entry.exploded && entry.dying <= DESTROY_SEC) {
+              effects.explode(segment.x, segment.z)
+              entry.exploded = true
+            }
+          }
+          if (entry.spawnAge >= 0) {
+            entry.spawnAge += dt
+            if (entry.spawnAge >= SPAWN_SEC) {
+              entry.spawnAge = -1
+            }
+          }
+
+          const showNode = !segment.dead || entry.dying > 0
+          entry.node.visible = showNode
           entry.node.position.set(segment.x, entry.height, segment.z)
           entry.node.rotation.y = segment.angle
+          if (showNode) {
+            let scale = 1
+            if (entry.dying > 0 && entry.dying <= DESTROY_SEC) {
+              const shrink = 1 - entry.dying / DESTROY_SEC
+              scale = 1 - shrink * shrink
+            } else if (entry.spawnAge >= 0) {
+              scale = spawnScale(entry.spawnAge)
+            }
+            entry.node.scale.copy(entry.baseScale).multiplyScalar(Math.max(0.001, scale))
+          }
           // Legs only walk while the segment is moving, like Idle/Move in the original.
           if (entry.mixer && !segment.dead) {
             const moved =
@@ -202,16 +286,15 @@ export function createSnakeViewer(scene: THREE.Scene) {
             entry.lastX = segment.x
             entry.lastZ = segment.z
           }
-          entry.bones.visible = segment.dead
+          entry.bones.visible = segment.dead && entry.dying <= 0
           entry.bones.position.set(segment.x, entry.model ? 0 : 0.2, segment.z)
           entry.bones.rotation.y = segment.angle
           entry.shadow.visible = true
           entry.shadow.position.set(segment.x, 0.02, segment.z)
 
           // The original flashes the part's emission white twice when it is hurt.
-          const remaining = segment.hurtUntil - world.time
           const flash =
-            !segment.dead && remaining > 0
+            remaining > 0
               ? Math.sin((1 - remaining / BALANCE.hurtCooldownSec) * Math.PI * 2) ** 2
               : 0
           if (entry.flash !== flash) {
@@ -228,6 +311,9 @@ export function createSnakeViewer(scene: THREE.Scene) {
             entry.node.visible = false
             entry.bones.visible = false
             entry.shadow.visible = false
+            entry.dead = true
+            entry.dying = 0
+            entry.spawnAge = -1
           }
         }
       }
