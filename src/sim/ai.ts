@@ -1,7 +1,6 @@
 import { normalize } from '@/core/math2d'
 import type { Snake, World } from './types'
 
-const AGGRO_RANGE = 10
 const WANDER_MARGIN = 4
 const RETARGET_MIN_SEC = 3
 const RETARGET_MAX_SEC = 5
@@ -25,31 +24,6 @@ function updateWander(world: World, snake: Snake): void {
     pickWanderTarget(world, snake)
   }
   steerTo(snake, snake.ai.targetX, snake.ai.targetZ)
-}
-
-function nearestPrey(world: World, snake: Snake): Snake | undefined {
-  let nearest: Snake | undefined
-  let nearestDistance = AGGRO_RANGE
-  for (const other of world.snakes) {
-    if (!other.alive || other.control === 'enemy') {
-      continue
-    }
-    const distance = Math.hypot(other.x - snake.x, other.z - snake.z)
-    if (distance < nearestDistance) {
-      nearest = other
-      nearestDistance = distance
-    }
-  }
-  return nearest
-}
-
-function updateEnemy(world: World, snake: Snake): void {
-  const prey = nearestPrey(world, snake)
-  if (prey) {
-    steerTo(snake, prey.x, prey.z)
-    return
-  }
-  updateWander(world, snake)
 }
 
 function nearestApple(world: World, snake: Snake): { x: number; z: number } | undefined {
@@ -80,7 +54,8 @@ function updateBot(world: World, snake: Snake): void {
 /** Bots and enemies share the same steering interface as remote players. */
 export function updateAi(world: World, snake: Snake): void {
   if (snake.control === 'enemy') {
-    updateEnemy(world, snake)
+    // Normal bugs only wander, like the original; only bosses chase the player.
+    updateWander(world, snake)
   } else {
     updateBot(world, snake)
   }

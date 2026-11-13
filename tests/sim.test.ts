@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { BALANCE } from '@/data/balance'
 import { DEFAULT_HEAD_ID } from '@/content'
 import { createWorld } from '@/sim/world'
+import { updateAi } from '@/sim/ai'
 import { classicArena } from '@/content/arenas/classic'
 import { damageSegment, updateAreas, updateContact, updateProjectiles } from '@/sim/combat'
 import { tickWorld } from '@/sim/tick'
@@ -60,6 +61,29 @@ describe('world', () => {
       expect(Math.abs(snake.x)).toBeLessThanOrEqual(classicArena.width / 2)
       expect(Math.abs(snake.z)).toBeLessThanOrEqual(classicArena.depth / 2)
     }
+  })
+
+  it('lets normal bugs wander instead of chasing the player', () => {
+    const world = createWorld({ seed: 31, arena: classicArena })
+    const enemy = world.snakes.find((snake) => snake.control === 'enemy')
+    const player = getSnake(world, 'bot-1')
+    expect(enemy).toBeDefined()
+    if (!enemy) {
+      return
+    }
+    // Put the player right next to the bug and its own target on the far side.
+    enemy.x = 0
+    enemy.z = 0
+    player.x = 0
+    player.z = 2
+    enemy.ai.targetX = 0
+    enemy.ai.targetZ = -10
+    enemy.ai.retargetAt = world.time + 10
+
+    updateAi(world, enemy)
+
+    expect(enemy.steerX).toBeCloseTo(0, 5)
+    expect(enemy.steerZ).toBeCloseTo(-1, 5)
   })
 
   it('grows after eating the required apples', () => {

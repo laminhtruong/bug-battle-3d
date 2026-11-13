@@ -32,6 +32,8 @@ All notable changes to this project are documented here. The format follows
   small bone for the body, converted from the Unity art.
 - Bodies play the leg animation that ships with the source models while the
   snake moves.
+- Normal bugs wander and only shoot forward, like the original, instead of
+  chasing the player across the arena.
 - Sound effects are tagged with the snake they belong to, so a player only hears
   what happens to their own snake. The same effect played again within 150 ms is
   dropped, which keeps combat from turning into noise.
