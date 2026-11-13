@@ -126,7 +126,8 @@ the same. A is the direction in degrees relative to the part facing: `0` is
 forward, `90` is right and `-90` is left. Add or remove points with **+ point**
 and the row's delete button. Clicking the part art selects the part itself and
 shows its art-offset arrows instead. For a cone the spawn point is where the
-effect starts, and the editor draws the whole sector so its reach is easy to see.
+effect starts, and the editor draws the 3D cone volume so its direction and reach
+are easy to see.
 
 ```json
 "attack": {

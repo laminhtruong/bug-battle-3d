@@ -29,8 +29,8 @@ All notable changes to this project are documented here. The format follows
   arrows so a point can be dragged per axis or edited with X/Y/Z/A fields.
 - The editor shows arrows only for the selected object: a spawn point shows its
   muzzle arrows, and clicking the part art switches back to the art arrows.
-- Cone attacks draw their sector in the editor, so the effect origin, direction
-  and reach are visible while authoring.
+- Cone attacks draw a 3D cone volume in the editor, so the effect origin,
+  direction and reach are visible while authoring.
 
 ### Changed
 

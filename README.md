@@ -88,7 +88,7 @@ or the X/Z fields. Y is locked to the prefab lift. Attack spawn points appear as
 orange handles. Click a point to show its orange X/Y/Z arrows: drag a point or
 its arrows to place each muzzle, or edit X/Y/Z/A in the panel. Clicking the art
 shows the part's own arrows instead. For cone attacks the editor also draws the
-whole sector, so its origin and reach are easy to picture. Collider boxes stay
+3D cone volume, so its origin, direction and reach are easy to picture. Collider boxes stay
 hidden until you tick **Edit** in the Colliders section,
 where you can set their centre, size and rotation. The axis widget snaps the
 camera like Unity, and undo/redo is available with `Ctrl+Z` / `Ctrl+Shift+Z`. It

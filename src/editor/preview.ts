@@ -100,7 +100,7 @@ interface SpawnEntry {
 interface ConeEntry {
   group: THREE.Group
   mesh: THREE.Mesh
-  line: THREE.Line
+  line: THREE.LineSegments
 }
 
 type Drag =
@@ -590,7 +590,11 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
   }
 
   function paintSpawns(): void {
-    const paint = (mesh: THREE.Mesh, line: THREE.Line, selected: boolean): void => {
+    const paint = (
+      mesh: THREE.Mesh,
+      line: THREE.Line | THREE.LineSegments,
+      selected: boolean,
+    ): void => {
       const color = selected ? SELECTED_COLOR : SPAWN_COLOR
       ;(mesh.material as THREE.MeshBasicMaterial).color.setHex(color)
       ;(line.material as THREE.LineBasicMaterial).color.setHex(color)
@@ -636,13 +640,22 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
     paintSpawns()
   }
 
-  function coneOutline(radius: number, halfAngle: number): THREE.Vector3[] {
-    const points = [new THREE.Vector3()]
-    for (let step = 0; step <= 24; step += 1) {
-      const angle = -halfAngle + (halfAngle * 2 * step) / 24
-      points.push(new THREE.Vector3(Math.sin(angle) * radius, 0, Math.cos(angle) * radius))
+  /** Base circle plus four ribs, drawn as line segments for the cone volume. */
+  function coneOutline(radius: number, range: number): THREE.Vector3[] {
+    const points: THREE.Vector3[] = []
+    const segments = 32
+    const ring: THREE.Vector3[] = []
+    for (let step = 0; step < segments; step += 1) {
+      const angle = (step / segments) * Math.PI * 2
+      ring.push(new THREE.Vector3(Math.cos(angle) * radius, Math.sin(angle) * radius, range))
     }
-    points.push(new THREE.Vector3())
+    for (let step = 0; step < segments; step += 1) {
+      points.push(ring[step]!, ring[(step + 1) % segments]!)
+    }
+    const apex = new THREE.Vector3()
+    for (let rib = 0; rib < 4; rib += 1) {
+      points.push(apex, ring[(rib * segments) / 4]!)
+    }
     return points
   }
 
@@ -652,32 +665,31 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
     if (!state.cone) {
       return
     }
-    const halfAngle = (state.cone.halfAngleDeg * Math.PI) / 180
-    // Range is authored in arena units, like the simulation uses it.
-    const radius = state.cone.range
+    // A true cone matches the 2D sector on the horizontal plane through its
+    // axis. Cap the half angle where tan explodes for near-180 degree cones.
+    const halfAngle = Math.min(state.cone.halfAngleDeg, 80) * (Math.PI / 180)
+    const range = state.cone.range
+    const radius = range * Math.tan(halfAngle)
+    const geometry = new THREE.ConeGeometry(radius, range, 32, 1, true)
+      .translate(0, -range / 2, 0)
+      .rotateX(-Math.PI / 2)
     cones = state.spawns.map((spawn) => {
       const group = new THREE.Group()
       group.position.set(spawn.x * PART_SCALE, spawn.y * PART_SCALE, spawn.z * PART_SCALE)
       group.rotation.y = (spawn.angle * Math.PI) / 180
-      const geometry = new THREE.CircleGeometry(
-        radius,
-        32,
-        -Math.PI / 2 - halfAngle,
-        halfAngle * 2,
-      ).rotateX(-Math.PI / 2)
       const mesh = new THREE.Mesh(
         geometry,
         new THREE.MeshBasicMaterial({
           color: SPAWN_COLOR,
           transparent: true,
-          opacity: 0.09,
+          opacity: 0.12,
           depthTest: false,
           side: THREE.DoubleSide,
         }),
       )
       mesh.renderOrder = 5
-      const line = new THREE.Line(
-        new THREE.BufferGeometry().setFromPoints(coneOutline(radius, halfAngle)),
+      const line = new THREE.LineSegments(
+        new THREE.BufferGeometry().setFromPoints(coneOutline(radius, range)),
         new THREE.LineBasicMaterial({
           color: SPAWN_COLOR,
           transparent: true,
