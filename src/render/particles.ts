@@ -782,16 +782,20 @@ export function createParticles(scene: THREE.Scene) {
     return system
   }
 
-  /** The fire prefabs hang their three systems at these local offsets. */
+  /**
+   * The three fire systems, at their offsets inside the prefab. Unity units are
+   * scaled by four to match the art.
+   */
   const FIRE_OFFSETS: [number, number, number][] = [
-    [0, 0.1, 0],
     [0, 0, 0],
-    [0, 0, 0.104],
+    [0, 0, 0],
+    [0, 0, 0.104 * 4],
   ]
 
   /**
-   * Adds one fire prefab to a muzzle frame. The systems stay in local space, so
-   * they ride along when the part moves, like the Unity children they copy.
+   * Adds one fire prefab at a local point of the part. The systems stay in
+   * local space, so they ride along when the part moves, like the Unity
+   * children they copy.
    */
   function spawnFire(
     specs: SystemSpec[],
@@ -800,7 +804,6 @@ export function createParticles(scene: THREE.Scene) {
     y: number,
     z: number,
     angle: number,
-    scale: number,
   ): void {
     const muzzle = new THREE.Group()
     muzzle.position.set(x, y, z)
@@ -808,7 +811,7 @@ export function createParticles(scene: THREE.Scene) {
     parent.add(muzzle)
     for (let index = 0; index < specs.length; index += 1) {
       const [ox, oy, oz] = FIRE_OFFSETS[index]!
-      add(specs[index]!, muzzle, ox * scale, oy * scale, oz * scale)
+      add(specs[index]!, muzzle, ox, oy, oz)
     }
   }
   function spawnImpact(specs: SystemSpec[], x: number, y: number, z: number): void {
@@ -833,29 +836,20 @@ export function createParticles(scene: THREE.Scene) {
   }
 
   return {
-    flameHead(parent: THREE.Object3D, x: number, y: number, z: number, angle: number): void {
-      spawnFire(headFire(), parent, x, y, z, angle, 4)
+    flameHead(parent: THREE.Object3D): void {
+      // Head.prefab hides BulletFire under the pivot at (0, 0.1, 0); it fires
+      // straight out of the part's own +Z.
+      spawnFire(headFire(), parent, 0, 0.1 * 4, 0, 0)
     },
 
-    flameBody(parent: THREE.Object3D, x: number, y: number, z: number, angle: number): void {
+    flameBody(parent: THREE.Object3D): void {
       // Body.prefab mounts two jets at (+-0.25, 0.19, -0.018), each turned 90
       // degrees outward, so the body sprays sideways instead of forward. The
-      // jets are scaled to 0.75, which also shrinks their own local offsets.
+      // jets are scaled to 0.75, which shrinks their particles, not their
+      // parent-local mounts.
       const specs = bodyFire()
-      const cos = Math.cos(angle)
-      const sin = Math.sin(angle)
-      const zOffset = -0.018 * 4
       for (const side of [-1, 1]) {
-        const xOffset = side * 0.25 * 4
-        spawnFire(
-          specs,
-          parent,
-          x + xOffset * cos + zOffset * sin,
-          y,
-          z - xOffset * sin + zOffset * cos,
-          angle + (side * Math.PI) / 2,
-          3,
-        )
+        spawnFire(specs, parent, side * 0.25 * 4, 0.19 * 4, -0.018 * 4, (side * Math.PI) / 2)
       }
     },
 
