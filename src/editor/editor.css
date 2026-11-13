@@ -540,7 +540,7 @@ select:focus {
 
 .spawn-row .icon {
   grid-row: 1;
-  grid-column: 5;
+  grid-column: 6;
   align-self: center;
   justify-self: end;
 }
