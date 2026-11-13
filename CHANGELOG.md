@@ -87,6 +87,14 @@ All notable changes to this project are documented here. The format follows
 - Wire protocol version 2: the sound list of a snapshot carries the owner id.
 - Wire protocol version 3: a snapshot segment carries the destroyed flag.
 
+### Fixed
+
+- The fire, lightning, poison and spike01 bodies show their side spikes and pods
+  again. FBX2glTF wrote NaN skin weights for the vertices those source FBX files
+  leave unweighted, so the GPU dropped them; they now bind to the root joint.
+  `check:assets` rejects NaN or unnormalised skin weights, so a fresh conversion
+  cannot lose the same art silently.
+
 ## [0.1.0] - 2026-11-12
 
 ### Added

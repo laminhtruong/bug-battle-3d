@@ -24,6 +24,41 @@ const exists = async (target) => {
   }
 }
 
+/**
+ * FBX2glTF writes NaN weights for vertices the source FBX leaves unweighted,
+ * and the GPU then drops those triangles. Catch it instead of losing art.
+ */
+function badWeights(buffer) {
+  const jsonLength = buffer.readUInt32LE(12)
+  const gltf = JSON.parse(buffer.subarray(20, 20 + jsonLength).toString('utf8'))
+  const binStart = 20 + jsonLength + 8
+  for (const mesh of gltf.meshes ?? []) {
+    for (const primitive of mesh.primitives) {
+      const accessor = gltf.accessors[primitive.attributes.WEIGHTS_0]
+      if (!accessor || accessor.componentType !== 5126) {
+        continue
+      }
+      const view = gltf.bufferViews[accessor.bufferView]
+      const base = binStart + (view.byteOffset ?? 0) + (accessor.byteOffset ?? 0)
+      const stride = view.byteStride ?? 16
+      for (let index = 0; index < accessor.count; index += 1) {
+        let sum = 0
+        for (let slot = 0; slot < 4; slot += 1) {
+          const value = buffer.readFloatLE(base + index * stride + slot * 4)
+          if (!Number.isFinite(value) || value < 0 || value > 1) {
+            return index
+          }
+          sum += value
+        }
+        if (Math.abs(sum - 1) > 0.01) {
+          return index
+        }
+      }
+    }
+  }
+  return undefined
+}
+
 async function listFiles(directory, base = directory) {
   const files = []
   for (const entry of await readdir(directory, { withFileTypes: true })) {
@@ -63,6 +98,13 @@ for (const model of sourceText.matchAll(/["']?model["']?\s*:\s*["']([a-z0-9-]+)[
   const candidates = [`models/parts/head/${id}.glb`, `models/parts/body/${id}.glb`]
   if (!candidates.some((candidate) => referenced.has(candidate))) {
     problems.push(`content model "${id}" is missing from public/assets`)
+  }
+}
+
+for (const file of assetFiles.filter((name) => name.endsWith('.glb'))) {
+  const index = badWeights(await readFile(path.join(assetsRoot, file)))
+  if (index !== undefined) {
+    problems.push(`${file}: vertex ${index} has invalid skin weights`)
   }
 }
 

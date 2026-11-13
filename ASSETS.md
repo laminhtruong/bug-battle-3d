@@ -95,6 +95,13 @@ and scales it to arena units; the source scenes place the parts far from the
 origin at a much larger scale. Placeholder primitives stay as a fallback while a
 model loads. Do not commit raw FBX, PSD or Unity package files.
 
+FBX2glTF 0.9.7 writes NaN weights for vertices that the source FBX leaves
+unweighted, which makes the GPU drop their triangles. This hit the side spikes
+and pods of `fire`, `lightning`, `poison` and `spike01`; those vertices are bound
+to the root joint with weight 1, which keeps them in the bind pose like Unity
+does. `npm run check:assets` rejects NaN or unnormalised skin weights, so a
+future conversion that drops them fails the check instead of losing art.
+
 ## Third-party notices
 
 - three.js, MIT.
