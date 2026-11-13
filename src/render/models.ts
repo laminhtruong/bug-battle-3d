@@ -22,6 +22,7 @@ const partMaterial = new THREE.MeshToonMaterial({ map: atlas })
 
 const loader = new GLTFLoader()
 const templates = new Map<string, THREE.Group>()
+const clips = new Map<string, THREE.AnimationClip>()
 const requests = new Map<string, Promise<void>>()
 const boneTemplates = new Map<Slot, THREE.Group>()
 const boneRequests = new Map<Slot, Promise<void>>()
@@ -60,6 +61,10 @@ function load(slot: Slot, id: string): Promise<void> {
     .loadAsync(`/assets/models/parts/${slot}/${model}.glb`)
     .then((gltf) => {
       templates.set(key, normalize(gltf.scene))
+      const clip = gltf.animations[0]
+      if (clip) {
+        clips.set(key, clip)
+      }
     })
     .catch(() => {
       // A missing model keeps the placeholder primitives instead of breaking the match.
@@ -92,6 +97,11 @@ function loadBones(slot: Slot): Promise<void> {
 /** Returns the loaded model for a part, or undefined while it is still loading. */
 export function getPartModel(slot: Slot, id: string): THREE.Group | undefined {
   return templates.get(modelId(slot, id))
+}
+
+/** The walk cycle some bodies ship with, if the source file has one. */
+export function getPartClip(slot: Slot, id: string): THREE.AnimationClip | undefined {
+  return clips.get(modelId(slot, id))
 }
 
 /**

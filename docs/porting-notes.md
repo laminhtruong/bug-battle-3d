@@ -39,10 +39,11 @@ line port; the rules were re-derived from prefabs, scripts and playtests.
   in its own room by design.
 - Snapshots send part ids, not definitions. Both sides must agree on the content
   hash before a match starts.
-- Part models are static (no animation clips are played) and share one palette
-  texture; placeholder primitives show only if a model fails to load.
-- The original legs were animated with inverse kinematics. The models ship with
-  the legs in their rest pose, so the bodies do not walk yet.
+- Part models share one palette texture; placeholder primitives show only if a
+  model fails to load.
+- The original legs were animated by inverse kinematics. The converted bodies
+  only carry the baked leg clip that ships with the source file, so they walk
+  with that clip instead of IK.
 - Sound effects are per player. The host tags every effect with the snake it
   belongs to and each client keeps the ones of its own snake, so the arena of
   bots stays silent.

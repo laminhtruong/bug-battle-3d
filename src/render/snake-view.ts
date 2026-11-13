@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { fnv1a } from '@/core/rng'
 import type { PartDef } from '@/content/define'
-import { getPartModel, clonePartModel, getBonesModel, cloneBonesModel } from './models'
+import { getPartModel, clonePartModel, getBonesModel, cloneBonesModel, getPartClip } from './models'
 import { createShadow } from './shadow'
 import type { RenderState } from './state'
 
@@ -42,6 +42,10 @@ interface SegmentView {
   height: number
   model: boolean
   boneModel: boolean
+  /** Plays the leg walk cycle of a body while the snake moves. */
+  mixer?: THREE.AnimationMixer
+  lastX: number
+  lastZ: number
 }
 
 interface SnakeView {
@@ -59,6 +63,11 @@ function createSegment(slot: PartDef['slot'], id: string): SegmentView {
   const model = clonePartModel(slot, id)
   if (model) {
     // Models are normalised so their feet sit on the group origin.
+    const clip = getPartClip(slot, id)
+    const mixer = clip ? new THREE.AnimationMixer(model) : undefined
+    if (clip && mixer) {
+      mixer.clipAction(clip).play()
+    }
     return {
       key: `${slot}:${id}`,
       node: model,
@@ -67,6 +76,9 @@ function createSegment(slot: PartDef['slot'], id: string): SegmentView {
       height: 0,
       model: true,
       boneModel,
+      ...(mixer ? { mixer } : {}),
+      lastX: Number.NaN,
+      lastZ: Number.NaN,
     }
   }
   const mesh = new THREE.Mesh(head ? HEAD_GEOMETRY : BODY_GEOMETRY, getPartMaterial(slot, id))
@@ -81,6 +93,8 @@ function createSegment(slot: PartDef['slot'], id: string): SegmentView {
     height: head ? 0.55 : 0.4,
     model: false,
     boneModel,
+    lastX: Number.NaN,
+    lastZ: Number.NaN,
   }
 }
 
@@ -105,7 +119,7 @@ export function createSnakeViewer(scene: THREE.Scene) {
   const views = new Map<string, SnakeView>()
 
   return {
-    sync(world: RenderState): void {
+    sync(world: RenderState, dt = 0): void {
       const alive = new Set<string>()
       for (const snake of world.snakes) {
         alive.add(snake.id)
@@ -135,6 +149,7 @@ export function createSnakeViewer(scene: THREE.Scene) {
             (!entry?.boneModel && getBonesModel(segment.slot))
           if (entry?.key !== key || upgraded) {
             if (entry) {
+              entry.mixer?.stopAllAction()
               view.group.remove(entry.node)
               view.group.remove(entry.bones)
               view.group.remove(entry.shadow)
@@ -149,6 +164,17 @@ export function createSnakeViewer(scene: THREE.Scene) {
           entry.node.visible = !segment.dead
           entry.node.position.set(segment.x, entry.height, segment.z)
           entry.node.rotation.y = segment.angle
+          // Legs only walk while the segment is moving, like Idle/Move in the original.
+          if (entry.mixer && !segment.dead) {
+            const moved =
+              Number.isNaN(entry.lastX) ||
+              Math.hypot(segment.x - entry.lastX, segment.z - entry.lastZ) > 1e-3
+            if (moved) {
+              entry.mixer.update(dt)
+            }
+            entry.lastX = segment.x
+            entry.lastZ = segment.z
+          }
           entry.bones.visible = segment.dead
           entry.bones.position.set(segment.x, entry.model ? 0 : 0.2, segment.z)
           entry.bones.rotation.y = segment.angle
@@ -173,6 +199,9 @@ export function createSnakeViewer(scene: THREE.Scene) {
 
       for (const [id, view] of views) {
         if (!alive.has(id)) {
+          for (const entry of view.segments) {
+            entry.mixer?.stopAllAction()
+          }
           scene.remove(view.group)
           views.delete(id)
         }

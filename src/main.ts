@@ -256,7 +256,7 @@ startLoop({
     }
 
     if (renderState) {
-      snakeViewer.sync(renderState)
+      snakeViewer.sync(renderState, dt)
       propViewer.sync(renderState)
       updateFocus(renderState)
       view.updateCamera(focusX, focusZ, dt)

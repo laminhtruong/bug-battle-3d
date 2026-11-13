@@ -16,8 +16,7 @@ All notable changes to this project are documented here. The format follows
   rendered in place of the placeholder primitives.
 - Sound effects for apples, pickups, hits, deaths and the result screen, copied
   from the original Unity audio and played from the simulation events.
-- Blob shadows under the segments and name labels above the players, like the
-  flags in the original game.
+- Blob shadows under the segments and name labels above the players.
 
 ### Changed
 
@@ -31,6 +30,8 @@ All notable changes to this project are documented here. The format follows
 - The first body segment sits behind the head instead of inside it.
 - Destroyed parts show the bones of the original, a skull for the head and a
   small bone for the body, converted from the Unity art.
+- Bodies play the leg animation that ships with the source models while the
+  snake moves.
 - Sound effects are tagged with the snake they belong to, so a player only hears
   what happens to their own snake. The same effect played again within 150 ms is
   dropped, which keeps combat from turning into noise.

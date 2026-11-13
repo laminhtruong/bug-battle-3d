@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import type { RenderState } from '@/render/state'
 
 /**
- * Name labels that follow the players, like the flags in the original game.
+ * Name labels that follow the players.
  * Enemies stay unnamed so the arena does not get noisy.
  */
 export interface NameTags {
