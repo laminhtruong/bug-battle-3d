@@ -19,6 +19,8 @@ const BONES_MATERIAL = new THREE.MeshBasicMaterial({ color: '#e8e0cc' })
 const DESTROY_SEC = 0.18
 /** How long a new or restored part takes to pop back in. */
 const SPAWN_SEC = 0.28
+/** How long the bones stay behind after a snake dies, before it vanishes. */
+const DEATH_SEC = 1.2
 
 /** Overshoots a little past 1, like a bubble appearing. */
 function spawnScale(age: number): number {
@@ -73,6 +75,8 @@ interface SnakeView {
   group: THREE.Group
   segments: SegmentView[]
   alive: boolean
+  /** Seconds since the snake died; only meaningful while it is dead. */
+  deathAge: number
 }
 
 /** Copies a segment's material, so the hurt flash cannot light up the whole snake. */
@@ -157,7 +161,7 @@ function createSegment(slot: PartDef['slot'], id: string): SegmentView {
 }
 
 function createSnakeView(): SnakeView {
-  return { group: new THREE.Group(), segments: [], alive: true }
+  return { group: new THREE.Group(), segments: [], alive: true, deathAge: 0 }
 }
 
 /** Keeps one object per visible segment, reusing them between ticks. */
@@ -177,19 +181,43 @@ export function createSnakeViewer(scene: THREE.Scene) {
           scene.add(view.group)
         }
 
-        view.group.visible = snake.alive
         if (view.alive && !snake.alive) {
-          // Everything pops in again when the snake respawns.
+          // The remains linger: living parts shrink away, then the bones stay for a moment.
+          view.deathAge = 0
           for (const entry of view.segments) {
-            entry.dead = true
-            entry.dying = 0
+            if (!entry.dead) {
+              entry.dead = true
+              entry.dying = DESTROY_SEC
+              entry.exploded = false
+            }
             entry.spawnAge = -1
           }
         }
         view.alive = snake.alive
         if (!snake.alive) {
+          view.deathAge += dt
+          const gone = view.deathAge >= DEATH_SEC
+          view.group.visible = !gone
+          for (const entry of view.segments) {
+            entry.dying = Math.max(0, entry.dying - dt)
+            const shrinking = !gone && entry.dying > 0
+            entry.node.visible = shrinking
+            if (shrinking) {
+              if (!entry.exploded) {
+                effects.explode(entry.node.position.x, entry.node.position.z)
+                entry.exploded = true
+              }
+              const shrink = 1 - entry.dying / DESTROY_SEC
+              entry.node.scale
+                .copy(entry.baseScale)
+                .multiplyScalar(Math.max(0.001, 1 - shrink * shrink))
+            }
+            entry.bones.visible = !gone && !shrinking
+            entry.shadow.visible = !gone
+          }
           continue
         }
+        view.group.visible = true
         for (let index = 0; index < snake.segments.length; index += 1) {
           const segment = snake.segments[index]
           if (!segment) {
