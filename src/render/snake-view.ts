@@ -20,7 +20,7 @@ const DESTROY_SEC = 0.18
 /** How long a new or restored part takes to pop back in. */
 const SPAWN_SEC = 0.28
 /** How long the bones stay behind after a snake dies, before it vanishes. */
-const DEATH_SEC = 1.2
+const DEATH_SEC = 1.4
 
 /** Overshoots a little past 1, like a bubble appearing. */
 function spawnScale(age: number): number {
@@ -77,6 +77,8 @@ interface SnakeView {
   alive: boolean
   /** Seconds since the snake died; only meaningful while it is dead. */
   deathAge: number
+  /** The killing hit flashes the remains before they go down. */
+  flashLeft: number
 }
 
 /** Copies a segment's material, so the hurt flash cannot light up the whole snake. */
@@ -161,16 +163,17 @@ function createSegment(slot: PartDef['slot'], id: string): SegmentView {
 }
 
 function createSnakeView(): SnakeView {
-  return { group: new THREE.Group(), segments: [], alive: true, deathAge: 0 }
+  return { group: new THREE.Group(), segments: [], alive: true, deathAge: 0, flashLeft: 0 }
 }
 
-/** The killing hit takes every living part down; the bones are shown afterwards. */
+/** The killing hit flashes the whole snake, then every living part goes down. */
 function startDeath(view: SnakeView): void {
   view.deathAge = 0
+  view.flashLeft = BALANCE.hurtCooldownSec
   for (const entry of view.segments) {
     if (!entry.dead) {
       entry.dead = true
-      entry.dying = DESTROY_SEC
+      entry.dying = BALANCE.hurtCooldownSec + DESTROY_SEC
       entry.exploded = false
     }
     entry.spawnAge = -1
@@ -184,19 +187,34 @@ function updateRemains(view: SnakeView, dt: number, effects: Effects): boolean {
   view.deathAge += dt
   const gone = view.deathAge >= DEATH_SEC
   view.group.visible = !gone
+  view.flashLeft = Math.max(0, view.flashLeft - dt)
+  // Same two white pulses as a hurt part, so the killing hit is visible.
+  const flash =
+    view.flashLeft > 0
+      ? Math.sin((1 - view.flashLeft / BALANCE.hurtCooldownSec) * Math.PI * 2) ** 2
+      : 0
   for (const entry of view.segments) {
     entry.dying = Math.max(0, entry.dying - dt)
-    const shrinking = !gone && entry.dying > 0
-    entry.node.visible = shrinking
+    const visible = !gone && entry.dying > 0
+    const shrinking = visible && entry.dying <= DESTROY_SEC
+    entry.node.visible = visible
+    if (visible && !shrinking) {
+      for (const material of entry.materials) {
+        material.emissive.setRGB(flash, flash, flash)
+      }
+    }
     if (shrinking) {
       if (!entry.exploded) {
         effects.explode(entry.node.position.x, entry.node.position.z)
         entry.exploded = true
+        for (const material of entry.materials) {
+          material.emissive.setRGB(0, 0, 0)
+        }
       }
       const shrink = 1 - entry.dying / DESTROY_SEC
       entry.node.scale.copy(entry.baseScale).multiplyScalar(Math.max(0.001, 1 - shrink * shrink))
     }
-    entry.bones.visible = !gone && !shrinking
+    entry.bones.visible = !gone && entry.dying <= 0
     entry.shadow.visible = !gone
   }
   return gone

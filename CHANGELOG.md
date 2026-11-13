@@ -35,8 +35,8 @@ All notable changes to this project are documented here. The format follows
   flash before the part shrinks away and pops the original 12-spark effect, so
   it never vanishes mid-flash. New, restored and respawned parts pop back in
   instead of appearing abruptly.
-- A dying snake shrinks into its bones and leaves them on the floor for a
-  moment before vanishing, instead of disappearing on the killing hit.
+- A dying snake flashes white on the killing hit, then shrinks into its bones and
+  leaves them on the floor for a moment before vanishing.
 
 ### Changed
 
