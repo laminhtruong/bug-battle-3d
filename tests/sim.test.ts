@@ -4,7 +4,13 @@ import { DEFAULT_HEAD_ID } from '@/content'
 import { createWorld } from '@/sim/world'
 import { updateAi } from '@/sim/ai'
 import { classicArena } from '@/content/arenas/classic'
-import { damageSegment, updateAreas, updateContact, updateProjectiles } from '@/sim/combat'
+import {
+  damageSegment,
+  fireAttacks,
+  updateAreas,
+  updateContact,
+  updateProjectiles,
+} from '@/sim/combat'
 import { tickWorld } from '@/sim/tick'
 import type { Projectile, Snake, World } from '@/sim/types'
 
@@ -257,6 +263,30 @@ describe('combat', () => {
 
     expect(first.segments[0]?.hp).toBe(firstHp)
     expect(second.segments[0]?.hp).toBe(secondHp)
+  })
+
+  it('fires from the configured spawn point', () => {
+    const world = createWorld({ seed: 15, arena: classicArena })
+    const shooter = getSnake(world, 'bot-2')
+    const head = shooter.segments[0]
+    if (!head) {
+      throw new Error('missing head')
+    }
+    head.partId = 'gun'
+    head.angle = Math.PI / 2
+    head.cooldown = 0
+    placeHead(shooter, 1, 2)
+
+    fireAttacks(world, 0)
+
+    const shots = world.projectiles.filter((shot) => shot.ownerId === shooter.id)
+    expect(shots).toHaveLength(1)
+    const shot = shots[0]!
+    // The muzzle sits 1.96 prefab units forward, so 0.49 arena units ahead.
+    expect(shot.x).toBeCloseTo(1.49, 5)
+    expect(shot.z).toBeCloseTo(2, 5)
+    expect(shot.vx).toBeCloseTo(5, 5)
+    expect(shot.vz).toBeCloseTo(0, 5)
   })
 
   it('hits a segment with a projectile', () => {

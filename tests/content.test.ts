@@ -43,6 +43,7 @@ describe('content registry', () => {
       if (part.attack?.kind === 'projectile') {
         expect(part.attack.projectile.speed).toBeGreaterThan(0)
         expect(part.attack.projectile.ttl).toBeGreaterThan(0)
+        expect(part.attack.projectile.spawnPoints.length).toBeGreaterThan(0)
       }
       expect(requirePart(part.slot, part.id).id).toBe(part.id)
     }

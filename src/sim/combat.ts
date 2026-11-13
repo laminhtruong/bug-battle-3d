@@ -1,5 +1,6 @@
 import { PARTS, requirePart } from '@/content'
-import type { AttackDef, PartDef } from '@/content/define'
+import { PART_SCALE } from '@/content/define'
+import type { AttackDef, PartDef, SpawnPoint } from '@/content/define'
 import { directionFromAngle } from '@/core/math2d'
 import { BALANCE } from '@/data/balance'
 import { collidersOverlap, segmentHitsCircle, segmentHitsCone } from './collider'
@@ -119,18 +120,24 @@ function spawnProjectile(
   world: World,
   snake: Snake,
   segment: Segment,
+  spawn: SpawnPoint,
   angle: number,
   attack: Extract<AttackDef, { kind: 'projectile' }>,
 ): void {
   const direction = directionFromAngle(angle)
-  const offset = BALANCE.projectileSpawnOffset
+  // The muzzle is authored in prefab units, so rotate it with the segment and
+  // scale it like the art and the collider boxes.
+  const cos = Math.cos(segment.angle)
+  const sin = Math.sin(segment.angle)
+  const localX = spawn.x * PART_SCALE
+  const localZ = spawn.z * PART_SCALE
   const projectile: Projectile = {
     id: nextEntityId(world, 'shot'),
     ownerId: snake.id,
     partId: segment.partId,
     visual: attack.projectile.visual,
-    x: segment.x + direction.x * offset,
-    z: segment.z + direction.z * offset,
+    x: segment.x + localX * cos + localZ * sin,
+    z: segment.z - localX * sin + localZ * cos,
     vx: direction.x * attack.projectile.speed,
     vz: direction.z * attack.projectile.speed,
     damage: attack.projectile.damage,
@@ -200,12 +207,9 @@ function fireCone(world: World, context: AttackContext): void {
 function fire(world: World, context: AttackContext): void {
   const { snake, segment, attack } = context
   if (attack.kind === 'projectile') {
-    const angles =
-      attack.mount === 'sides'
-        ? [segment.angle + Math.PI / 2, segment.angle - Math.PI / 2]
-        : [segment.angle]
-    for (const angle of angles) {
-      spawnProjectile(world, snake, segment, angle, attack)
+    for (const spawn of attack.projectile.spawnPoints) {
+      const angle = segment.angle + (spawn.angle * Math.PI) / 180
+      spawnProjectile(world, snake, segment, spawn, angle, attack)
     }
   } else {
     fireCone(world, context)

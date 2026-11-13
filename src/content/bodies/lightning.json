@@ -8,11 +8,14 @@
   "attack": {
     "kind": "projectile",
     "cooldown": 2,
-    "mount": "sides",
     "projectile": {
       "speed": 3,
       "ttl": 0.5,
       "visual": "lightning",
+      "spawnPoints": [
+        { "x": 1.96, "z": 0, "angle": 90 },
+        { "x": -1.96, "z": 0, "angle": -90 }
+      ],
       "onLand": { "delay": 0.5, "duration": 0.5, "radius": 1.5 }
     }
   }

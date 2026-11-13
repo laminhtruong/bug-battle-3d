@@ -8,7 +8,14 @@
   "attack": {
     "kind": "projectile",
     "cooldown": 1,
-    "mount": "sides",
-    "projectile": { "speed": 3, "ttl": 0.5, "visual": "bullet" }
+    "projectile": {
+      "speed": 3,
+      "ttl": 0.5,
+      "visual": "bullet",
+      "spawnPoints": [
+        { "x": 1.96, "z": 0, "angle": 90 },
+        { "x": -1.96, "z": 0, "angle": -90 }
+      ]
+    }
   }
 }

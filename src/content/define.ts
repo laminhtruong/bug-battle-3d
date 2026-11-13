@@ -82,11 +82,26 @@ const onLandSchema = z.object({
   radius: z.number().positive(),
 })
 
+/** A muzzle in raw prefab units, relative to the part pivot. */
+const spawnPointSchema = z.object({
+  x: z.number(),
+  z: z.number(),
+  /** Firing direction relative to the part facing, in degrees. */
+  angle: z.number().default(0),
+})
+
+export type SpawnPoint = z.infer<typeof spawnPointSchema>
+
 const projectileSchema = z.object({
   speed: z.number().positive(),
   ttl: z.number().positive(),
   visual: z.string().min(1),
   damage: z.number().int().positive().default(1),
+  /** Every muzzle fires once per cooldown. */
+  spawnPoints: z
+    .array(spawnPointSchema)
+    .min(1)
+    .default(() => [{ x: 0, z: 1.96, angle: 0 }]),
   /** When set the projectile deals no damage while flying, only on landing. */
   onLand: onLandSchema.optional(),
 })
@@ -95,7 +110,6 @@ const attackSchema = z.discriminatedUnion('kind', [
   z.object({
     kind: z.literal('projectile'),
     cooldown: z.number().positive(),
-    mount: z.enum(['forward', 'sides']),
     projectile: projectileSchema,
   }),
   z.object({
