@@ -76,8 +76,8 @@ export default defineBody({
 The original game has no simple circle around a head or a body. Each part
 carries the trigger BoxColliders authored in its Unity art prefab. The editor is
 the primary way to author them now: tick **Edit**, then drag a box over the art,
-edit its centre and size, and mark the claw boxes. The shipped values were copied
-from the art prefabs once, so they are still a useful reference:
+edit its centre and size, and mark the claw boxes. The shipped values are copied
+straight from the prefab `m_Center` and `m_Size`, so they are exact:
 
 1. Open the art prefab, for example `HeadClaw01.prefab` or `BodySpike02.prefab`.
    Do not copy from the gameplay `Head.prefab` or `Body.prefab`.
@@ -96,9 +96,9 @@ from the art prefabs once, so they are still a useful reference:
 ```ts
 // Spike body: the main body plus two claws.
 boxes: [
-  { center: [0, -0.1, -0.05], size: [1.5, 1.45, 1.15] },
-  { center: [-1.4, -0.1, -0.05], size: [1.3, 1.45, 0.25], hitbox: true },
-  { center: [1.4, -0.1, -0.05], size: [1.3, 1.45, 0.25], hitbox: true },
+  { center: [0, 0, -0.05], size: [1.5, 0.9, 1.15] },
+  { center: [-1.4, 0.2, -0.05], size: [1.3, 0.25, 0.25], hitbox: true },
+  { center: [1.4, 0.2, -0.05], size: [1.3, 0.25, 0.25], hitbox: true },
 ],
 ```
 

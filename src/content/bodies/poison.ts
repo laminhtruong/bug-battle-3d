@@ -6,7 +6,7 @@ export default defineBody({
   hp: 1,
   score: 50,
   contact: { damage: 0 },
-  boxes: [{ center: [0, -0.1, -0.05], size: [1.5, 1.44, 1.15] }],
+  boxes: [{ center: [0, 0, -0.05], size: [1.5, 0.9, 1.15] }],
   attack: {
     kind: 'projectile',
     cooldown: 3,

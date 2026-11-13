@@ -6,7 +6,7 @@ export default defineHead({
   hp: 2,
   score: 60,
   contact: { damage: 0 },
-  boxes: [{ center: [0, 0.38, 0], size: [2, 2.39, 1.4] }],
+  boxes: [{ center: [0, 0, 0], size: [2, 1.5, 1.4] }],
   attack: {
     kind: 'projectile',
     cooldown: 2,

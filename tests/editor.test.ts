@@ -9,8 +9,8 @@ const claw = defineHead({
   score: 10,
   contact: { damage: 1 },
   boxes: [
-    { center: [0, 0.4, 0.05], size: [2, 2.34, 1.3] },
-    { center: [0.65, 0.4, 1.3], size: [0.7, 2.34, 0.8], hitbox: true },
+    { center: [0, 0, 0.05], size: [2, 1.5, 1.3] },
+    { center: [0.65, 0, 1.3], size: [0.7, 0.3, 0.8], hitbox: true },
   ],
 })
 
@@ -20,8 +20,8 @@ describe('part editor drafts', () => {
     expect(draft.id).toBe('claw01')
     expect(draft.model).toBe('claw01')
     expect(draft.boxes).toEqual([
-      { center: [0, 0.4, 0.05], size: [2, 2.34, 1.3] },
-      { center: [0.65, 0.4, 1.3], size: [0.7, 2.34, 0.8], hitbox: true },
+      { center: [0, 0, 0.05], size: [2, 1.5, 1.3] },
+      { center: [0.65, 0, 1.3], size: [0.7, 0.3, 0.8], hitbox: true },
     ])
     expect(draft.offset).toBeUndefined()
   })
@@ -34,7 +34,7 @@ describe('part editor drafts', () => {
       score: 10,
       contact: { damage: 0 },
       offset: [1.5, -0.5],
-      boxes: [{ center: [0, 0.4, 0], size: [2, 2.34, 1.4] }],
+      boxes: [{ center: [0, 0, 0], size: [2, 1.5, 1.4] }],
     })
     expect(partToDraft(shifted, PART_SCALE).offset).toEqual([1.5, -0.5])
   })
@@ -44,8 +44,8 @@ describe('part editor drafts', () => {
     expect(source).toContain("import { defineHead } from '../define'")
     expect(source).toContain('defineHead(')
     expect(source).toContain("id: 'claw01'")
-    expect(source).toContain('center: [0, 0.4, 0.05]')
-    expect(source).toContain('size: [2, 2.34, 1.3]')
+    expect(source).toContain('center: [0, 0, 0.05]')
+    expect(source).toContain('size: [2, 1.5, 1.3]')
     expect(source).toContain('hitbox: true')
     expect(source).not.toContain('hitbox: false')
     expect(source).not.toContain('offset:')
