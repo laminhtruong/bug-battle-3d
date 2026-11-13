@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { BALANCE } from '@/data/balance'
 import { DEFAULT_HEAD_ID, requirePart } from '@/content'
+import { PART_SCALE } from '@/content/define'
 import { createWorld } from '@/sim/world'
 import { updateAi } from '@/sim/ai'
 import { classicArena } from '@/content/arenas/classic'
@@ -282,10 +283,15 @@ describe('combat', () => {
     const shots = world.projectiles.filter((shot) => shot.ownerId === shooter.id)
     expect(shots).toHaveLength(1)
     const shot = shots[0]!
-    // The muzzle sits 1.96 prefab units forward, so 0.49 arena units ahead.
-    expect(shot.x).toBeCloseTo(1.49, 5)
-    expect(shot.z).toBeCloseTo(2, 5)
-    expect(shot.vx).toBeCloseTo(5, 5)
+    const part = requirePart('head', 'gun')
+    if (part.attack?.kind !== 'projectile') {
+      throw new Error('gun head is not a projectile')
+    }
+    const muzzle = part.attack.projectile.spawnPoints[0]!
+    // The muzzle is authored in prefab units and scaled with the art.
+    expect(shot.x).toBeCloseTo(1 + muzzle.z * PART_SCALE, 5)
+    expect(shot.z).toBeCloseTo(2 - muzzle.x * PART_SCALE, 5)
+    expect(shot.vx).toBeCloseTo(part.attack.projectile.speed, 5)
     expect(shot.vz).toBeCloseTo(0, 5)
   })
 
@@ -301,20 +307,22 @@ describe('combat', () => {
     head.angle = 0
     head.cooldown = 0
     placeHead(shooter, 0, 0)
-    placeHead(target, 0, 4.5)
 
     const part = requirePart('head', 'fire')
     if (part.attack?.kind !== 'cone') {
       throw new Error('fire head is not a cone')
     }
-    const original = part.attack.cone.spawnPoints
-    // Two arena units forward: the target at 4.5 is out of range from the part.
-    part.attack.cone.spawnPoints = [{ x: 0, y: 2, z: 8, angle: 0 }]
+    const cone = part.attack.cone
+    const original = cone.spawnPoints
+    // Muzzle two arena units ahead, so the target is out of reach from the part
+    // but inside the cone.
+    cone.spawnPoints = [{ x: 0, y: 2, z: 8, angle: 0 }]
+    placeHead(target, 0, 2 + cone.range / 2)
     const hp = target.segments[0]?.hp ?? 0
     try {
       fireAttacks(world, 0)
     } finally {
-      part.attack.cone.spawnPoints = original
+      cone.spawnPoints = original
     }
 
     expect(target.segments[0]?.hp).toBe(hp - 1)
