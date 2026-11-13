@@ -155,6 +155,9 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- Bones from a longer previous life no longer reappear where that bug died
+  after it respawns shorter and dies again, and a rematch no longer replays the
+  old round's remains at their old spots.
 - A poison or lightning shot now bursts on the first part it touches, so the
   puddle or bolt lands on a power-up instead of flying through it and landing
   behind. A poison bug can break a crate again.

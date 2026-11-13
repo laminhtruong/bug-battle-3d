@@ -186,6 +186,17 @@ function createSnakeView(): SnakeView {
   return { group: new THREE.Group(), segments: [], alive: true, deathAge: 0, flashLeft: 0 }
 }
 
+/** Drops one segment's objects, so a stale entry cannot show up again. */
+function disposeEntry(view: SnakeView, entry: SegmentView): void {
+  entry.mixer?.stopAllAction()
+  view.group.remove(entry.node)
+  view.group.remove(entry.bones)
+  view.group.remove(entry.shadow)
+  for (const material of entry.materials) {
+    material.dispose()
+  }
+}
+
 /** The killing hit flashes the whole snake, then every living part goes down. */
 function startDeath(view: SnakeView): void {
   view.deathAge = 0
@@ -282,13 +293,7 @@ export function createSnakeViewer(scene: THREE.Scene) {
           let pop = false
           if (keyChanged || upgraded) {
             if (entry) {
-              entry.mixer?.stopAllAction()
-              view.group.remove(entry.node)
-              view.group.remove(entry.bones)
-              view.group.remove(entry.shadow)
-              for (const material of entry.materials) {
-                material.dispose()
-              }
+              disposeEntry(view, entry)
             }
             // Models load asynchronously, so a segment can swap from primitive to model.
             entry = createSegment(segment.slot, segment.partId, prop)
@@ -378,15 +383,11 @@ export function createSnakeViewer(scene: THREE.Scene) {
           }
         }
 
-        for (let index = snake.segments.length; index < view.segments.length; index += 1) {
-          const entry = view.segments[index]
-          if (entry) {
-            entry.node.visible = false
-            entry.bones.visible = false
-            entry.shadow.visible = false
-            entry.dead = true
-            entry.dying = 0
-            entry.spawnAge = -1
+        // A respawn builds a shorter snake. Entries past its tail would still
+        // hold their old bones, so drop them instead of just hiding them.
+        if (view.segments.length > snake.segments.length) {
+          for (const entry of view.segments.splice(snake.segments.length)) {
+            disposeEntry(view, entry)
           }
         }
       }
@@ -404,16 +405,23 @@ export function createSnakeViewer(scene: THREE.Scene) {
           continue
         }
         for (const entry of view.segments) {
-          entry.mixer?.stopAllAction()
-          for (const material of entry.materials) {
-            material.dispose()
-          }
+          disposeEntry(view, entry)
         }
         scene.remove(view.group)
         views.delete(id)
       }
 
       effects.update(dt)
+    },
+    /** Drops every snake, so a new match cannot replay the old one's remains. */
+    reset(): void {
+      for (const view of views.values()) {
+        for (const entry of view.segments) {
+          disposeEntry(view, entry)
+        }
+        scene.remove(view.group)
+      }
+      views.clear()
     },
   }
 }

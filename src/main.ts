@@ -85,6 +85,13 @@ function playOwned(sound: SoundEvent): void {
   }
 }
 
+/** Drops the last round's visuals, so a rematch that reuses ids starts clean. */
+function resetRound(): void {
+  snakeViewer.reset()
+  smoother.reset()
+  snapshotAge = 0
+}
+
 function resetSession(): void {
   host?.dispose()
   host = undefined
@@ -92,8 +99,7 @@ function resetSession(): void {
   client = undefined
   world = undefined
   renderState = undefined
-  smoother.reset()
-  snapshotAge = 0
+  resetRound()
   resultsShown = false
   mode = 'idle'
   nameTags.clear()
@@ -137,6 +143,7 @@ async function createRoom(name: string): Promise<void> {
       handlers: {
         onLobby: (code, players) => hud.showLobby(code, players, true),
         onStart: () => {
+          resetRound()
           mode = 'host'
           resultsShown = false
           hud.showGame()
@@ -170,6 +177,8 @@ async function joinMatch(code: string, name: string): Promise<void> {
   const handlers: ClientHandlers = {
     onLobby: (players) => hud.showLobby(roomCode, players, false),
     onStart: () => {
+      resetRound()
+      renderState = undefined
       mode = 'guest'
       resultsShown = false
       hud.showGame()
