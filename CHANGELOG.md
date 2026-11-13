@@ -81,9 +81,10 @@ All notable changes to this project are documented here. The format follows
   distance the original uses between parts.
 - Parts render at the size they are authored at instead of being shrunk to the
   original prefab's quarter scale. Colliders, muzzles and offsets use the same
-  units, so they still line up with the art. Chain spacing, walk speed, attack
-  ranges and the camera field of view were scaled to match, so the arena and the
-  floor keep their proportions while the bugs read at their real size.
+  units, so they still line up with the art. Chain spacing, walk speed and
+  attack ranges were scaled to match, and the camera sits four times higher and
+  farther so a native part keeps the on-screen size the quarter-scale prefabs
+  had. The floor and the arena now show at their true proportion to the bugs.
 - Part models keep the pivot authored in their model file, as the original
   prefabs do, instead of being recentred on their bounding box. Heads with long
   claws or antennae now attach to the chain at the same point as in Unity.
