@@ -30,13 +30,16 @@ export interface Smoother {
 export function createSmoother(): Smoother {
   let snakePoses = new Map<string, Pose[]>()
   let shotPoses = new Map<string, Pose>()
+  let fromTime = 0
 
   return {
     reset: () => {
       snakePoses = new Map()
       shotPoses = new Map()
+      fromTime = 0
     },
     capture: (state) => {
+      fromTime = state.time
       snakePoses = new Map(
         state.snakes.map((snake) => [
           snake.id,
@@ -48,7 +51,9 @@ export function createSmoother(): Smoother {
     sample: (state, alpha) => {
       const a = Math.min(1, Math.max(0, alpha))
       return {
-        time: state.time,
+        // Pickup arcs and other time-driven motion need a smooth clock, not
+        // the 30 Hz simulation step.
+        time: fromTime + (state.time - fromTime) * a,
         duration: state.duration,
         ended: state.ended,
         snakes: state.snakes.map((snake) => {

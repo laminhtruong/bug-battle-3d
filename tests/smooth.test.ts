@@ -80,6 +80,17 @@ describe('render smoothing', () => {
     expect(smoother.sample(state, 1).projectiles[0]?.z).toBe(0.5)
   })
 
+  it('interpolates time so arcs move every frame', () => {
+    const state = makeState()
+    const smoother = createSmoother()
+    smoother.capture(state)
+
+    state.time = 0.5
+
+    expect(smoother.sample(state, 0.5).time).toBeCloseTo(0.25)
+    expect(smoother.sample(state, 1).time).toBe(0.5)
+  })
+
   it('does not blend across matches', () => {
     const state = makeState()
     const smoother = createSmoother()
