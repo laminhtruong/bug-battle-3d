@@ -198,7 +198,7 @@ describe('world', () => {
     expect(bot.steerX).toBeGreaterThan(0.5)
   })
 
-  it('slows a chasing gun bot smoothly as it reaches attack range', () => {
+  it('keeps a chasing gun bot at full speed until it reaches attack range', () => {
     const world = createWorld({
       seed: 49,
       arena: classicArena,
@@ -219,8 +219,54 @@ describe('world', () => {
 
     updateAi(world, bot)
 
-    expect(Math.hypot(bot.steerX, bot.steerZ)).toBeGreaterThan(0.1)
-    expect(Math.hypot(bot.steerX, bot.steerZ)).toBeLessThan(0.2)
+    expect(Math.hypot(bot.steerX, bot.steerZ)).toBeCloseTo(1)
+  })
+
+  it('does not chase players when headless but still fires from an armed body', () => {
+    const world = createWorld({
+      seed: 49,
+      arena: classicArena,
+      players: [{ id: 'human', name: 'You', control: 'human', slot: 0, headId: DEFAULT_HEAD_ID }],
+    })
+    const bot = getSnake(world, 'bot-2')
+    const human = getSnake(world, 'human')
+    world.snakes = [bot, human]
+    world.pickups = []
+    placeHead(bot, 0, 0)
+    placeHead(human, 0, 10)
+    bot.ai.targetX = 10
+    bot.ai.targetZ = 0
+    bot.ai.retargetAt = world.time + 10
+    bot.segments[0]!.dead = true
+    bot.segments[1]!.partId = 'gun'
+    bot.segments[1]!.angle = 0
+    bot.segments[1]!.cooldown = 0
+    bot.ai.chaseUntil = world.time + 10
+    bot.ai.chaseRestUntil = world.time + 100
+
+    updateAi(world, bot)
+    fireAttacks(world, STEP)
+
+    expect(bot.alive).toBe(true)
+    expect(bot.ai.seenZ).not.toBe(human.z)
+    expect(bot.steerX).toBeGreaterThan(0)
+    expect(Math.abs(bot.steerZ)).toBeLessThan(0.01)
+    expect(world.events).toContainEqual(expect.objectContaining({ type: 'attack', snakeId: bot.id }))
+  })
+
+  it('kills a headless bot with only bones instead of letting it chase', () => {
+    const world = createWorld({ seed: 49, arena: classicArena })
+    const bot = getSnake(world, 'bot-2')
+    bot.segments[0]!.dead = true
+    for (const segment of bot.segments.slice(1)) {
+      segment.partId = 'normal'
+    }
+    bot.ai.chaseUntil = world.time + 10
+
+    updateAi(world, bot)
+
+    expect(bot.alive).toBe(false)
+    expect(world.events).toContainEqual(expect.objectContaining({ type: 'death', snakeId: bot.id }))
   })
 
   it('makes the boss wander until a player is close, then chase', () => {
@@ -302,13 +348,13 @@ describe('world', () => {
     }
     world.snakes = [bot, powerup]
     world.pickups = []
-    // A gun head shoots from range, so the bot should not walk into the crate.
+    // A ranged head can target the crate.
     const gun = requirePart('head', 'gun')
     const head = bot.segments[0]!
     head.partId = 'gun'
     head.hp = gun.hp
     head.maxHp = gun.hp
-    placeHead(powerup, 0, 30)
+    placeHead(powerup, 0, 18)
     placeHead(bot, 0, 0)
     bot.angle = 0
     bot.ai.chaseRestUntil = world.time + 20
@@ -318,7 +364,7 @@ describe('world', () => {
     // Far away it closes in at full speed.
     expect(bot.steerZ).toBeCloseTo(1, 5)
 
-    placeHead(bot, 0, 24)
+    placeHead(bot, 0, 12.5)
     bot.angle = Math.PI
     updateAi(world, bot)
 
@@ -329,7 +375,7 @@ describe('world', () => {
       updateMovement(bot, classicArena.width / 2, classicArena.depth / 2, STEP)
     }
     expect(Math.abs(bot.angle)).toBeLessThan(0.2)
-    expect(Math.hypot(bot.x, bot.z - 24)).toBeLessThan(0.1)
+    expect(Math.hypot(bot.x, bot.z - 12.5)).toBeLessThan(0.1)
   })
 
   it('makes a bot run from the human while it is hunting a power-up', () => {
@@ -383,39 +429,155 @@ describe('world', () => {
     expect(bot.steerZ).toBeGreaterThan(0.5)
   })
 
-  it('holds at bite range instead of running through the player', () => {
+  it('limits bot power-up hunting to 20 units and head weapons', () => {
+    const world = createWorld({ seed: 56, arena: classicArena })
+    const bot = getSnake(world, 'bot-1')
+    const powerup = world.snakes.find((snake) => snake.control === 'powerup')
+    if (!powerup) {
+      throw new Error('expected a power-up')
+    }
+    world.snakes = [bot, powerup]
+    world.pickups = []
+    bot.segments[0]!.partId = DEFAULT_HEAD_ID
+    bot.segments[1]!.partId = 'gun'
+    bot.ai.targetX = 10
+    bot.ai.targetZ = 0
+    bot.ai.retargetAt = world.time + 10
+    bot.ai.chaseRestUntil = world.time + 20
+    placeHead(bot, 0, 0)
+    placeHead(powerup, 0, 10)
+
+    updateAi(world, bot)
+
+    expect(bot.steerX).toBeGreaterThan(0.5)
+    expect(Math.abs(bot.steerZ)).toBeLessThan(0.01)
+
+    bot.segments[0]!.partId = 'gun'
+    placeHead(powerup, 0, 21)
+    updateAi(world, bot)
+
+    expect(bot.steerX).toBeGreaterThan(0.5)
+    expect(Math.abs(bot.steerZ)).toBeLessThan(0.01)
+  })
+
+  it('makes a boss hunt a nearby power-up but wander when it is out of range', () => {
+    const world = createWorld({ seed: 55, arena: classicArena })
+    const boss = spawnBoss(world)
+    const powerup = spawnPowerup(world)
+    world.snakes = [boss, powerup]
+    boss.segments[0]!.partId = DEFAULT_HEAD_ID
+    boss.segments[1]!.partId = 'gun'
+    boss.ai.targetX = 20
+    boss.ai.targetZ = 0
+    boss.ai.retargetAt = world.time + 10
+    placeHead(boss, 0, 0)
+    placeHead(powerup, 0, 20)
+
+    updateAi(world, boss)
+
+    expect(boss.steerZ).toBeGreaterThan(0.5)
+
+    placeHead(powerup, 0, 50)
+    updateAi(world, boss)
+
+    expect(boss.steerX).toBeGreaterThan(0.5)
+    expect(Math.abs(boss.steerZ)).toBeLessThan(0.01)
+  })
+
+  it("holds within a short claw's attack reach and bites", () => {
     const world = createWorld({
       seed: 49,
       arena: classicArena,
-      players: [
-        { id: 'human', name: 'You', control: 'human', slot: 0, headId: DEFAULT_HEAD_ID },
-      ],
+      players: [{ id: 'human', name: 'You', control: 'human', slot: 0, headId: DEFAULT_HEAD_ID }],
+    })
+    const bot = getSnake(world, 'bot-2')
+    const human = getSnake(world, 'human')
+    world.snakes = [bot, human]
+    world.pickups = []
+    human.segments = human.segments.slice(0, 1)
+    bot.segments[0]!.partId = 'claw01'
+    placeHead(bot, 0, 0)
+    placeHead(human, 0, 2.2)
+    bot.angle = 0
+    human.angle = 0
+    bot.segments[0]!.angle = 0
+    human.segments[0]!.angle = 0
+    updateAi(world, bot)
+
+    expect(Math.hypot(bot.steerX, bot.steerZ)).toBeGreaterThan(0.01)
+
+    placeHead(human, 0, 1.7)
+    bot.ai.seenZ = 1.7
+    updateAi(world, bot)
+    const humanHp = human.segments[0]?.hp ?? 0
+    updateContact(world)
+
+    expect(Math.hypot(bot.steerX, bot.steerZ)).toBeLessThan(0.01)
+    expect(bot.steerZ).toBeGreaterThan(0)
+    expect(human.segments[0]?.hp).toBeLessThan(humanHp)
+  })
+
+  it('holds at the actual reach of a long-claw head and attacks', () => {
+    const world = createWorld({
+      seed: 49,
+      arena: classicArena,
+      players: [{ id: 'human', name: 'You', control: 'human', slot: 0, headId: DEFAULT_HEAD_ID }],
     })
     const bot = getSnake(world, 'bot-2')
     const human = getSnake(world, 'human')
     world.snakes = [bot, human]
     world.pickups = []
     bot.segments[0]!.partId = 'claw04'
-    bot.ai.chaseRestUntil = 0
-    placeHead(human, 0, 10)
+    bot.segments[1]!.partId = 'gun'
     placeHead(bot, 0, 0)
+    placeHead(human, 0, 3.8)
     bot.angle = 0
+    human.angle = 0
+    bot.segments[0]!.angle = 0
+    human.segments[0]!.angle = 0
+    for (const [index, segment] of human.segments.entries()) {
+      segment.x = human.x
+      segment.z = human.z - index * BALANCE.headSpacing
+      segment.angle = 0
+    }
 
     updateAi(world, bot)
-
-    expect(bot.ai.chaseUntil).toBeGreaterThan(world.time)
-    expect(bot.steerZ).toBeGreaterThan(0.5)
-
-    // In reach, the bot holds and aims instead of driving through the head.
-    placeHead(bot, 0, 0)
-    placeHead(human, 0, 2)
-    bot.ai.seenX = 0
-    bot.ai.seenZ = 2
-
-    updateAi(world, bot)
+    const humanHp = human.segments.reduce((sum, segment) => sum + segment.hp, 0)
+    updateContact(world)
 
     expect(Math.hypot(bot.steerX, bot.steerZ)).toBeLessThan(0.01)
-    expect(bot.steerZ).toBeGreaterThan(0)
+    expect(human.segments.reduce((sum, segment) => sum + segment.hp, 0)).toBeLessThan(humanHp)
+  })
+
+  it('damages a player after chasing into long-claw range', () => {
+    const world = createWorld({
+      seed: 49,
+      arena: classicArena,
+      players: [{ id: 'human', name: 'You', control: 'human', slot: 0, headId: DEFAULT_HEAD_ID }],
+    })
+    const bot = getSnake(world, 'bot-2')
+    const human = getSnake(world, 'human')
+    world.snakes = [bot, human]
+    world.pickups = []
+    bot.segments[0]!.partId = 'claw04'
+    bot.segments[1]!.partId = 'gun'
+    bot.segments[1]!.cooldown = 100
+    placeHead(bot, 0, 0)
+    placeHead(human, 0, 10)
+    bot.angle = 0
+    human.angle = 0
+    human.trail = Array.from({ length: 51 }, (_, index) => ({ x: 0, z: 5 + index * 0.1 }))
+    let clawHit = false
+
+    for (let index = 0; index < BALANCE.tickRate * 2; index += 1) {
+      tickWorld(world, STEP)
+      clawHit ||= world.events.some(
+        (event) =>
+          event.type === 'hit' && event.targetId === human.id && event.attackerId === bot.id,
+      )
+    }
+
+    expect(clawHit).toBe(true)
   })
 
   it('does not walk a melee bot into a power-up', () => {
@@ -787,7 +949,7 @@ describe('survival', () => {
     expect(player.segments[1]?.dead).toBe(false)
   })
 
-  it('dies once nothing can attack anymore', () => {
+  it('dies immediately when its head is lost and no body can attack', () => {
     const world = createWorld({ seed: 24, arena: classicArena })
     const player = getSnake(world, 'bot-1')
 

@@ -1,6 +1,8 @@
-import { normalize } from '@/core/math2d'
+import { angleFromDirection, normalize } from '@/core/math2d'
 import { requirePart } from '@/content'
 import { BALANCE } from '@/data/balance'
+import { contactReach } from './collider'
+import { canAttack, killSnake } from './combat'
 import { isPlayerControl } from './types'
 import type { Pickup, Segment, Snake, World } from './types'
 
@@ -9,8 +11,8 @@ const RETARGET_MIN_SEC = 3
 const RETARGET_MAX_SEC = 5
 /** Bots grab parts before apples, and only look this far for each. */
 const BOT_GEAR_RANGE = 40
-const BOT_POWERUP_RANGE = 45
-/** A bot shoots a crate from this fraction of its head attack reach. */
+const BOT_POWERUP_RANGE = 20
+/** Bots shoot crates from this fraction of their attack reach. */
 const BOT_SHOOT_REACH = 0.6
 /** A player closer than this makes a bot drop its crate and run. */
 const BOT_DANGER_RANGE = 12
@@ -143,9 +145,42 @@ function attackReach(snake: Snake): number {
   return Math.max(0, ...snake.segments.map(segmentReach))
 }
 
-/** Crates are only farmed with a head that shoots; body shots aim poorly. */
+/** Bots only farm crates with a ranged head; bosses may use body weapons too. */
 function headReach(snake: Snake): number {
   return segmentReach(snake.segments[0])
+}
+
+/** Uses the same oriented-box geometry as contact damage. */
+function meleeReach(bot: Snake, prey: Snake, x: number, z: number): number {
+  const head = bot.segments[0]
+  if (!head || head.dead) {
+    return 0
+  }
+  const part = requirePart(head.slot, head.partId)
+  if (part.contact.damage <= 0) {
+    return 0
+  }
+  const direction = normalize(x - bot.x, z - bot.z)
+  if (Math.hypot(direction.x, direction.z) < 1e-6) {
+    return BOT_BITE_REACH
+  }
+  const targets = prey.segments.flatMap((segment) =>
+    segment.dead ? [] : [{ part: requirePart(segment.slot, segment.partId), segment }],
+  )
+  return contactReach(
+    { part, segment: { ...head, angle: angleFromDirection(direction.x, direction.z) } },
+    { x: bot.x, z: bot.z },
+    targets,
+    { x: prey.x, z: prey.z },
+    direction,
+  )
+}
+
+function botAttackReach(bot: Snake, prey: Snake, x: number, z: number): number {
+  const melee = meleeReach(bot, prey, x, z)
+  return melee > 0
+    ? Math.max(BOT_BITE_REACH, melee - BOT_CONTACT_OVERLAP)
+    : Math.max(attackReach(bot), BOT_BITE_REACH)
 }
 
 /** Turns toward a point without travelling, so the head aims its attack. */
@@ -163,18 +198,16 @@ function trackPrey(bot: Snake, prey: Snake): void {
   bot.ai.seenZ += (prey.z - bot.ai.seenZ) * blend
 }
 
-/** Melee bots bite from here instead of driving through the target. */
-const BOT_BITE_REACH = 2.2
-const BOT_ARRIVAL_BAND = 4
+/** Fallback for a head without a usable contact hitbox. */
+const BOT_BITE_REACH = 0.8
+/** Stay inside the geometric contact boundary to absorb movement error. */
+const BOT_CONTACT_OVERLAP = 0.4
 
 /** Closes to attack range, then holds and aims instead of running through. */
 function holdAtRange(world: World, bot: Snake, x: number, z: number, reach: number): void {
   const distance = Math.hypot(x - bot.x, z - bot.z)
   if (distance > reach) {
     steerAway(world, bot, x, z)
-    const speedScale = Math.min(1, (distance - reach) / BOT_ARRIVAL_BAND)
-    bot.steerX *= speedScale
-    bot.steerZ *= speedScale
   } else {
     faceOnly(bot, x, z)
   }
@@ -187,13 +220,24 @@ function holdAtRange(world: World, bot: Snake, x: number, z: number, reach: numb
  */
 function updateBot(world: World, bot: Snake): void {
   const now = world.time
-  const chasing = now < bot.ai.chaseUntil
+  const headless = bot.segments[0]?.dead === true
+  if (headless && !canAttack(bot)) {
+    killSnake(world, bot)
+    return
+  }
+  const chasing = !headless && now < bot.ai.chaseUntil
   // Bots only take the bait from the human. Chasing each other turned into two
   // bots orbiting one spot, usually right next to the crate they were farming.
   const prey = chasing ? nearestPlayer(world, bot, BOT_CHASE_LEASH, true) : undefined
   if (prey) {
     trackPrey(bot, prey)
-    holdAtRange(world, bot, bot.ai.seenX, bot.ai.seenZ, attackReach(bot) || BOT_BITE_REACH)
+    holdAtRange(
+      world,
+      bot,
+      bot.ai.seenX,
+      bot.ai.seenZ,
+      botAttackReach(bot, prey, bot.ai.seenX, bot.ai.seenZ),
+    )
     return
   }
   if (chasing) {
@@ -209,7 +253,7 @@ function updateBot(world: World, bot: Snake): void {
       // The bot locks on where the player is now, then trails behind the turn.
       bot.ai.seenX = target.x
       bot.ai.seenZ = target.z
-      holdAtRange(world, bot, target.x, target.z, attackReach(bot) || BOT_BITE_REACH)
+      holdAtRange(world, bot, target.x, target.z, botAttackReach(bot, target, target.x, target.z))
       return
     }
   }
@@ -218,8 +262,7 @@ function updateBot(world: World, bot: Snake): void {
     steerAway(world, bot, gear.x, gear.z)
     return
   }
-  // Only a bot that can shoot from its head farms a crate. A melee bot used to
-  // press into the solid crate and wrap its body around it.
+  // Only the head can aim at crates; body weapons are reserved for bosses here.
   const reach = headReach(bot)
   const powerup = reach > 0 ? nearestPowerup(world, bot, BOT_POWERUP_RANGE) : undefined
   if (powerup) {
@@ -298,6 +341,12 @@ function nearestPlayer(
 function updateBoss(world: World, boss: Snake): void {
   const target = nearestPlayer(world, boss, BOSS_AGGRO_RANGE)
   if (!target) {
+    const reach = attackReach(boss)
+    const powerup = reach > 0 ? nearestPowerup(world, boss, BOSS_AGGRO_RANGE) : undefined
+    if (powerup) {
+      holdAtRange(world, boss, powerup.x, powerup.z, reach)
+      return
+    }
     updateWander(world, boss)
     return
   }

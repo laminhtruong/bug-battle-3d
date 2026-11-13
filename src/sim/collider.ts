@@ -212,3 +212,91 @@ export function collidersOverlap(
   }
   return false
 }
+
+/** Farthest head-to-target distance at which the attacker's hitbox can touch. */
+export function contactReach(
+  attacker: { part: PartDef; segment: Segment },
+  attackerAnchor: { x: number; z: number },
+  targets: readonly { part: PartDef; segment: Segment }[],
+  targetAnchor: { x: number; z: number },
+  direction: { x: number; z: number },
+): number {
+  let reach = 0
+  for (const attackBox of attacker.part.collider.boxes) {
+    if (!attackBox.hitbox) {
+      continue
+    }
+    const attackCos = Math.cos(attacker.segment.angle)
+    const attackSin = Math.sin(attacker.segment.angle)
+    const attackX =
+      localToWorldX(attackBox.x, attackBox.z, attacker.segment, attackCos, attackSin) -
+      attackerAnchor.x
+    const attackZ =
+      localToWorldZ(attackBox.x, attackBox.z, attacker.segment, attackCos, attackSin) -
+      attackerAnchor.z
+    const attackBoxCos =
+      attackCos * Math.cos(attackBox.angle) - attackSin * Math.sin(attackBox.angle)
+    const attackBoxSin =
+      attackSin * Math.cos(attackBox.angle) + attackCos * Math.sin(attackBox.angle)
+
+    for (const target of targets) {
+      for (const targetBox of target.part.collider.boxes) {
+        const targetCos = Math.cos(target.segment.angle)
+        const targetSin = Math.sin(target.segment.angle)
+        const targetX =
+          localToWorldX(targetBox.x, targetBox.z, target.segment, targetCos, targetSin) -
+          targetAnchor.x
+        const targetZ =
+          localToWorldZ(targetBox.x, targetBox.z, target.segment, targetCos, targetSin) -
+          targetAnchor.z
+        const targetBoxCos =
+          targetCos * Math.cos(targetBox.angle) - targetSin * Math.sin(targetBox.angle)
+        const targetBoxSin =
+          targetSin * Math.cos(targetBox.angle) + targetCos * Math.sin(targetBox.angle)
+        const axes = [
+          [attackBoxCos, -attackBoxSin],
+          [attackBoxSin, attackBoxCos],
+          [targetBoxCos, -targetBoxSin],
+          [targetBoxSin, targetBoxCos],
+        ] as const
+        let minDistance = -Infinity
+        let maxDistance = Infinity
+        let possible = true
+
+        for (const [axisX, axisZ] of axes) {
+          const attackRadius =
+            attackBox.halfWidth * Math.abs(axisX * attackBoxCos - axisZ * attackBoxSin) +
+            attackBox.halfDepth * Math.abs(axisX * attackBoxSin + axisZ * attackBoxCos)
+          const targetRadius =
+            targetBox.halfWidth * Math.abs(axisX * targetBoxCos - axisZ * targetBoxSin) +
+            targetBox.halfDepth * Math.abs(axisX * targetBoxSin + axisZ * targetBoxCos)
+          const offset = (targetX - attackX) * axisX + (targetZ - attackZ) * axisZ
+          const slope = direction.x * axisX + direction.z * axisZ
+          const radius = attackRadius + targetRadius
+
+          if (Math.abs(slope) < 1e-8) {
+            if (Math.abs(offset) > radius) {
+              possible = false
+              break
+            }
+            continue
+          }
+
+          const first = (-radius - offset) / slope
+          const second = (radius - offset) / slope
+          minDistance = Math.max(minDistance, Math.min(first, second))
+          maxDistance = Math.min(maxDistance, Math.max(first, second))
+          if (minDistance > maxDistance) {
+            possible = false
+            break
+          }
+        }
+
+        if (possible && maxDistance >= Math.max(0, minDistance)) {
+          reach = Math.max(reach, maxDistance)
+        }
+      }
+    }
+  }
+  return reach
+}
