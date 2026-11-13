@@ -152,6 +152,8 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- Bots steer around a power-up that sits between them and their target, so a
+  bug walking to loot past a crate no longer parks against the solid box.
 - The in-game camera now sits 10 units above the head and 3.5 behind it, held at
   a fixed 75 degree pitch through a 60 degree lens. It used to sit at the lower
   menu-camera angle, which made the arena read much closer.

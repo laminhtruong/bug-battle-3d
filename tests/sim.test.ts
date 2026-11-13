@@ -696,6 +696,28 @@ describe('world', () => {
     expect(bot.steerZ).toBeLessThan(-0.5)
   })
 
+  it('walks a headless bot around a power-up instead of pressing into it', () => {
+    const world = createWorld({ seed: 57, arena: classicArena })
+    const bot = getSnake(world, 'bot-1')
+    const powerup = spawnPowerup(world)
+    world.snakes = [bot, powerup]
+    // A head lies past the crate, so the bot must go around the solid box.
+    world.pickups = [createPickup(world, 'head', 0, 20, 'gun')]
+    bot.segments[0]!.dead = true
+    bot.segments[1]!.partId = 'gun'
+    bot.ai.chaseRestUntil = world.time + 20
+    placeHead(powerup, 0, 10)
+    placeHead(bot, 0, 0)
+    bot.angle = 0
+
+    for (let index = 0; index < BALANCE.tickRate * 5; index += 1) {
+      tickWorld(world, STEP)
+    }
+
+    // It slid past the crate and picked the head up, so it fights again.
+    expect(bot.segments[0]?.dead).toBe(false)
+  })
+
   it('leaves a power-up that the human is camping', () => {
     const world = createWorld({ seed: 54, arena: classicArena })
     const bot = getSnake(world, 'bot-1')

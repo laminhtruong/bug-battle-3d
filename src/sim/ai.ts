@@ -54,7 +54,35 @@ function steerAway(world: World, snake: Snake, x: number, z: number): void {
     pushZ = (-halfDepth - snake.z) / margin
   }
   const aim = normalize(x - snake.x, z - snake.z)
-  const mixed = normalize(aim.x + pushX * 1.5, aim.z + pushZ * 1.5)
+  let steerX = aim.x
+  let steerZ = aim.z
+  // A crate is solid: steer around one that blocks the way instead of pressing
+  // the glued head against it until the target is dropped.
+  const targetDistance = Math.hypot(x - snake.x, z - snake.z)
+  for (const crate of world.snakes) {
+    if (!crate.alive || crate.control !== 'powerup') {
+      continue
+    }
+    // A crate that is the target itself is not in the way.
+    if (Math.hypot(crate.x - x, crate.z - z) < BALANCE.powerupSolidRadius) {
+      continue
+    }
+    const dx = crate.x - snake.x
+    const dz = crate.z - snake.z
+    const along = dx * aim.x + dz * aim.z
+    if (along <= 0 || along > targetDistance) {
+      continue
+    }
+    const lateral = Math.abs(dx * aim.z - dz * aim.x)
+    if (lateral >= BALANCE.powerupSolidRadius + 1) {
+      continue
+    }
+    // Turn to the side the crate is not on, so the head slides past it.
+    const side = aim.x * dz - aim.z * dx >= 0 ? 1 : -1
+    steerX += aim.z * side
+    steerZ -= aim.x * side
+  }
+  const mixed = normalize(steerX + pushX * 1.5, steerZ + pushZ * 1.5)
   snake.steerX = mixed.x
   snake.steerZ = mixed.z
 }
