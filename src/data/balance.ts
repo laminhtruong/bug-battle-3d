@@ -50,6 +50,9 @@ export const BALANCE = {
   /** Items land this far from the broken crate. */
   powerupDropMinDistance: 2,
   powerupDropMaxDistance: 5,
+  /** Loot arcs up for this long before it can be picked up. */
+  powerupDropFlightSec: 0.8,
+  powerupDropHeight: 6,
   /** Crate centres keep this much space between them. */
   powerupSpacing: 18,
   /** A head stops this far from a power-up centre, so the crate is solid. */

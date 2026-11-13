@@ -107,6 +107,10 @@ export interface Pickup {
   x: number
   z: number
   expireAt: number
+  /** Crate loot is thrown from the crate and cannot be taken before it lands. */
+  fromX?: number
+  fromZ?: number
+  landAt?: number
 }
 
 export type WorldEvent =

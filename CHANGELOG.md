@@ -21,10 +21,12 @@ All notable changes to this project are documented here. The format follows
   show a name tag over their head.
 - The apple and power-up targets now use the original Unity models (`item_full`
   and `box`) with the shared bug palette, instead of placeholder primitives.
-- A destroyed power-up throws three to five items out around it: each one is a
-  head 30% of the time, otherwise a body. Crates keep their distance from each
-  other, so two boxes never share a corner. A dead boss drops exactly ten of its
-  own parts, including its head, and comes back 30 seconds later.
+- A destroyed power-up throws three to five items up and out around it. They
+  arc down over a short moment, and cannot be picked up until they land, so a
+  player can step back from an unwanted head. Each item is a head 30% of the
+  time, otherwise a body. Crates keep their distance from each other, so two
+  boxes never share a corner. A dead boss drops exactly ten of its own parts,
+  including its head, and comes back 30 seconds later.
 - Boss AI leads its target, weaves to a flank while its attack reloads and lines
   up when ready. It roams the map until a player comes close, then chases from a
   longer range than a bot; it never goes after pickups or power-ups.

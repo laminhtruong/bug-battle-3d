@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { clamp } from '@/core/math2d'
 import { BALANCE } from '@/data/balance'
 import { clonePartModel, clonePropModel, getPropModel } from './models'
 import type { RenderPickup, RenderState } from './state'
@@ -91,6 +92,15 @@ function pickupObject(pickup: RenderPickup): THREE.Object3D {
   return new THREE.Mesh(pickupGeometry(pickup), pickupMaterial(pickup))
 }
 
+/** 0 while the loot sits in the crate, 1 once it has landed. */
+function flightProgress(pickup: RenderPickup, time: number): number {
+  if (pickup.fromX === undefined || pickup.fromZ === undefined || pickup.landAt === undefined) {
+    return 1
+  }
+  const launchedAt = pickup.landAt - BALANCE.powerupDropFlightSec
+  return clamp((time - launchedAt) / BALANCE.powerupDropFlightSec, 0, 1)
+}
+
 export function createPropViewer(scene: THREE.Scene) {
   const shots = new Map<string, THREE.Mesh>()
   const areas = new Map<string, THREE.Mesh>()
@@ -158,7 +168,14 @@ export function createPropViewer(scene: THREE.Scene) {
         const bob = Math.sin(world.time * 3 + pickup.x + pickup.z) * 0.32
         // The apple model stands on its own pivot; part drops are centred meshes.
         const lift = pickup.kind === 'apple' ? 0.45 : 1.28
-        mesh.position.set(pickup.x, lift + bob, pickup.z)
+        const progress = flightProgress(pickup, world.time)
+        const fromX = pickup.fromX ?? pickup.x
+        const fromZ = pickup.fromZ ?? pickup.z
+        const x = fromX + (pickup.x - fromX) * progress
+        const z = fromZ + (pickup.z - fromZ) * progress
+        // The loot hops up and drops onto its landing spot.
+        const hop = Math.sin(Math.PI * progress) * BALANCE.powerupDropHeight
+        mesh.position.set(x, lift + bob + hop, z)
         mesh.rotation.y = world.time * 2
       }
       for (const [id, mesh] of pickups) {

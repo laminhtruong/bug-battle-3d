@@ -460,6 +460,43 @@ describe('arena targets', () => {
     }
   })
 
+  it('keeps crate loot airborne until it lands', () => {
+    const arena = { ...classicArena, enemyCap: 0, powerupTarget: 0, appleTarget: 0 }
+    const world = createWorld({
+      seed: 66,
+      arena,
+      players: [{ id: 'you', name: 'You', control: 'human', slot: 0, headId: DEFAULT_HEAD_ID }],
+    })
+    const human = getSnake(world, 'you')
+    const crate = spawnPowerup(world)
+    const crateX = crate.x
+    const crateZ = crate.z
+    killSnake(world, crate)
+
+    const drop = world.pickups[0]
+    if (!drop) {
+      throw new Error('expected a crate drop')
+    }
+    expect(drop.fromX).toBeCloseTo(crateX)
+    expect(drop.fromZ).toBeCloseTo(crateZ)
+    expect(drop.landAt).toBeGreaterThan(world.time)
+
+    // Stand exactly on the landing spot before the item comes down.
+    world.snakes = [human]
+    world.pickups = [drop]
+    placeHead(human, drop.x, drop.z)
+    const earlyTicks = Math.ceil(BALANCE.powerupDropFlightSec * BALANCE.tickRate) - 2
+    for (let index = 0; index < earlyTicks; index += 1) {
+      tickWorld(world, STEP)
+    }
+    expect(world.pickups).toHaveLength(1)
+
+    for (let index = 0; index < 4; index += 1) {
+      tickWorld(world, STEP)
+    }
+    expect(world.pickups).toHaveLength(0)
+  })
+
   it('keeps power-ups apart, including respawns', () => {
     const world = createWorld({ seed: 56, arena: classicArena })
     const arena = { ...classicArena, enemyCap: 0 }

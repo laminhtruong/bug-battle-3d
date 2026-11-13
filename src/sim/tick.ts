@@ -79,6 +79,11 @@ function collectPickups(world: World): void {
     if (world.time >= pickup.expireAt) {
       continue
     }
+    // Crate loot is airborne: it cannot be grabbed until it lands.
+    if (pickup.landAt !== undefined && world.time < pickup.landAt) {
+      survivors.push(pickup)
+      continue
+    }
     let taken = false
     for (const snake of world.snakes) {
       if (!snake.alive || !isPlayerControl(snake.control)) {

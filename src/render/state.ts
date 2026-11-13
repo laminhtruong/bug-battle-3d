@@ -45,6 +45,10 @@ export interface RenderPickup {
   partId?: string
   x: number
   z: number
+  /** Crate loot arcs in from the crate until `landAt`. */
+  fromX?: number
+  fromZ?: number
+  landAt?: number
 }
 
 /** Everything the view needs. The simulated World and a network snapshot both fit. */

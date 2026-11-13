@@ -400,10 +400,11 @@ export function spawnDrops(
   }
 }
 
-/** A broken crate throws three to five items out around it. */
+/** A broken crate throws three to five items up and out around it. */
 export function spawnPowerupDrops(world: World, x: number, z: number): void {
   const { rng } = world
   const count = rng.int(BALANCE.powerupDropCountMin, BALANCE.powerupDropCountMax + 1)
+  const landAt = world.time + BALANCE.powerupDropFlightSec
   for (let index = 0; index < count; index += 1) {
     const slot: 'head' | 'body' =
       rng.next() < BALANCE.powerupDropHeadChance ? 'head' : 'body'
@@ -414,13 +415,17 @@ export function spawnPowerupDrops(world: World, x: number, z: number): void {
       BALANCE.powerupDropMinDistance,
       BALANCE.powerupDropMaxDistance,
     )
-    createPickup(
+    const drop = createPickup(
       world,
       slot,
       x + Math.sin(angle) * distance,
       z + Math.cos(angle) * distance,
       partId,
     )
+    // The arc buys the player time to step away before the item can be taken.
+    drop.fromX = x
+    drop.fromZ = z
+    drop.landAt = landAt
   }
 }
 

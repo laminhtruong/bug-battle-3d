@@ -51,6 +51,15 @@ export function createSnapshot(world: World, sfx: SoundEvent[] = []): Snapshot {
       if (pickup.partId) {
         entry.partId = pickup.partId
       }
+      if (
+        pickup.fromX !== undefined &&
+        pickup.fromZ !== undefined &&
+        pickup.landAt !== undefined
+      ) {
+        entry.fromX = pickup.fromX
+        entry.fromZ = pickup.fromZ
+        entry.landAt = pickup.landAt
+      }
       return entry
     }),
     sfx,
