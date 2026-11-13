@@ -29,6 +29,11 @@ function spawnScale(age: number): number {
   return 1 + (back + 1) * (t - 1) ** 3 + back * (t - 1) ** 2
 }
 
+/** One white pulse: up and back to normal, so a single hit reads as a single flash. */
+function hurtFlash(left: number): number {
+  return left > 0 ? Math.sin((1 - left / BALANCE.hurtCooldownSec) * Math.PI) ** 2 : 0
+}
+
 const materialCache = new Map<string, THREE.MeshToonMaterial>()
 
 /** Placeholder colour, used until the real model for a part has loaded. */
@@ -188,11 +193,8 @@ function updateRemains(view: SnakeView, dt: number, effects: Effects): boolean {
   const gone = view.deathAge >= DEATH_SEC
   view.group.visible = !gone
   view.flashLeft = Math.max(0, view.flashLeft - dt)
-  // Same two white pulses as a hurt part, so the killing hit is visible.
-  const flash =
-    view.flashLeft > 0
-      ? Math.sin((1 - view.flashLeft / BALANCE.hurtCooldownSec) * Math.PI * 2) ** 2
-      : 0
+  // Same single white pulse as a hurt part, so the killing hit is visible.
+  const flash = hurtFlash(view.flashLeft)
   for (const entry of view.segments) {
     entry.dying = Math.max(0, entry.dying - dt)
     const visible = !gone && entry.dying > 0
@@ -349,11 +351,8 @@ export function createSnakeViewer(scene: THREE.Scene) {
           entry.shadow.visible = true
           entry.shadow.position.set(segment.x, 0.02, segment.z)
 
-          // The original flashes the part's emission white twice when it is hurt.
-          const flash =
-            remaining > 0
-              ? Math.sin((1 - remaining / BALANCE.hurtCooldownSec) * Math.PI * 2) ** 2
-              : 0
+          // One flash per hit, like the original.
+          const flash = hurtFlash(remaining)
           if (entry.flash !== flash) {
             entry.flash = flash
             for (const material of entry.materials) {
