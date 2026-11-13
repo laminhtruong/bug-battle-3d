@@ -2,7 +2,7 @@ import { normalize } from '@/core/math2d'
 import { requirePart } from '@/content'
 import { BALANCE } from '@/data/balance'
 import { isPlayerControl } from './types'
-import type { Pickup, Snake, World } from './types'
+import type { Pickup, Segment, Snake, World } from './types'
 
 const WANDER_MARGIN = 16
 const RETARGET_MIN_SEC = 3
@@ -122,21 +122,30 @@ function humanWithin(world: World, x: number, z: number, range: number): boolean
   return false
 }
 
-/** How far the head attack reaches, or 0 when the head only bites. */
-function attackReach(snake: Snake): number {
-  const head = snake.segments[0]
-  if (!head || head.dead) {
+/** The shooting part of the bot's reach for one segment, or 0 for a melee part. */
+function segmentReach(segment: Segment | undefined): number {
+  if (!segment || segment.dead) {
     return 0
   }
-  const attack = requirePart(head.slot, head.partId).attack
+  const attack = requirePart(segment.slot, segment.partId).attack
   if (!attack) {
     return 0
   }
-  const reach =
+  const range =
     attack.kind === 'cone'
       ? attack.cone.range
       : attack.projectile.speed * attack.projectile.ttl
-  return reach * BOT_SHOOT_REACH
+  return range * BOT_SHOOT_REACH
+}
+
+/** Farthest shot on the whole snake, so a headless bot with a gun body still shoots. */
+function attackReach(snake: Snake): number {
+  return Math.max(0, ...snake.segments.map(segmentReach))
+}
+
+/** Crates are only farmed with a head that shoots; body shots aim poorly. */
+function headReach(snake: Snake): number {
+  return segmentReach(snake.segments[0])
 }
 
 /** Turns toward a point without travelling, so the head aims its attack. */
@@ -154,6 +163,18 @@ function trackPrey(bot: Snake, prey: Snake): void {
   bot.ai.seenZ += (prey.z - bot.ai.seenZ) * blend
 }
 
+/** Melee bots bite from here instead of driving through the target. */
+const BOT_BITE_REACH = 2.2
+
+/** Closes to attack range, then holds and aims instead of running through. */
+function holdAtRange(world: World, bot: Snake, x: number, z: number, reach: number): void {
+  if (Math.hypot(x - bot.x, z - bot.z) > reach) {
+    steerAway(world, bot, x, z)
+  } else {
+    faceOnly(bot, x, z)
+  }
+}
+
 /**
  * Bots gear up before they eat: part drops and power-ups are worth more than an
  * apple, and they only chase an apple when there is nothing better nearby.
@@ -167,7 +188,7 @@ function updateBot(world: World, bot: Snake): void {
   const prey = chasing ? nearestPlayer(world, bot, BOT_CHASE_LEASH, true) : undefined
   if (prey) {
     trackPrey(bot, prey)
-    steerAway(world, bot, bot.ai.seenX, bot.ai.seenZ)
+    holdAtRange(world, bot, bot.ai.seenX, bot.ai.seenZ, attackReach(bot) || BOT_BITE_REACH)
     return
   }
   if (chasing) {
@@ -183,7 +204,7 @@ function updateBot(world: World, bot: Snake): void {
       // The bot locks on where the player is now, then trails behind the turn.
       bot.ai.seenX = target.x
       bot.ai.seenZ = target.z
-      steerAway(world, bot, target.x, target.z)
+      holdAtRange(world, bot, target.x, target.z, attackReach(bot) || BOT_BITE_REACH)
       return
     }
   }
@@ -192,7 +213,10 @@ function updateBot(world: World, bot: Snake): void {
     steerAway(world, bot, gear.x, gear.z)
     return
   }
-  const powerup = nearestPowerup(world, bot, BOT_POWERUP_RANGE)
+  // Only a bot that can shoot from its head farms a crate. A melee bot used to
+  // press into the solid crate and wrap its body around it.
+  const reach = headReach(bot)
+  const powerup = reach > 0 ? nearestPowerup(world, bot, BOT_POWERUP_RANGE) : undefined
   if (powerup) {
     // Only a human scares a bot off a crate. Reacting to other bots made a
     // group farming one crate bounce around it forever.
@@ -206,7 +230,7 @@ function updateBot(world: World, bot: Snake): void {
       return
     }
     const distance = Math.hypot(powerup.x - bot.x, powerup.z - bot.z)
-    if (distance > attackReach(bot)) {
+    if (distance > reach) {
       steerAway(world, bot, powerup.x, powerup.z)
     } else {
       faceOnly(bot, powerup.x, powerup.z)

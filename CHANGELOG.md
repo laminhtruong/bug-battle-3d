@@ -37,11 +37,14 @@ All notable changes to this project are documented here. The format follows
   rolling their random gear on respawn.
 - Bots hunt part drops, power-ups and apples in range, and chase the human for a
   short run before resting. They read a moving target through a short reaction
-  delay, so a sudden turn is not mirrored on the spot. They stop at shooting
-  range, aim at a crate and fire instead of walking through it, and run when the
-  human comes close. A crate the human is standing next to is skipped, and rival
-  bots are never chased: both used to make a bot orbit a power-up it was farming.
-  Rival bots still take contact and projectile hits.
+  delay, so a sudden turn is not mirrored on the spot. They close to bite or
+  shoot range and hold there instead of running through the target, so their
+  body no longer coils around the player's head. They still run when the human
+  comes close. Only a head that shoots farms crates: melee bots leave the solid
+  boxes alone. A crate the human is standing next to is skipped, and rival bots
+  are never chased. Rival bots still take contact and projectile hits.
+- A snake whose head is destroyed only has bones at the front, so it can no
+  longer bite by contact. It keeps fighting while a ranged body still shoots.
 - Power-ups are solid: a snake head stops at the crate and slides around it
   instead of passing through.
 - Host-authoritative online play with five character room codes over PeerJS.

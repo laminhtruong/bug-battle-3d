@@ -12,7 +12,7 @@ import {
   updateContact,
   updateProjectiles,
 } from '@/sim/combat'
-import { spawnBoss, spawnPowerup } from '@/sim/spawn'
+import { spawnBoss, spawnPowerup, createPickup } from '@/sim/spawn'
 import { updateMovement } from '@/sim/snake'
 import { tickWorld } from '@/sim/tick'
 import { isPlayerControl } from '@/sim/types'
@@ -341,9 +341,14 @@ describe('world', () => {
     }
     world.snakes = [bot, rival, powerup]
     world.pickups = []
+    // A gun head so the crate is worth farming.
+    const gun = requirePart('head', 'gun')
+    bot.segments[0]!.partId = 'gun'
+    bot.segments[0]!.hp = gun.hp
+    bot.segments[0]!.maxHp = gun.hp
     placeHead(powerup, 0, 30)
-    placeHead(bot, 0, 24)
-    placeHead(rival, 0, 26)
+    placeHead(bot, 0, 20)
+    placeHead(rival, 0, 22)
     bot.angle = 0
     bot.ai.chaseRestUntil = world.time + 20
 
@@ -351,6 +356,62 @@ describe('world', () => {
 
     // No panic: the bot walks on to the crate instead of bouncing around it.
     expect(bot.steerZ).toBeGreaterThan(0.5)
+  })
+
+  it('holds at bite range instead of running through the player', () => {
+    const world = createWorld({
+      seed: 49,
+      arena: classicArena,
+      players: [
+        { id: 'human', name: 'You', control: 'human', slot: 0, headId: DEFAULT_HEAD_ID },
+      ],
+    })
+    const bot = getSnake(world, 'bot-2')
+    const human = getSnake(world, 'human')
+    world.snakes = [bot, human]
+    world.pickups = []
+    bot.segments[0]!.partId = 'claw04'
+    bot.ai.chaseRestUntil = 0
+    placeHead(human, 0, 10)
+    placeHead(bot, 0, 0)
+    bot.angle = 0
+
+    updateAi(world, bot)
+
+    expect(bot.ai.chaseUntil).toBeGreaterThan(world.time)
+    expect(bot.steerZ).toBeGreaterThan(0.5)
+
+    // In reach, the bot holds and aims instead of driving through the head.
+    placeHead(bot, 0, 0)
+    placeHead(human, 0, 2)
+    bot.ai.seenX = 0
+    bot.ai.seenZ = 2
+
+    updateAi(world, bot)
+
+    expect(Math.hypot(bot.steerX, bot.steerZ)).toBeLessThan(0.01)
+    expect(bot.steerZ).toBeGreaterThan(0)
+  })
+
+  it('does not walk a melee bot into a power-up', () => {
+    const world = createWorld({ seed: 57, arena: classicArena })
+    const bot = getSnake(world, 'bot-1')
+    const powerup = world.snakes.find((snake) => snake.control === 'powerup')
+    if (!powerup) {
+      throw new Error('expected a power-up')
+    }
+    world.snakes = [bot, powerup]
+    world.pickups = [createPickup(world, 'apple', 0, -20)]
+    bot.segments[0]!.partId = 'claw04'
+    bot.ai.chaseRestUntil = world.time + 20
+    placeHead(powerup, 0, 30)
+    placeHead(bot, 0, 0)
+    bot.angle = 0
+
+    updateAi(world, bot)
+
+    // Melee heads skip the crate, so the bot goes for the apple behind it.
+    expect(bot.steerZ).toBeLessThan(-0.5)
   })
 
   it('leaves a power-up that the human is camping', () => {
@@ -688,11 +749,11 @@ describe('arena targets', () => {
 })
 
 describe('survival', () => {
-  it('keeps fighting after the head is lost', () => {
+  it('keeps shooting from a body after the head is lost', () => {
     const world = createWorld({ seed: 23, arena: classicArena })
     const player = getSnake(world, 'bot-1')
-    // Give the snake a body that can fight back.
-    player.segments[1]!.partId = 'spike01'
+    // Give the snake a body that can fight back from range.
+    player.segments[1]!.partId = 'gun'
 
     damageSegment(world, player, 0, 99, undefined, world.time)
 
@@ -711,10 +772,47 @@ describe('survival', () => {
     expect(player.segments).toHaveLength(0)
   })
 
+  it('does not let a bone head bite a power-up', () => {
+    const world = createWorld({ seed: 26, arena: classicArena })
+    const snake = getSnake(world, 'bot-1')
+    const crate = spawnPowerup(world)
+    world.snakes = [snake, crate]
+    world.pickups = []
+
+    // Bone head at the front, live spike body beside the crate.
+    const head = snake.segments[0]!
+    head.dead = true
+    head.hp = 0
+    head.angle = 0
+    const body = snake.segments[1]!
+    body.partId = 'spike01'
+    body.dead = false
+    body.angle = 0
+    body.x = 0
+    body.z = 1
+    crate.x = 1.8
+    crate.z = 1
+    const crateHead = crate.segments[0]!
+    crateHead.x = 1.8
+    crateHead.z = 1
+    crateHead.angle = 0
+    const hp = crateHead.hp
+
+    updateContact(world)
+
+    expect(crateHead.hp).toBe(hp)
+
+    // The same spike body still bites while the head is alive.
+    head.dead = false
+    updateContact(world)
+
+    expect(crateHead.hp).toBe(hp - 1)
+  })
+
   it('brings the head back when a head is collected', () => {
     const world = createWorld({ seed: 25, arena: classicArena })
     const player = getSnake(world, 'bot-1')
-    player.segments[1]!.partId = 'spike01'
+    player.segments[1]!.partId = 'gun'
     damageSegment(world, player, 0, 99, undefined, world.time)
     expect(player.alive).toBe(true)
 
