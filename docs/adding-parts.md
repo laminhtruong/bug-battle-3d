@@ -3,6 +3,21 @@
 A part is pure data. Adding one means adding one file; the registry discovers it,
 validates it with zod and hashes it for network compatibility.
 
+## Using the editor
+
+`npm run editor` starts Vite and opens `/editor.html`. The editor works on the
+same files described below: it lists heads and bodies, lets you add and delete
+parts, edit their stats and model, and align the art with the body chain. The
+collider boxes are hidden by default: tick **Edit** in the Colliders section to
+show and change them, or drag the X/Z arrows on the selected part to move its
+art offset. The body reference is always shown for heads. The view gizmo snaps
+the camera like Unity, `W`/`R` switch tools, and `Ctrl+Z` / `Ctrl+Shift+Z` undo
+and redo edits. It validates before writing, so a bad save never leaves the
+content registry broken.
+
+The editor is a dev tool. It is not part of the production build and needs the
+Vite dev server for its file API.
+
 ## Steps
 
 1. Create `src/content/heads/my-head.ts` or `src/content/bodies/my-body.ts`.
@@ -20,8 +35,8 @@ export default defineBody({
   score: 5,
   contact: { damage: 0 },
   boxes: [
-    // Unity BoxCollider m_Center and m_Size, XZ only.
-    { center: [0, -0.05], size: [1.5, 1.15] },
+    // Unity BoxCollider m_Center and m_Size.
+    { center: [0, -0.1, -0.05], size: [1.5, 1.45, 1.15] },
   ],
   attack: {
     kind: 'projectile',
@@ -46,6 +61,9 @@ export default defineBody({
   part's hit shape; there is no fallback circle.
 - `attack` is optional. Parts without an attack only deal contact damage through
   their `hitbox` boxes.
+- `offset` is optional and defaults to `[0, 0]`. It shifts the art only, in raw
+  prefab units, so a head can line up with the body chain without moving its
+  colliders. Drag the X/Z arrows in the editor to set it.
 - Attacks are data, not functions. The simulation interprets them; do not import
   three.js, the DOM or `Math.random`.
 - `score` is what a killer earns for destroying this part.
@@ -54,13 +72,15 @@ export default defineBody({
 ## Colliders
 
 The original game has no simple circle around a head or a body. Each part
-carries the trigger BoxColliders authored in its Unity art prefab. Copy them
-exactly:
+carries the trigger BoxColliders authored in its Unity art prefab. The editor is
+the primary way to author them now: tick **Edit**, then drag a box over the art,
+edit its centre and size, and mark the claw boxes. The shipped values were copied
+from the art prefabs once, so they are still a useful reference:
 
 1. Open the art prefab, for example `HeadClaw01.prefab` or `BodySpike02.prefab`.
    Do not copy from the gameplay `Head.prefab` or `Body.prefab`.
-2. For every BoxCollider with `m_IsTrigger: 1`, copy `m_Center` x/z and
-   `m_Size` x/z into one `boxes` entry.
+2. For every BoxCollider with `m_IsTrigger: 1`, copy `m_Center` and `m_Size`
+   x/y/z into one `boxes` entry.
 3. A child named `Body` is only a hurtbox: leave `hitbox` off. A child named
    `Claw` also deals contact damage: add `hitbox: true`.
 4. Ignore `BulletFire`, `Skeleton`, MeshCollider and any non-trigger collider.
@@ -68,15 +88,22 @@ exactly:
    art scale, so the boxes always line up with the model.
 6. The centre is relative to the part pivot. Local `+z` points forward, the same
    direction the model faces.
+7. There is no rotation field, matching a plain Unity BoxCollider with an
+   identity rotation.
 
 ```ts
 // Spike body: the main body plus two claws.
 boxes: [
-  { center: [0, -0.05], size: [1.5, 1.15] },
-  { center: [-1.4, -0.05], size: [1.3, 0.25], hitbox: true },
-  { center: [1.4, -0.05], size: [1.3, 0.25], hitbox: true },
+  { center: [0, -0.1, -0.05], size: [1.5, 1.45, 1.15] },
+  { center: [-1.4, -0.1, -0.05], size: [1.3, 1.45, 0.25], hitbox: true },
+  { center: [1.4, -0.1, -0.05], size: [1.3, 1.45, 0.25], hitbox: true },
 ],
 ```
+
+The simulation runs on the XZ plane, so collision uses the centre and size X/Z
+values. Y is kept so the box matches the Unity BoxCollider; the editor adds the
+prefab's 0.125 lift when it draws the box, so it sits at the same height as the
+art.
 
 All boxes are hurtboxes, so a projectile or another claw can damage any of them.
 Only `hitbox` boxes cause contact damage, with the part's `contact.damage`.

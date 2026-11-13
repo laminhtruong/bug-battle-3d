@@ -17,6 +17,9 @@ All notable changes to this project are documented here. The format follows
 - Sound effects for apples, pickups, hits, deaths and the result screen, copied
   from the original Unity audio and played from the simulation events.
 - Blob shadows under the segments and name labels above the players.
+- A dev-only web editor for heads and bodies: part CRUD, stats, model, art
+  offset, undo/redo, a Unity-style view gizmo and collider box editing. It writes
+  the same `src/content` files the game loads.
 
 ### Changed
 
@@ -25,6 +28,9 @@ All notable changes to this project are documented here. The format follows
   and sideways spikes hit where the art says they should. Every box is a
   hurtbox; only boxes copied from a `Claw` collider deal contact damage, so the
   gun, fire, lightning and poison heads no longer hurt by touching.
+- Collider boxes keep the full Unity BoxCollider centre and size (X/Y/Z) and
+  have no rotation. The simulation still tests the XZ plane only; Y is kept so
+  the editor can draw the box at the same height as the art.
 - The content hash now covers part stats and colliders, not only part ids, so
   mismatched builds are rejected before a match starts.
 - The renderer blends between the last two simulation ticks, and guests blend
