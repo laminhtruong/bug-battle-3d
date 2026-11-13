@@ -153,6 +153,23 @@ describe('world', () => {
     expect(bot.steerZ).toBeGreaterThan(0.5)
   })
 
+  it('leaves rival bots alone instead of orbiting them', () => {
+    const world = createWorld({ seed: 46, arena: classicArena })
+    const bot = getSnake(world, 'bot-1')
+    const rival = getSnake(world, 'bot-2')
+    world.snakes = [bot, rival]
+    world.pickups = []
+    placeHead(bot, 0, 0)
+    placeHead(rival, 0, 10)
+    bot.ai.chaseUntil = 0
+    bot.ai.chaseRestUntil = 0
+
+    updateAi(world, bot)
+
+    // A rival bot is not bait: chasing another bot made two of them circle.
+    expect(bot.ai.chaseUntil).toBe(0)
+  })
+
   it('makes a bot trail a juke instead of turning with it', () => {
     const world = createWorld({
       seed: 48,
@@ -290,7 +307,31 @@ describe('world', () => {
     expect(Math.hypot(bot.x, bot.z - 24)).toBeLessThan(0.1)
   })
 
-  it('makes a bot run from danger while it is hunting a power-up', () => {
+  it('makes a bot run from the human while it is hunting a power-up', () => {
+    const world = createWorld({ seed: 54, arena: classicArena })
+    const bot = getSnake(world, 'bot-1')
+    const human = getSnake(world, 'bot-2')
+    human.control = 'human'
+    const powerup = world.snakes.find((snake) => snake.control === 'powerup')
+    if (!powerup) {
+      throw new Error('expected a power-up')
+    }
+    world.snakes = [bot, human, powerup]
+    world.pickups = []
+    // The crate is far enough from the human to still be worth farming.
+    placeHead(powerup, 0, 42)
+    placeHead(bot, 0, 24)
+    placeHead(human, 0, 28)
+    bot.angle = 0
+    bot.ai.chaseRestUntil = world.time + 20
+
+    updateAi(world, bot)
+
+    // The human is too close, so the bot backs away instead of shooting.
+    expect(bot.steerZ).toBeLessThan(-0.5)
+  })
+
+  it('keeps hunting a power-up when only another bot is close', () => {
     const world = createWorld({ seed: 54, arena: classicArena })
     const bot = getSnake(world, 'bot-1')
     const rival = getSnake(world, 'bot-2')
@@ -302,13 +343,37 @@ describe('world', () => {
     world.pickups = []
     placeHead(powerup, 0, 30)
     placeHead(bot, 0, 24)
-    placeHead(rival, 0, 28)
+    placeHead(rival, 0, 26)
     bot.angle = 0
     bot.ai.chaseRestUntil = world.time + 20
 
     updateAi(world, bot)
 
-    // The rival is too close, so the bot backs away from it instead of shooting.
+    // No panic: the bot walks on to the crate instead of bouncing around it.
+    expect(bot.steerZ).toBeGreaterThan(0.5)
+  })
+
+  it('leaves a power-up that the human is camping', () => {
+    const world = createWorld({ seed: 54, arena: classicArena })
+    const bot = getSnake(world, 'bot-1')
+    const human = getSnake(world, 'bot-2')
+    human.control = 'human'
+    const crates = world.snakes.filter((snake) => snake.control === 'powerup').slice(0, 2)
+    if (crates.length < 2) {
+      throw new Error('expected two power-ups')
+    }
+    world.snakes = [bot, human, ...crates]
+    world.pickups = []
+    placeHead(crates[0]!, 0, 30)
+    placeHead(crates[1]!, 0, -30)
+    placeHead(human, 0, 28)
+    placeHead(bot, 0, 0)
+    bot.angle = 0
+    bot.ai.chaseRestUntil = world.time + 20
+
+    updateAi(world, bot)
+
+    // The human sits by the north crate, so the bot picks the south one.
     expect(bot.steerZ).toBeLessThan(-0.5)
   })
 

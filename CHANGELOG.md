@@ -35,11 +35,13 @@ All notable changes to this project are documented here. The format follows
   A human respawn also resets the build to the default head and three normal
   bodies, so gear picked up during a life does not survive a death. Bots keep
   rolling their random gear on respawn.
-- Bots hunt part drops, power-ups and apples in range, and chase a nearby player
-  for a short run before resting. They read a moving target through a short
-  reaction delay, so a sudden turn is not mirrored on the spot. They stop at
-  shooting range, aim at a crate and fire instead of walking through it, and run
-  when a player comes close.
+- Bots hunt part drops, power-ups and apples in range, and chase the human for a
+  short run before resting. They read a moving target through a short reaction
+  delay, so a sudden turn is not mirrored on the spot. They stop at shooting
+  range, aim at a crate and fire instead of walking through it, and run when the
+  human comes close. A crate the human is standing next to is skipped, and rival
+  bots are never chased: both used to make a bot orbit a power-up it was farming.
+  Rival bots still take contact and projectile hits.
 - Power-ups are solid: a snake head stops at the crate and slides around it
   instead of passing through.
 - Host-authoritative online play with five character room codes over PeerJS.

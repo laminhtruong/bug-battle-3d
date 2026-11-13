@@ -121,10 +121,11 @@ Early playable version (`0.1.0`):
   three random bodies whose strength follows the best part you own.
 - Eight wandering bugs roam the map at random and are replaced a couple of
   seconds after they die.
-- Bots forage apples and power-ups, break off for a short chase when a player
-  comes close, then go back to foraging. They see a moving player through a
-  short reaction delay, so a quick turn can shake them off. The boss roams until
-  a player comes close, then keeps chasing from a longer range.
+- Bots forage apples and power-ups, break off for a short chase when the human
+  comes close, then go back to foraging. They still trade hits with rival bots,
+  but never chase them. They see a moving player through a short reaction delay,
+  so a quick turn can shake them off. The boss roams until a player comes close,
+  then keeps chasing from a longer range.
 - Twenty apples spawn around the arena and refill during the round.
 - Sixteen destructible power-ups sit around the arena with 5 to 10 health, kept
   apart from each other. Breaking one throws three to five items up around it;

@@ -95,6 +95,11 @@ function nearestPowerup(world: World, snake: Snake, range: number): Snake | unde
     if (!candidate.alive || candidate.control !== 'powerup') {
       continue
     }
+    // Do not walk up to a crate a human is camping: the bot would just bounce
+    // back and forth around the danger radius instead of farming it.
+    if (humanWithin(world, candidate.x, candidate.z, BOT_DANGER_RANGE)) {
+      continue
+    }
     const distance = Math.hypot(candidate.x - snake.x, candidate.z - snake.z)
     if (distance < nearestDistance) {
       nearest = candidate
@@ -102,6 +107,19 @@ function nearestPowerup(world: World, snake: Snake, range: number): Snake | unde
     }
   }
   return nearest
+}
+
+/** True when a human player stands within range of a point. */
+function humanWithin(world: World, x: number, z: number, range: number): boolean {
+  for (const snake of world.snakes) {
+    if (!snake.alive || snake.control !== 'human') {
+      continue
+    }
+    if (Math.hypot(snake.x - x, snake.z - z) < range) {
+      return true
+    }
+  }
+  return false
 }
 
 /** How far the head attack reaches, or 0 when the head only bites. */
@@ -144,7 +162,9 @@ function trackPrey(bot: Snake, prey: Snake): void {
 function updateBot(world: World, bot: Snake): void {
   const now = world.time
   const chasing = now < bot.ai.chaseUntil
-  const prey = chasing ? nearestPlayer(world, bot, BOT_CHASE_LEASH) : undefined
+  // Bots only take the bait from the human. Chasing each other turned into two
+  // bots orbiting one spot, usually right next to the crate they were farming.
+  const prey = chasing ? nearestPlayer(world, bot, BOT_CHASE_LEASH, true) : undefined
   if (prey) {
     trackPrey(bot, prey)
     steerAway(world, bot, bot.ai.seenX, bot.ai.seenZ)
@@ -156,7 +176,7 @@ function updateBot(world: World, bot: Snake): void {
     bot.ai.chaseRestUntil = now + BOT_CHASE_REST_SEC
   }
   if (now >= bot.ai.chaseRestUntil) {
-    const target = nearestPlayer(world, bot, BOT_CHASE_RANGE)
+    const target = nearestPlayer(world, bot, BOT_CHASE_RANGE, true)
     if (target) {
       bot.ai.chaseUntil = now + BOT_CHASE_SEC
       bot.ai.chaseRestUntil = bot.ai.chaseUntil + BOT_CHASE_REST_SEC
@@ -174,7 +194,9 @@ function updateBot(world: World, bot: Snake): void {
   }
   const powerup = nearestPowerup(world, bot, BOT_POWERUP_RANGE)
   if (powerup) {
-    const threat = nearestPlayer(world, bot, BOT_DANGER_RANGE)
+    // Only a human scares a bot off a crate. Reacting to other bots made a
+    // group farming one crate bounce around it forever.
+    const threat = nearestPlayer(world, bot, BOT_DANGER_RANGE, true)
     if (threat) {
       // Back off from the threat instead of standing next to it.
       const dx = bot.x - threat.x
@@ -215,11 +237,19 @@ function leadPoint(snake: Snake, target: Snake): { x: number; z: number; distanc
   }
 }
 
-function nearestPlayer(world: World, snake: Snake, range: number): Snake | undefined {
+function nearestPlayer(
+  world: World,
+  snake: Snake,
+  range: number,
+  humansOnly = false,
+): Snake | undefined {
   let nearest: Snake | undefined
   let nearestDistance = range
   for (const candidate of world.snakes) {
-    if (!candidate.alive || candidate.id === snake.id || !isPlayerControl(candidate.control)) {
+    if (!candidate.alive || candidate.id === snake.id) {
+      continue
+    }
+    if (humansOnly ? candidate.control !== 'human' : !isPlayerControl(candidate.control)) {
       continue
     }
     const distance = Math.hypot(candidate.x - snake.x, candidate.z - snake.z)
