@@ -164,6 +164,44 @@ function createSnakeView(): SnakeView {
   return { group: new THREE.Group(), segments: [], alive: true, deathAge: 0 }
 }
 
+/** The killing hit takes every living part down; the bones are shown afterwards. */
+function startDeath(view: SnakeView): void {
+  view.deathAge = 0
+  for (const entry of view.segments) {
+    if (!entry.dead) {
+      entry.dead = true
+      entry.dying = DESTROY_SEC
+      entry.exploded = false
+    }
+    entry.spawnAge = -1
+  }
+}
+
+type Effects = ReturnType<typeof createEffects>
+
+/** Advances the remains. Returns true once they have vanished. */
+function updateRemains(view: SnakeView, dt: number, effects: Effects): boolean {
+  view.deathAge += dt
+  const gone = view.deathAge >= DEATH_SEC
+  view.group.visible = !gone
+  for (const entry of view.segments) {
+    entry.dying = Math.max(0, entry.dying - dt)
+    const shrinking = !gone && entry.dying > 0
+    entry.node.visible = shrinking
+    if (shrinking) {
+      if (!entry.exploded) {
+        effects.explode(entry.node.position.x, entry.node.position.z)
+        entry.exploded = true
+      }
+      const shrink = 1 - entry.dying / DESTROY_SEC
+      entry.node.scale.copy(entry.baseScale).multiplyScalar(Math.max(0.001, 1 - shrink * shrink))
+    }
+    entry.bones.visible = !gone && !shrinking
+    entry.shadow.visible = !gone
+  }
+  return gone
+}
+
 /** Keeps one object per visible segment, reusing them between ticks. */
 export function createSnakeViewer(scene: THREE.Scene) {
   const views = new Map<string, SnakeView>()
@@ -182,39 +220,11 @@ export function createSnakeViewer(scene: THREE.Scene) {
         }
 
         if (view.alive && !snake.alive) {
-          // The remains linger: living parts shrink away, then the bones stay for a moment.
-          view.deathAge = 0
-          for (const entry of view.segments) {
-            if (!entry.dead) {
-              entry.dead = true
-              entry.dying = DESTROY_SEC
-              entry.exploded = false
-            }
-            entry.spawnAge = -1
-          }
+          startDeath(view)
         }
         view.alive = snake.alive
         if (!snake.alive) {
-          view.deathAge += dt
-          const gone = view.deathAge >= DEATH_SEC
-          view.group.visible = !gone
-          for (const entry of view.segments) {
-            entry.dying = Math.max(0, entry.dying - dt)
-            const shrinking = !gone && entry.dying > 0
-            entry.node.visible = shrinking
-            if (shrinking) {
-              if (!entry.exploded) {
-                effects.explode(entry.node.position.x, entry.node.position.z)
-                entry.exploded = true
-              }
-              const shrink = 1 - entry.dying / DESTROY_SEC
-              entry.node.scale
-                .copy(entry.baseScale)
-                .multiplyScalar(Math.max(0.001, 1 - shrink * shrink))
-            }
-            entry.bones.visible = !gone && !shrinking
-            entry.shadow.visible = !gone
-          }
+          updateRemains(view, dt, effects)
           continue
         }
         view.group.visible = true
@@ -348,16 +358,25 @@ export function createSnakeViewer(scene: THREE.Scene) {
       }
 
       for (const [id, view] of views) {
-        if (!alive.has(id)) {
-          for (const entry of view.segments) {
-            entry.mixer?.stopAllAction()
-            for (const material of entry.materials) {
-              material.dispose()
-            }
-          }
-          scene.remove(view.group)
-          views.delete(id)
+        if (alive.has(id)) {
+          continue
         }
+        // An enemy leaves the snake list the tick it dies, so its remains play out here.
+        if (view.alive) {
+          view.alive = false
+          startDeath(view)
+        }
+        if (!updateRemains(view, dt, effects)) {
+          continue
+        }
+        for (const entry of view.segments) {
+          entry.mixer?.stopAllAction()
+          for (const material of entry.materials) {
+            material.dispose()
+          }
+        }
+        scene.remove(view.group)
+        views.delete(id)
       }
 
       effects.update(dt)
