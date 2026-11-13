@@ -42,7 +42,7 @@ export function createInput(): InputController {
   window.addEventListener('keyup', onKeyUp)
   window.addEventListener('blur', onBlur)
 
-  let joystick: HTMLElement | undefined
+  let disposeJoystick = (): void => {}
   const coarsePointer = window.matchMedia('(pointer: coarse)').matches
   if (coarsePointer) {
     const base = document.createElement('div')
@@ -51,7 +51,6 @@ export function createInput(): InputController {
     knob.className = 'joystick-knob'
     base.append(knob)
     document.body.append(base)
-    joystick = base
 
     let pointerId: number | null = null
 
@@ -73,20 +72,47 @@ export function createInput(): InputController {
       stick.x = 0
       stick.z = 0
       knob.style.transform = ''
+      base.classList.remove('is-active')
     }
-
-    base.addEventListener('pointerdown', (event) => {
+    const onPointerDown = (event: PointerEvent): void => {
+      if (pointerId !== null) {
+        return
+      }
+      // Menu screens and their buttons must not spawn the stick.
+      if (event.target instanceof Element && event.target.closest('.hud')) {
+        return
+      }
       pointerId = event.pointerId
-      base.setPointerCapture(event.pointerId)
-      move(event)
-    })
-    base.addEventListener('pointermove', (event) => {
+      const half = base.offsetWidth / 2
+      base.style.left = `${Math.min(Math.max(event.clientX, half), window.innerWidth - half)}px`
+      base.style.top = `${Math.min(Math.max(event.clientY, half), window.innerHeight - half)}px`
+      base.classList.add('is-active')
+    }
+    const onPointerMove = (event: PointerEvent): void => {
       if (event.pointerId === pointerId) {
         move(event)
       }
-    })
-    base.addEventListener('pointerup', reset)
-    base.addEventListener('pointercancel', reset)
+    }
+    const onPointerUp = (event: PointerEvent): void => {
+      if (event.pointerId === pointerId) {
+        reset()
+      }
+    }
+
+    window.addEventListener('pointerdown', onPointerDown)
+    window.addEventListener('pointermove', onPointerMove)
+    window.addEventListener('pointerup', onPointerUp)
+    window.addEventListener('pointercancel', onPointerUp)
+    window.addEventListener('blur', reset)
+
+    disposeJoystick = () => {
+      window.removeEventListener('pointerdown', onPointerDown)
+      window.removeEventListener('pointermove', onPointerMove)
+      window.removeEventListener('pointerup', onPointerUp)
+      window.removeEventListener('pointercancel', onPointerUp)
+      window.removeEventListener('blur', reset)
+      base.remove()
+    }
   }
 
   return {
@@ -112,7 +138,7 @@ export function createInput(): InputController {
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)
       window.removeEventListener('blur', onBlur)
-      joystick?.remove()
+      disposeJoystick()
     },
   }
 }

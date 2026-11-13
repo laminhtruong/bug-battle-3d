@@ -508,14 +508,20 @@ input:focus {
 
 .joystick {
   position: fixed;
-  left: 24px;
-  bottom: 24px;
+  left: 0;
+  top: 0;
+  display: none;
   width: 128px;
   height: 128px;
+  margin: -64px 0 0 -64px;
   border: 2px solid rgba(255, 255, 255, 0.45);
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.14);
   touch-action: none;
+}
+
+.joystick.is-active {
+  display: block;
 }
 
 .joystick-knob {
