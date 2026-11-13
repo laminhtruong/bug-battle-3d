@@ -123,6 +123,8 @@ All notable changes to this project are documented here. The format follows
 - The in-game camera now uses the original rig: 10 units above the head, 3.5
   behind it, held at a fixed 75 degree pitch through a 60 degree lens. It used to
   sit at the lower menu-camera angle, which made the arena read much closer.
+- Power-ups keep the facing of their Unity prefab instead of a random one, so
+  every crate shows the same side.
 - The fire, lightning, poison and spike01 bodies show their side spikes and pods
   again. FBX2glTF wrote NaN skin weights for the vertices those source FBX files
   leave unweighted, so the GPU dropped them; they now bind to the root joint.

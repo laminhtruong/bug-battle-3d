@@ -222,7 +222,8 @@ export function spawnPowerup(world: World): Snake {
     bodyIds: [],
     x: point.x,
     z: point.z,
-    angle: rng.range(-Math.PI, Math.PI),
+    // The crate keeps its prefab facing; a random angle would turn it away.
+    angle: 0,
     speed: 0,
   })
   const head = snake.segments[0]
