@@ -165,11 +165,16 @@ function trackPrey(bot: Snake, prey: Snake): void {
 
 /** Melee bots bite from here instead of driving through the target. */
 const BOT_BITE_REACH = 2.2
+const BOT_ARRIVAL_BAND = 4
 
 /** Closes to attack range, then holds and aims instead of running through. */
 function holdAtRange(world: World, bot: Snake, x: number, z: number, reach: number): void {
-  if (Math.hypot(x - bot.x, z - bot.z) > reach) {
+  const distance = Math.hypot(x - bot.x, z - bot.z)
+  if (distance > reach) {
     steerAway(world, bot, x, z)
+    const speedScale = Math.min(1, (distance - reach) / BOT_ARRIVAL_BAND)
+    bot.steerX *= speedScale
+    bot.steerZ *= speedScale
   } else {
     faceOnly(bot, x, z)
   }

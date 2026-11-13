@@ -198,6 +198,31 @@ describe('world', () => {
     expect(bot.steerX).toBeGreaterThan(0.5)
   })
 
+  it('slows a chasing gun bot smoothly as it reaches attack range', () => {
+    const world = createWorld({
+      seed: 49,
+      arena: classicArena,
+      players: [
+        { id: 'human', name: 'You', control: 'human', slot: 0, headId: DEFAULT_HEAD_ID },
+      ],
+    })
+    const bot = getSnake(world, 'bot-2')
+    const human = getSnake(world, 'human')
+    world.snakes = world.snakes.filter((snake) => snake.id === bot.id || snake.id === human.id)
+    world.pickups = []
+    placeHead(bot, 0, 0)
+    placeHead(human, 0, 6.5)
+    bot.segments[0]!.partId = 'gun'
+    bot.ai.chaseUntil = world.time + 10
+    bot.ai.seenX = 0
+    bot.ai.seenZ = 6.5
+
+    updateAi(world, bot)
+
+    expect(Math.hypot(bot.steerX, bot.steerZ)).toBeGreaterThan(0.1)
+    expect(Math.hypot(bot.steerX, bot.steerZ)).toBeLessThan(0.2)
+  })
+
   it('makes the boss wander until a player is close, then chase', () => {
     const world = createWorld({ seed: 47, arena: classicArena })
     spawnBoss(world)
