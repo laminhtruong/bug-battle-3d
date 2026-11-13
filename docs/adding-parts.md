@@ -83,29 +83,31 @@ straight from the prefab `m_Center` and `m_Size`, so they are exact:
    Do not copy from the gameplay `Head.prefab` or `Body.prefab`.
 2. For every BoxCollider with `m_IsTrigger: 1`, copy `m_Center` and `m_Size`
    x/y/z into one `boxes` entry.
-3. A child named `Body` is only a hurtbox: leave `hitbox` off. A child named
+3. Copy the rotation of the GameObject the collider hangs on, in Unity Euler
+   degrees, into `rotation`. The Inspector shows these values; leave it out for
+   an identity rotation. Both the centre and the box axes turn around the part
+   pivot.
+4. A child named `Body` is only a hurtbox: leave `hitbox` off. A child named
    `Claw` also deals contact damage: add `hitbox: true`.
-4. Ignore `BulletFire`, `Skeleton`, MeshCollider and any non-trigger collider.
-5. Use the raw Unity numbers. The definition scales them by the prefab's 0.25
+5. Ignore `BulletFire`, `Skeleton`, MeshCollider and any non-trigger collider.
+6. Use the raw Unity numbers. The definition scales them by the prefab's 0.25
    art scale, so the boxes always line up with the model.
-6. The centre is relative to the part pivot. Local `+z` points forward, the same
+7. The centre is relative to the part pivot. Local `+z` points forward, the same
    direction the model faces.
-7. There is no rotation field, matching a plain Unity BoxCollider with an
-   identity rotation.
 
 ```ts
-// Spike body: the main body plus two claws.
+// Spike body: the main body plus a rotated claw.
 boxes: [
   { center: [0, 0, -0.05], size: [1.5, 0.9, 1.15] },
-  { center: [-1.4, 0.2, -0.05], size: [1.3, 0.25, 0.25], hitbox: true },
-  { center: [1.4, 0.2, -0.05], size: [1.3, 0.25, 0.25], hitbox: true },
+  { center: [4.1, 0.25, 1.38], size: [1.5, 0.25, 0.6], rotation: [0, 20, 0], hitbox: true },
 ],
 ```
 
-The simulation runs on the XZ plane, so collision uses the centre and size X/Z
-values. Y is kept so the box matches the Unity BoxCollider; the editor adds the
-prefab's 0.125 lift when it draws the box, so it sits at the same height as the
-art.
+The simulation runs on the XZ plane, so collision uses the rotated centre and
+the box yaw. X/Z tilt barely changes the footprint and is ignored there, but the
+editor still draws the box with the full rotation. Y is kept so the box matches
+the Unity BoxCollider; the editor adds the prefab's 0.125 lift when it draws the
+box, so it sits at the same height as the art.
 
 All boxes are hurtboxes, so a projectile or another claw can damage any of them.
 Only `hitbox` boxes cause contact damage, with the part's `contact.damage`.

@@ -28,11 +28,13 @@ All notable changes to this project are documented here. The format follows
   and sideways spikes hit where the art says they should. Every box is a
   hurtbox; only boxes copied from a `Claw` collider deal contact damage, so the
   gun, fire, lightning and poison heads no longer hurt by touching.
-- Collider boxes keep the full Unity BoxCollider centre and size (X/Y/Z) and
-  have no rotation. The simulation still tests the XZ plane only; Y is kept so
-  the editor can draw the box at the same height as the art. The values are copied
-  from each prefab's `m_Center` and `m_Size`, so the boxes match the art instead
-  of the guessed heights that sat too tall.
+- Collider boxes keep the full Unity BoxCollider centre and size (X/Y/Z) and the
+  rotation of the GameObject they hang on, so rotated claws hit where the art
+  points. The editor shows RX/RY/RZ next to the centre and size. The simulation
+  still tests the XZ plane only, using the rotated centre and the box yaw; Y is
+  kept so the editor can draw the box at the same height as the art. The values
+  are copied from each prefab's `m_Center`, `m_Size` and transform rotation, so
+  the boxes match the art instead of the guessed heights that sat too tall.
 - The content hash now covers part stats and colliders, not only part ids, so
   mismatched builds are rejected before a match starts.
 - The renderer blends between the last two simulation ticks, and guests blend
