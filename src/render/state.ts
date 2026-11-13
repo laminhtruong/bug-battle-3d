@@ -9,6 +9,8 @@ export interface RenderSegment {
   x: number
   z: number
   angle: number
+  /** Absolute time until which the part flashes from the last hit. */
+  hurtUntil: number
 }
 
 export interface RenderSnake {

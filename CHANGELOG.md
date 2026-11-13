@@ -31,6 +31,9 @@ All notable changes to this project are documented here. The format follows
   muzzle arrows, and clicking the part art switches back to the art arrows.
 - Cone attacks draw a 3D cone volume in the editor, so the effect origin,
   direction and reach are visible while authoring.
+- The local player's parts glow on the floor like the original prefab. A hurt
+  part flashes its emission white twice, and a destroyed part pops the original
+  12-spark effect instead of only leaving bones behind.
 
 ### Changed
 
@@ -57,6 +60,8 @@ All notable changes to this project are documented here. The format follows
   the boxes match the art instead of the guessed heights that sat too tall.
 - The content hash now covers part stats and colliders, not only part ids, so
   mismatched builds are rejected before a match starts.
+- Snapshots carry each segment's `hurtUntil`, so guests see the same hit flash
+  as the host. This bumps the wire protocol to version 5.
 - The renderer blends between the last two simulation ticks, and guests blend
   between two host snapshots, so movement is smooth on any display refresh rate
   instead of stepping at 30 Hz.

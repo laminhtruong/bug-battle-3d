@@ -62,6 +62,7 @@ describe('protocol', () => {
     const state = toRenderState(decoded)
     expect(state.snakes.length).toBe(world.snakes.length)
     expect(state.snakes[0]?.segments.length).toBe(world.snakes[0]?.segments.length)
+    expect(state.snakes[0]?.segments[0]?.hurtUntil).toBe(world.snakes[0]?.segments[0]?.hurtUntil)
     expect(state.pickups.length).toBe(world.pickups.length)
     expect(state.time).toBe(world.time)
   })

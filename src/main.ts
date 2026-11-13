@@ -278,7 +278,7 @@ startLoop({
         blend = snapshotAge * BALANCE.snapshotRate
       }
       const shown = smoother.sample(renderState, blend)
-      snakeViewer.sync(shown, dt)
+      snakeViewer.sync(shown, dt, playerId)
       propViewer.sync(shown)
       updateFocus(shown)
       view.updateCamera(focusX, focusZ, dt)

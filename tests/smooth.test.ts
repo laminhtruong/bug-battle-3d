@@ -16,8 +16,8 @@ function makeState(): RenderState {
         alive: true,
         score: 0,
         segments: [
-          { partId: 'claw01', slot: 'head', dead: false, x: 0, z: 0, angle: 0 },
-          { partId: 'normal', slot: 'body', dead: false, x: 0, z: -0.3, angle: 0 },
+          { partId: 'claw01', slot: 'head', dead: false, x: 0, z: 0, angle: 0, hurtUntil: 0 },
+          { partId: 'normal', slot: 'body', dead: false, x: 0, z: -0.3, angle: 0, hurtUntil: 0 },
         ],
       },
     ],
