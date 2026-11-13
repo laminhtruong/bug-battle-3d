@@ -21,6 +21,7 @@ import {
   Vector3 as QuarksVector3,
   Vector4 as QuarksVector4,
 } from 'three.quarks'
+import type { Slot } from '@/content/define'
 
 /**
  * Particle presets copied from the Unity project at
@@ -836,21 +837,19 @@ export function createParticles(scene: THREE.Scene) {
   }
 
   return {
-    flameHead(parent: THREE.Object3D): void {
-      // Head.prefab hides BulletFire under the pivot at (0, 0.1, 0); it fires
-      // straight out of the part's own +Z.
-      spawnFire(headFire(), parent, 0, 0.1 * 4, 0, 0)
-    },
-
-    flameBody(parent: THREE.Object3D): void {
-      // Body.prefab mounts two jets at (+-0.25, 0.19, -0.018), each turned 90
-      // degrees outward, so the body sprays sideways instead of forward. The
-      // jets are scaled to 0.75, which shrinks their particles, not their
-      // parent-local mounts.
-      const specs = bodyFire()
-      for (const side of [-1, 1]) {
-        spawnFire(specs, parent, side * 0.25 * 4, 0.19 * 4, -0.018 * 4, (side * Math.PI) / 2)
-      }
+    /**
+     * One fire prefab at a spawn point from the part's JSON: the point carries
+     * the mount position and the Y rotation the Unity transform had.
+     */
+    flame(
+      parent: THREE.Object3D,
+      slot: Slot,
+      x: number,
+      y: number,
+      z: number,
+      angle: number,
+    ): void {
+      spawnFire(slot === 'head' ? headFire() : bodyFire(), parent, x, y, z, angle)
     },
 
     shot(id: string, visual: string, x: number, y: number, z: number): void {

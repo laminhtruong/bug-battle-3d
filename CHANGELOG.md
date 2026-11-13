@@ -81,6 +81,10 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- Spawn points carry a Y rotation that can be dragged with the editor's green
+  ring or typed as RY, and the fire head and body now take their mounts from the
+  part JSON instead of hardcoded offsets, so the flames, the cone and the damage
+  all start at the same points.
 - Fire, lightning, poison and bullet visuals now come from the original Unity
   prefabs through `three.quarks`: head and body flames ride the part they
   belong to, lightning lands with the prefab's ring, glow, shards and flat

@@ -8,6 +8,14 @@
   "attack": {
     "kind": "cone",
     "cooldown": 1.5,
-    "cone": { "range": 12, "halfAngleDeg": 25, "duration": 0.3 }
+    "cone": {
+      "range": 12,
+      "halfAngleDeg": 25,
+      "duration": 0.3,
+      "spawnPoints": [
+        { "x": 1, "y": 0.76, "z": -0.072, "angle": 90 },
+        { "x": -1, "y": 0.76, "z": -0.072, "angle": -90 }
+      ]
+    }
   }
 }

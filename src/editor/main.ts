@@ -429,6 +429,19 @@ const preview = createPreview(canvas, {
     syncSpawnInputs(index)
     markDirty()
   },
+  onSpawnRotate(index, degrees) {
+    const attack = current?.draft.attack
+    if (!attack) {
+      return
+    }
+    const point = attackSpawns(attack)[index]
+    if (!point) {
+      return
+    }
+    point.angle = snap(degrees)
+    syncSpawnInputs(index)
+    markDirty()
+  },
   onScale(index, halfWidth, halfHeight, halfDepth) {
     const box = current?.draft.boxes[index]
     if (!box) {
@@ -521,7 +534,7 @@ function spawnRows(points: SpawnPoint[]): string {
         <label>X<input data-spawn-field="x" data-spawn-index="${index}" type="number" step="0.05" value="${fmt(point.x)}"></label>
         <label>Y<input data-spawn-field="y" data-spawn-index="${index}" type="number" step="0.05" value="${fmt(point.y)}"></label>
         <label>Z<input data-spawn-field="z" data-spawn-index="${index}" type="number" step="0.05" value="${fmt(point.z)}"></label>
-        <label>A<input data-spawn-field="angle" data-spawn-index="${index}" type="number" step="5" value="${fmt(point.angle)}" title="Firing direction in degrees, relative to the part"></label>
+        <label>RY<input data-spawn-field="angle" data-spawn-index="${index}" type="number" step="5" value="${fmt(point.angle)}" title="Rotation around Y in degrees, relative to the part"></label>
         <button type="button" class="icon danger" data-action="delete-spawn" data-index="${index}" ${points.length <= 1 ? 'disabled' : ''}>x</button>
       </div>`,
     )
@@ -533,7 +546,7 @@ function spawnSection(points: SpawnPoint[]): string {
       <h4>Spawn points</h4>
       <button type="button" data-action="add-spawn">+ point</button>
     </div>
-    <p class="hint">Select a point to show its arrows, then drag them or the point. A is the direction in degrees, relative to the part.</p>
+    <p class="hint">Select a point to show its arrows, then drag them, the point, or the green ring to turn it. RY is the rotation around Y in degrees, relative to the part.</p>
     <div class="spawns">${spawnRows(points)}</div>`
 }
 

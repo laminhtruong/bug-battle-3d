@@ -56,6 +56,8 @@ export interface PreviewHandlers {
   onOffset(x: number, z: number): void
   /** Raw prefab position for a muzzle. Y is visual only. */
   onSpawnMove(index: number, x: number, y: number, z: number): void
+  /** Y rotation of a muzzle in degrees, the effect and cone direction. */
+  onSpawnRotate(index: number, degrees: number): void
   onDragEnd(): void
 }
 
@@ -95,6 +97,8 @@ interface SpawnEntry {
   group: THREE.Group
   mesh: THREE.Mesh
   line: THREE.Line
+  /** Y rotation in degrees, shared with the cone drawn at this point. */
+  angle: number
 }
 
 interface ConeEntry {
@@ -126,6 +130,12 @@ type Drag =
       origin: THREE.Vector3
       axis: THREE.Vector3
       startT: number
+    }
+  | {
+      kind: 'spawn-yaw'
+      index: number
+      startPointer: number
+      startAngle: number
     }
   | {
       kind: 'scale'
@@ -336,6 +346,16 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
       AXIS_Z_COLOR,
       'spawn-z',
       new THREE.Vector3(0, 0, 0.62),
+      0.9,
+      spawnGizmoGroup,
+      spawnGizmoHandles,
+    )
+    // Ring in the floor plane, like Unity's green Y rotation handle.
+    addGizmoHandle(
+      new THREE.TorusGeometry(0.55, 0.035, 8, 48).rotateX(Math.PI / 2),
+      AXIS_Y_COLOR,
+      'spawn-yaw',
+      new THREE.Vector3(0, 0, 0),
       0.9,
       spawnGizmoGroup,
       spawnGizmoHandles,
@@ -621,18 +641,20 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
       )
       mesh.renderOrder = 18
       mesh.userData.spawnIndex = index
-      const radians = (spawn.angle * Math.PI) / 180
-      const direction = new THREE.Vector3(Math.sin(radians), 0, Math.cos(radians)).multiplyScalar(
-        0.32,
-      )
+      // The group carries the Y rotation, so the direction line and any cone
+      // stay in sync while the ring is dragged.
+      group.rotation.y = (spawn.angle * Math.PI) / 180
       const line = new THREE.Line(
-        new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), direction]),
+        new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(),
+          new THREE.Vector3(0, 0, 0.32),
+        ]),
         new THREE.LineBasicMaterial({ color: SPAWN_COLOR, depthTest: false }),
       )
       line.renderOrder = 17
       group.add(mesh, line)
       spawnGroup.add(group)
-      return { group, mesh, line }
+      return { group, mesh, line, angle: spawn.angle }
     })
     selectedSpawn = spawns.length === 0 ? -1 : Math.min(state.selectedSpawn, spawns.length - 1)
     paintSpawns()
@@ -742,6 +764,26 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
       const handle = spawnGizmoHit.object.userData.handle as string
       const entry = spawns[selectedSpawn]
       if (!entry) {
+        return
+      }
+      if (handle === 'spawn-yaw') {
+        setDragPlane(entry.group.position.y)
+        if (!raycaster.ray.intersectPlane(dragPlane, dragPoint)) {
+          return
+        }
+        dragChanged = false
+        drag = {
+          kind: 'spawn-yaw',
+          index: selectedSpawn,
+          startPointer: Math.atan2(
+            dragPoint.x - entry.group.position.x,
+            dragPoint.z - entry.group.position.z,
+          ),
+          startAngle: entry.angle,
+        }
+        controls.enabled = false
+        canvas.setPointerCapture(event.pointerId)
+        event.stopImmediatePropagation()
         return
       }
       const axis = handle === 'spawn-x' ? AXIS_X : handle === 'spawn-y' ? AXIS_Y : AXIS_Z
@@ -1001,6 +1043,33 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
       const t = axisParameter(raycaster.ray, drag.origin, drag.axis)
       const position = drag.origin.clone().addScaledVector(drag.axis, t - drag.startT)
       placeSpawn(drag.index, position.x, position.y, position.z)
+      return
+    }
+    if (drag.kind === 'spawn-yaw') {
+      const entry = spawns[drag.index]
+      if (!entry) {
+        return
+      }
+      setDragPlane(entry.group.position.y)
+      if (!raycaster.ray.intersectPlane(dragPlane, dragPoint)) {
+        return
+      }
+      const pointerAngle = Math.atan2(
+        dragPoint.x - entry.group.position.x,
+        dragPoint.z - entry.group.position.z,
+      )
+      // Shortest turn, so crossing the +/-180 seam does not spin the point.
+      let delta = pointerAngle - drag.startPointer
+      delta = Math.atan2(Math.sin(delta), Math.cos(delta))
+      const degrees = drag.startAngle + (delta * 180) / Math.PI
+      entry.angle = degrees
+      entry.group.rotation.y = (degrees * Math.PI) / 180
+      const cone = cones[drag.index]
+      if (cone) {
+        cone.group.rotation.y = entry.group.rotation.y
+      }
+      markDragStart()
+      handlers.onSpawnRotate(drag.index, degrees)
       return
     }
     const entry = boxes[drag.index]

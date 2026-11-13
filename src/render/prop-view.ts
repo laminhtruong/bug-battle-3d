@@ -125,11 +125,16 @@ export function createPropViewer(scene: THREE.Scene) {
         if (previous === undefined || segment.cooldown <= previous) {
           continue
         }
-        // Unity hangs one fire prefab on the part, not one per damage origin.
-        if (segment.slot === 'head') {
-          particles.flameHead(anchor)
-        } else {
-          particles.flameBody(anchor)
+        // Unity hangs one fire prefab on each spawn point of the part.
+        for (const spawn of attack.cone.spawnPoints) {
+          particles.flame(
+            anchor,
+            segment.slot,
+            spawn.x,
+            spawn.y,
+            spawn.z,
+            (spawn.angle * Math.PI) / 180,
+          )
         }
       }
     }

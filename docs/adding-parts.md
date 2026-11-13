@@ -121,13 +121,13 @@ fills sensible defaults, so every value stays editable afterwards.
 
 A projectile and a cone can have any number of spawn points. They are drawn in
 the 3D view as orange handles. Click a point to select it: its orange X/Y/Z
-arrows appear, and dragging a point or an arrow moves it. The X/Y/Z/A fields do
-the same. A is the direction in degrees relative to the part facing: `0` is
-forward, `90` is right and `-90` is left. Add or remove points with **+ point**
-and the row's delete button. Clicking the part art selects the part itself and
-shows its art-offset arrows instead. For a cone the spawn point is where the
-effect starts, and the editor draws the 3D cone volume so its direction and reach
-are easy to see.
+arrows and a green Y rotation ring appear, and dragging a point, an arrow or the
+ring moves or turns it. The X/Y/Z/RY fields do the same. RY is the rotation
+around Y in degrees relative to the part facing: `0` is forward, `90` is right
+and `-90` is left. Add or remove points with **+ point** and the row's delete
+button. Clicking the part art selects the part itself and shows its art-offset
+arrows instead. For a cone the spawn point is where the effect starts, and the
+editor draws the 3D cone volume so its direction and reach are easy to see.
 
 ```json
 "attack": {
