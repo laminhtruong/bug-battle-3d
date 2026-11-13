@@ -160,6 +160,14 @@ body {
   backdrop-filter: blur(14px);
 }
 
+.menu-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  width: min(400px, 100%);
+  margin: auto;
+}
+
 .screen h2 {
   margin: 0;
 }
@@ -170,7 +178,7 @@ body {
 }
 
 .brand-logo img {
-  width: min(270px, 100%);
+  width: min(300px, 100%);
   height: auto;
 }
 
