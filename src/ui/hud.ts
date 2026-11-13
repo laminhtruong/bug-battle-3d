@@ -27,6 +27,23 @@ function escapeHtml(value: string): string {
   return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
 }
 
+async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text)
+    return true
+  } catch {
+    // shortcut: execCommand covers plain-http LAN play; drop when every host is HTTPS.
+    const area = document.createElement('textarea')
+    area.value = text
+    area.style.cssText = 'position:fixed;opacity:0'
+    document.body.append(area)
+    area.select()
+    const copied = document.execCommand('copy')
+    area.remove()
+    return copied
+  }
+}
+
 export function createHud(handlers: HudHandlers): Hud {
   const root = document.createElement('div')
   root.className = 'hud'
@@ -39,33 +56,53 @@ export function createHud(handlers: HudHandlers): Hud {
       <ol class="hud-board"></ol>
     </div>
     <section class="screen" data-screen="menu">
-      <h1>${EN.title}</h1>
-      <p class="tagline">${EN.tagline}</p>
-      <label class="field">
-        <span>${EN.name}</span>
-        <input class="name-input" maxlength="16" value="${EN.you}" />
-      </label>
-      <button class="button" data-action="local" type="button">${EN.play}</button>
-      <div class="menu-row">
-        <button class="button secondary" data-action="create" type="button">${EN.createRoom}</button>
-        <input class="code-input" maxlength="6" placeholder="${EN.roomCode}" />
-        <button class="button secondary" data-action="join" type="button">${EN.joinRoom}</button>
+      <div class="panel">
+        <header class="brand">
+          <h1>${EN.title}</h1>
+          <p class="tagline">${EN.tagline}</p>
+        </header>
+        <label class="field">
+          <span>${EN.name}</span>
+          <input class="name-input" maxlength="16" value="${EN.you}" />
+        </label>
+        <button class="button" data-action="local" type="button">${EN.play}</button>
+        <p class="divider"><span>${EN.orPlayOnline}</span></p>
+        <div class="menu-row">
+          <button class="button secondary" data-action="create" type="button">${EN.createRoom}</button>
+        </div>
+        <div class="menu-row">
+          <input class="code-input" maxlength="6" placeholder="${EN.roomCode}" />
+          <button class="button secondary" data-action="join" type="button">${EN.joinRoom}</button>
+        </div>
+        <p class="hint">${EN.hint}</p>
       </div>
-      <p class="hint">${EN.hint}</p>
     </section>
     <section class="screen" data-screen="lobby" hidden>
-      <p class="lobby-label">${EN.roomCode}</p>
-      <p class="lobby-code">-----</p>
-      <ul class="lobby-players"></ul>
-      <p class="lobby-status">${EN.waiting}</p>
-      <button class="button" data-action="start" type="button">${EN.startMatch}</button>
-      <button class="button secondary" data-action="cancel" type="button">${EN.cancel}</button>
+      <div class="panel">
+        <p class="lobby-label">${EN.roomCode}</p>
+        <div class="lobby-code-row">
+          <p class="lobby-code">-----</p>
+          <button class="copy-button" data-action="copy" type="button" aria-label="${EN.copyCode}">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="9" y="9" width="12" height="12" rx="2" />
+              <path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" />
+            </svg>
+            <span class="copy-label">${EN.copyCode}</span>
+          </button>
+        </div>
+        <ul class="lobby-players"></ul>
+        <p class="lobby-status">${EN.waiting}</p>
+        <button class="button" data-action="start" type="button">${EN.startMatch}</button>
+        <button class="button secondary" data-action="cancel" type="button">${EN.cancel}</button>
+      </div>
     </section>
     <section class="screen" data-screen="results" hidden>
-      <h2>${EN.roundOver}</h2>
-      <ol class="results"></ol>
-      <button class="button" data-action="again" type="button">${EN.playAgain}</button>
-      <button class="button secondary" data-action="menu" type="button">${EN.backToMenu}</button>
+      <div class="panel">
+        <h2>${EN.roundOver}</h2>
+        <ol class="results"></ol>
+        <button class="button" data-action="again" type="button">${EN.playAgain}</button>
+        <button class="button secondary" data-action="menu" type="button">${EN.backToMenu}</button>
+      </div>
     </section>
     <div class="toast" hidden></div>
   `
@@ -81,6 +118,8 @@ export function createHud(handlers: HudHandlers): Hud {
   const nameInput = root.querySelector<HTMLInputElement>('.name-input')
   const codeInput = root.querySelector<HTMLInputElement>('.code-input')
   const lobbyCode = root.querySelector<HTMLElement>('.lobby-code')
+  const copyButton = root.querySelector<HTMLButtonElement>('[data-action="copy"]')
+  const copyLabel = root.querySelector<HTMLElement>('.copy-label')
   const lobbyPlayers = root.querySelector<HTMLUListElement>('.lobby-players')
   const lobbyStatus = root.querySelector<HTMLElement>('.lobby-status')
   const startButton = root.querySelector<HTMLElement>('[data-action="start"]')
@@ -98,6 +137,8 @@ export function createHud(handlers: HudHandlers): Hud {
     !nameInput ||
     !codeInput ||
     !lobbyCode ||
+    !copyButton ||
+    !copyLabel ||
     !lobbyPlayers ||
     !lobbyStatus ||
     !startButton ||
@@ -109,6 +150,7 @@ export function createHud(handlers: HudHandlers): Hud {
 
   let signature = ''
   let toastTimer: number | undefined
+  let copyTimer: number | undefined
 
   const getPlayerName = (): string => nameInput.value.trim().slice(0, 16) || EN.you
 
@@ -125,6 +167,20 @@ export function createHud(handlers: HudHandlers): Hud {
   })
   root.querySelector('[data-action="join"]')?.addEventListener('click', () => {
     click(() => handlers.onJoin(codeInput.value.trim(), getPlayerName()))
+  })
+  copyButton.addEventListener('click', () => {
+    const code = lobbyCode.textContent ?? ''
+    click(() => {
+      void copyToClipboard(code).then((copied) => {
+        copyLabel.textContent = copied ? EN.copied : EN.copyFailed
+        copyButton.classList.toggle('is-copied', copied)
+        window.clearTimeout(copyTimer)
+        copyTimer = window.setTimeout(() => {
+          copyLabel.textContent = EN.copyCode
+          copyButton.classList.remove('is-copied')
+        }, 1600)
+      })
+    })
   })
   startButton.addEventListener('click', () => click(handlers.onStart))
   root
