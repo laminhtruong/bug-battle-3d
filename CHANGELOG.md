@@ -43,8 +43,8 @@ All notable changes to this project are documented here. The format follows
   comes close. Only a head that shoots farms crates: melee bots leave the solid
   boxes alone. A crate the human is standing next to is skipped, and rival bots
   are never chased. Rival bots still take contact and projectile hits.
-- A snake whose head is destroyed only has bones at the front, so it can no
-  longer bite by contact. It keeps fighting while a ranged body still shoots.
+- A snake whose head is destroyed only has bones at the front, but it keeps
+  fighting while a surviving body can still bite or shoot.
 - Power-ups are solid: a snake head stops at the crate and slides around it
   instead of passing through.
 - Host-authoritative online play with five character room codes over PeerJS.

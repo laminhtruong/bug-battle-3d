@@ -13,21 +13,20 @@ interface AttackContext {
 }
 
 /**
- * A snake keeps playing as long as one of its parts can attack. Losing the
- * head is not fatal when a ranged body can still shoot, but a headless snake
- * cannot bite any more: only bones are left at the front.
+ * A snake keeps playing as long as one of its parts can attack. A ranged body
+ * still shoots without a head, and a spiked body still bites, so losing the head
+ * is only fatal when no surviving part can deal damage.
  */
 export function canAttack(snake: Snake): boolean {
-  const headAlive = snake.segments[0]?.dead === false
   return snake.segments.some((segment) => {
     if (segment.dead) {
       return false
     }
     const part = requirePart(segment.slot, segment.partId)
-    if (part.attack) {
-      return true
-    }
-    return headAlive && part.contact.damage > 0 && part.collider.boxes.some((box) => box.hitbox)
+    return (
+      part.attack !== undefined ||
+      (part.contact.damage > 0 && part.collider.boxes.some((box) => box.hitbox))
+    )
   })
 }
 
@@ -394,8 +393,6 @@ interface ContactEntry {
   segment: Segment
   part: PartDef
   reach: number
-  /** A snake whose head is bones can only shoot, never bite. */
-  canBite: boolean
 }
 
 const MAX_REACH = Math.max(...PARTS.map((part) => part.collider.reach))
@@ -414,14 +411,13 @@ export function updateContact(world: World): void {
     if (!snake.alive) {
       continue
     }
-    const canBite = snake.segments[0]?.dead === false
     for (let index = 0; index < snake.segments.length; index += 1) {
       const segment = snake.segments[index]
       if (!segment || segment.dead) {
         continue
       }
       const part = requirePart(segment.slot, segment.partId)
-      entries.push({ snake, index, segment, part, reach: part.collider.reach, canBite })
+      entries.push({ snake, index, segment, part, reach: part.collider.reach })
     }
   }
 
@@ -460,11 +456,9 @@ export function updateContact(world: World): void {
             continue
           }
           const entryHits =
-            entry.canBite &&
             entry.part.contact.damage > 0 &&
             collidersOverlap(entry.part, entry.segment, other.part, other.segment, true, false)
           const otherHits =
-            other.canBite &&
             other.part.contact.damage > 0 &&
             collidersOverlap(other.part, other.segment, entry.part, entry.segment, true, false)
           if (entryHits) {

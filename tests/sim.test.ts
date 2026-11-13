@@ -974,17 +974,19 @@ describe('arena targets', () => {
 })
 
 describe('survival', () => {
-  it('keeps shooting from a body after the head is lost', () => {
-    const world = createWorld({ seed: 23, arena: classicArena })
-    const player = getSnake(world, 'bot-1')
-    // Give the snake a body that can fight back from range.
-    player.segments[1]!.partId = 'gun'
+  it('keeps fighting from a body after the head is lost', () => {
+    for (const bodyId of ['gun', 'spike01']) {
+      const world = createWorld({ seed: 23, arena: classicArena })
+      const player = getSnake(world, 'bot-1')
+      // Give the snake a body that can fight on without its head.
+      player.segments[1]!.partId = bodyId
 
-    damageSegment(world, player, 0, 99, undefined, world.time)
+      damageSegment(world, player, 0, 99, undefined, world.time)
 
-    expect(player.alive).toBe(true)
-    expect(player.segments[0]?.dead).toBe(true)
-    expect(player.segments[1]?.dead).toBe(false)
+      expect(player.alive).toBe(true)
+      expect(player.segments[0]?.dead).toBe(true)
+      expect(player.segments[1]?.dead).toBe(false)
+    }
   })
 
   it('dies immediately when its head is lost and no body can attack', () => {
@@ -997,7 +999,7 @@ describe('survival', () => {
     expect(player.segments).toHaveLength(0)
   })
 
-  it('does not let a bone head bite a power-up', () => {
+  it('lets a spike body bite a power-up after the head is lost', () => {
     const world = createWorld({ seed: 26, arena: classicArena })
     const snake = getSnake(world, 'bot-1')
     const crate = spawnPowerup(world)
@@ -1023,12 +1025,6 @@ describe('survival', () => {
     crateHead.angle = 0
     const hp = crateHead.hp
 
-    updateContact(world)
-
-    expect(crateHead.hp).toBe(hp)
-
-    // The same spike body still bites while the head is alive.
-    head.dead = false
     updateContact(world)
 
     expect(crateHead.hp).toBe(hp - 1)
