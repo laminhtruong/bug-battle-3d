@@ -50,7 +50,7 @@ export const BALANCE = {
   /** Boss loot: its head plus nine of its ten bodies. */
   bossLootCount: 10,
   bossSpawnMinDistance: 48,
-  /** Wanderers refill at most one at a time, this long after one dies. */
+  /** Wanderers refill one at a time, this long apart. */
   enemyRespawnSec: 2,
   enemySpawnMinDistance: 32,
   appleRespawnSec: 0.8,

@@ -3,8 +3,8 @@ import type { RenderState } from '@/render/state'
 import { isPlayerControl } from '@/sim/types'
 
 /**
- * Name labels that follow the players.
- * Enemies stay unnamed so the arena does not get noisy.
+ * Name labels that follow the players and the boss.
+ * Wandering bugs stay unnamed so the arena does not get noisy.
  */
 export interface NameTags {
   sync(state: RenderState, camera: THREE.Camera, playerId: string): void
@@ -25,7 +25,7 @@ export function createNameTags(): NameTags {
       camera.updateMatrixWorld()
 
       for (const snake of state.snakes) {
-        if (!isPlayerControl(snake.control) || state.ended) {
+        if (state.ended || (!isPlayerControl(snake.control) && snake.control !== 'boss')) {
           continue
         }
         const head = snake.segments[0]

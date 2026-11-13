@@ -56,19 +56,19 @@ describe('world', () => {
     if (!enemy) {
       throw new Error('expected a wandering bug')
     }
+    // Keep only the bug, so the running fight cannot change the count.
+    world.snakes = [enemy]
+    const before = new Set(world.snakes.map((snake) => snake.id))
     killSnake(world, enemy)
     expect(enemy.alive).toBe(false)
-    expect(
-      world.snakes.filter((snake) => snake.control === 'enemy' && snake.alive),
-    ).toHaveLength(classicArena.enemyCap - 1)
 
     for (let index = 0; index <= BALANCE.enemyRespawnSec * BALANCE.tickRate + 5; index += 1) {
       tickWorld(world, STEP)
     }
 
     expect(
-      world.snakes.filter((snake) => snake.control === 'enemy' && snake.alive),
-    ).toHaveLength(classicArena.enemyCap)
+      world.snakes.some((snake) => snake.control === 'enemy' && !before.has(snake.id)),
+    ).toBe(true)
   })
 
   it('keeps a wandering bug on its route past a nearby player', () => {

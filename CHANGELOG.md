@@ -17,6 +17,8 @@ All notable changes to this project are documented here. The format follows
 - Bots roll a random head and three random bodies whose part score stays close
   to the best part the human owns. They forage apples and power-ups, chase a
   nearby player for a short run, then rest before chasing again.
+- Bots get random English names instead of "Bot 2", and both bots and the boss
+  show a name tag over their head.
 - The apple and power-up targets now use the original Unity models (`item_full`
   and `box`) with the shared bug palette, instead of placeholder primitives.
 - A destroyed power-up drops one item: a head 30% of the time, otherwise a body.

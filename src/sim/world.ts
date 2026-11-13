@@ -22,6 +22,30 @@ export interface WorldOptions {
   players?: readonly PlayerSetup[]
 }
 
+/** Bots get real-sounding names, so the arena does not show "Bot 2". */
+const BOT_NAMES = [
+  'Amber',
+  'Bolt',
+  'Bramble',
+  'Coco',
+  'Dash',
+  'Ember',
+  'Fizz',
+  'Gizmo',
+  'Hazel',
+  'Juno',
+  'Milo',
+  'Nova',
+  'Pebble',
+  'Pixel',
+  'Rocco',
+  'Rusty',
+  'Skipper',
+  'Tango',
+  'Waffles',
+  'Ziggy',
+]
+
 export function createWorld({ seed, arena, players = [] }: WorldOptions): World {
   const world: World = {
     arena,
@@ -43,11 +67,13 @@ export function createWorld({ seed, arena, players = [] }: WorldOptions): World 
   }
 
   const setups: PlayerSetup[] = [...players]
+  const botNames = [...BOT_NAMES]
   while (setups.length < BALANCE.maxPlayers) {
     const slot = setups.length
+    const name = botNames.splice(world.rng.int(0, botNames.length), 1)[0] ?? `Bug ${slot + 1}`
     setups.push({
       id: `bot-${slot + 1}`,
-      name: `Bot ${slot + 1}`,
+      name,
       control: 'bot',
       slot,
       headId: DEFAULT_HEAD_ID,

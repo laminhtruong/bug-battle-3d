@@ -120,12 +120,6 @@ export function killSnake(world: World, snake: Snake): void {
     world.bossSpawnAt = world.time + world.arena.bossEverySec
   } else {
     spawnDrops(world, snake.x, snake.z, remaining)
-    if (snake.control === 'enemy') {
-      world.enemySpawnAt = Math.max(
-        world.enemySpawnAt,
-        world.time + BALANCE.enemyRespawnSec,
-      )
-    }
   }
 }
 
