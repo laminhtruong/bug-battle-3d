@@ -8,7 +8,7 @@ import type { RenderPickup, RenderState } from './state'
 import { getPartMaterial } from './snake-view'
 
 const SHOT_STYLES: Record<string, { color: string; radius: number }> = {
-  // Bullet prefabs: a built-in sphere with the part's flat material colour.
+  // Bullet shots: a built-in sphere with the part's flat material colour.
   bullet: { color: '#4ddef2', radius: 0.4 },
   lightning: { color: '#fd5cfd', radius: 0.467 },
   poison: { color: '#00e501', radius: 0.467 },
@@ -125,7 +125,7 @@ export function createPropViewer(scene: THREE.Scene) {
         if (previous === undefined || segment.cooldown <= previous) {
           continue
         }
-        // Unity hangs one fire prefab on each spawn point of the part.
+        // One fire system hangs on each spawn point of the part.
         for (const spawn of attack.cone.spawnPoints) {
           particles.flame(
             anchor,

@@ -3,6 +3,7 @@ dist
 coverage
 .vite
 *.local
+*.local.md
 .DS_Store
 Thumbs.db
 *.tsbuildinfo

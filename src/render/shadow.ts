@@ -1,8 +1,8 @@
 import * as THREE from 'three'
 
 /**
- * A soft blob shadow under each segment. The original game used real shadow
- * maps; a cheap radial sprite reads the same at this camera distance.
+ * A soft blob shadow under each segment. A cheap radial sprite reads the same
+ * as real shadow maps at this camera distance.
  */
 let shadowTexture: THREE.Texture | undefined
 

@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 
-/** Draws the original's particle sprites instead of shipping its paid FX pack. */
+/** Draws flat 2D particle sprites for the effects. */
 function sprite(draw: (context: CanvasRenderingContext2D) => void): THREE.CanvasTexture {
   const canvas = document.createElement('canvas')
   canvas.width = 64
@@ -38,7 +38,7 @@ interface Burst {
   particles: BurstParticle[]
 }
 
-/** Explosion of the original's BalloonPopExplosion: 12 stretched sparks. */
+/** Explosion effect: 12 stretched sparks. */
 const SPARKS = 12
 const SPARK_LIFE_MIN = 0.3
 const SPARK_LIFE_MAX = 0.5
@@ -117,7 +117,7 @@ export function createEffects(scene: THREE.Scene) {
             (burst.positions[position + 1] ?? 0) + particle.velocity.y * dt
           burst.positions[position + 2] =
             (burst.positions[position + 2] ?? 0) + particle.velocity.z * dt
-          // Unity holds full alpha until 32% of the lifetime, then fades out.
+          // Full alpha until 32% of the lifetime, then fade out.
           burst.colors[spark * 4 + 3] =
             particle.age < particle.life * FLASH_END
               ? 1

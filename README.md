@@ -1,6 +1,6 @@
 # Bug Battle 3D
 
-A browser remake of a small Unity snake arena game, rebuilt with three.js and TypeScript.
+A browser snake arena game built with three.js and TypeScript.
 
 Grow your bug by eating apples and breaking power-ups, fight wandering bugs, and
 take down the boss that arrives every 30 seconds. One 90 second round, up to four
@@ -28,8 +28,8 @@ can be deployed to GitHub Pages, Netlify or any static host.
 | ------ | ------------------ | ------------------------ |
 | Move   | WASD or arrow keys | Drag the on-screen stick |
 
-The snake moves while the stick is pushed and stops when it is released, like
-the original game. A light push moves slower.
+The snake moves while the stick is pushed and stops when it is released. A
+light push moves slower.
 
 ## Online play
 
@@ -85,7 +85,7 @@ Rules that keep the project maintainable:
 Run `npm run editor` and open the page it launches. It is a dev-only web editor
 for heads and bodies: add, delete, or edit a part, change its stats and model,
 author attacks from presets, and align the art on the pivot with the X/Z arrows
-or the X/Z fields. Y is locked to the prefab lift. Attack spawn points appear as
+or the X/Z fields. Y is locked to the part lift. Attack spawn points appear as
 orange handles. Click a point to show its orange X/Y/Z arrows and green Y ring:
 drag a point, an arrow or the ring to place and turn each muzzle, or edit
 X/Y/Z/RY in the panel. Clicking the art shows the part's own arrows instead. For
@@ -93,25 +93,23 @@ cone attacks the editor also draws the 3D cone volume, so its origin, direction
 and reach are easy to picture. Collider boxes stay hidden until you tick
 **Edit** in the Colliders section,
 where you can set their centre, size and rotation. The axis widget snaps the
-camera like Unity, and undo/redo is available with `Ctrl+Z` / `Ctrl+Shift+Z`. It
-reads and writes the same `src/content` JSON files the game loads, so
-`npm run check` still validates everything afterwards.
+camera to the nearest axis, and undo/redo is available with `Ctrl+Z` /
+`Ctrl+Shift+Z`. It reads and writes the same `src/content` JSON files the game
+loads, so `npm run check` still validates everything afterwards.
 
 ## Adding content
 
 A head or a body is a single JSON file under `src/content/heads` or
 `src/content/bodies`. The registry discovers it automatically and validates it
-with zod. Its `boxes` are the trigger BoxColliders copied from the Unity prefab,
-so collision keeps the original claw and body shapes. See
-[docs/adding-parts.md](docs/adding-parts.md).
+with zod. Its `boxes` are trigger boxes that define its hit shape, so collision
+follows the shape of the art. See [docs/adding-parts.md](docs/adding-parts.md).
 
 ## Assets
 
-The original Unity art belongs to the project author and ships with the game as
-converted GLB models, PNG textures and MP3 sound effects. The renderer falls
-back to placeholder primitives while a model loads. File naming rules, the
-source rename map and the conversion steps are documented in
-[ASSETS.md](ASSETS.md).
+The art belongs to the project author and ships with the game as GLB models, PNG
+textures and MP3 sound effects. The renderer falls back to placeholder
+primitives while a model loads. File naming rules, model requirements and
+third-party notices are documented in [ASSETS.md](ASSETS.md).
 
 ## Status
 

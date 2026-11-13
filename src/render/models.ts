@@ -6,14 +6,13 @@ import { PART_LIFT } from '@/content/define'
 import type { Slot } from '@/content/define'
 
 /**
- * Source models are authored at the size they appear in the arena. The original
- * Unity prefabs scaled them down by four; this port keeps that authored size,
- * and gameplay distances scale with it instead.
+ * Parts are authored at the size they appear in the arena, and gameplay
+ * distances scale with that size.
  */
 
 /**
  * Parts share one 32x32 palette texture: their UVs point at flat colour swatches,
- * so a single material reproduces the original look without per-part textures.
+ * so a single material reproduces the flat look without per-part textures.
  */
 const atlas = new THREE.TextureLoader().load('/assets/textures/parts/bug-atlas.png')
 atlas.colorSpace = THREE.SRGBColorSpace
@@ -30,10 +29,10 @@ const boneRequests = new Map<Slot, Promise<void>>()
 
 export type PropId = 'apple' | 'powerup'
 
-/** Scales and rotations copied from the Unity prop prefabs. */
+/** Fixed prop scales and rotations. */
 const PROPS: Record<PropId, { scale: number; rotationX?: number; rotationY?: number }> = {
   apple: { scale: 0.75, rotationX: Math.PI / 2 },
-  // The prefab is 0.45; doubled so the crate still reads at this camera distance.
+  // 0.45 doubled so the crate still reads at this camera distance.
   powerup: { scale: 0.9, rotationY: Math.PI },
 }
 
@@ -46,10 +45,10 @@ function modelId(slot: Slot, id: string): string {
 }
 
 /**
- * Places a part the way the original prefabs do: the pivot authored in the
- * model file stays the attachment point. Centring on the bounding box would
- * drag a head with long claws or antennae off that pivot, so the chain would
- * join it at the wrong spot, and every head would sit differently.
+ * Places a part by its authored pivot: the pivot in the model file stays the
+ * attachment point. Centring on the bounding box would drag a head with long
+ * claws or antennae off that pivot, so the chain would join it at the wrong
+ * spot, and every head would sit differently.
  */
 function preparePart(
   root: THREE.Object3D,
@@ -60,9 +59,8 @@ function preparePart(
       node.material = partMaterial
     }
   })
-  // The FBX export keeps the arbitrary object offset of the source scene in
-  // the nodes under its RootNode; the original prefabs use the mesh alone, so
-  // drop those offsets but keep the unit scale.
+  // The export keeps an arbitrary object offset in the nodes under its root.
+  // Drop those offsets but keep the unit scale.
   for (const file of root.children) {
     for (const part of file.children.length > 0 ? file.children : [file]) {
       part.position.set(0, 0, 0)
@@ -84,8 +82,8 @@ function normalize(root: THREE.Object3D): THREE.Group {
       node.material = partMaterial
     }
   })
-  // Source scenes scatter the parts far from the origin; bring the geometry
-  // back to (0, ground, 0) so the simulation can own every position.
+  // The exported scene scatters the parts far from the origin; bring the
+  // geometry back to (0, ground, 0) so the simulation can own every position.
   const box = new THREE.Box3().setFromObject(root)
   const center = box.getCenter(new THREE.Vector3())
   root.position.set(-center.x, -box.min.y, -center.z)
@@ -96,8 +94,8 @@ function normalize(root: THREE.Object3D): THREE.Group {
 }
 
 /**
- * Map props keep the scale and rotation of their Unity prefabs. The geometry is
- * dropped onto y = 0, because the simulation only owns the XZ position.
+ * Map props keep a fixed scale and rotation. The geometry is dropped onto
+ * y = 0, because the simulation only owns the XZ position.
  */
 function prepareProp(root: THREE.Object3D, prop: PropId): THREE.Group {
   root.traverse((node) => {
@@ -131,9 +129,9 @@ function load(slot: Slot, id: string): Promise<void> {
       templates.set(key, preparePart(gltf.scene, part?.offset))
       const clip = gltf.animations[0]
       if (clip) {
-        // The source action opens with a lead-in before the walk cycle repeats,
-        // so loop only the repeating part (24 fps, frames 20 to 60). The start
-        // is half a frame early because glTF key times are float32.
+        // The walk action opens with a lead-in before the cycle repeats, so
+        // loop only the repeating part (24 fps, frames 20 to 60). The start is
+        // half a frame early because glTF key times are float32.
         clips.set(key, THREE.AnimationUtils.subclip(clip, clip.name, 19.5, 61, 24))
       }
     })
@@ -145,8 +143,8 @@ function load(slot: Slot, id: string): Promise<void> {
 }
 
 /**
- * The bones the original leaves behind when a part explodes: a skull for the
- * head and a small bone for the body.
+ * The bones left when a part explodes: a skull for the head and a small bone
+ * for the body.
  */
 function loadBones(slot: Slot): Promise<void> {
   const running = boneRequests.get(slot)
@@ -170,7 +168,7 @@ export function getPartModel(slot: Slot, id: string): THREE.Group | undefined {
   return templates.get(modelId(slot, id))
 }
 
-/** The walk cycle some bodies ship with, if the source file has one. */
+/** The walk cycle some bodies ship with, if the model has one. */
 export function getPartClip(slot: Slot, id: string): THREE.AnimationClip | undefined {
   return clips.get(modelId(slot, id))
 }

@@ -15,7 +15,7 @@ export interface Segment {
   slot: Slot
   hp: number
   maxHp: number
-  /** A destroyed part keeps its place in the chain, like the bones in the original. */
+  /** A destroyed part keeps its place in the chain, like a bone. */
   dead: boolean
   x: number
   z: number

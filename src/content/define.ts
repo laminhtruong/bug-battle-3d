@@ -13,11 +13,11 @@ export type Slot = 'head' | 'body'
 export const idPattern = /^[a-z0-9]+(-[a-z0-9]+)*$/
 
 /**
- * Parts render at the size they are authored at, so raw prefab numbers
+ * Parts render at the size they are authored at, so raw art numbers
  * (collider boxes, spawn points, offsets) are already arena units.
  */
 
-/** The Unity prefabs lift the art above the pivot by this many arena units. */
+/** The art sits this far above the pivot, in arena units. */
 export const PART_LIFT = 0.5
 
 export type EulerDegrees = [number, number, number]
@@ -35,7 +35,7 @@ function multiplyQuaternions(
   ]
 }
 
-/** Unity Quaternion.Euler order: rotate around Z, then X, then Y. */
+/** Euler order: rotate around Z, then X, then Y. */
 export function boxQuaternion([x, y, z]: EulerDegrees): Quaternion {
   const hx = (x * Math.PI) / 360
   const hy = (y * Math.PI) / 360
@@ -60,7 +60,7 @@ function rotateByQuaternion(
   ]
 }
 
-/** Rotates a prefab point by a box's Unity transform rotation. */
+/** Rotates a part-local point by a box's rotation. */
 export function rotateBoxPoint(
   rotation: EulerDegrees,
   point: [number, number, number],
@@ -68,7 +68,7 @@ export function rotateBoxPoint(
   return rotateByQuaternion(boxQuaternion(rotation), point)
 }
 
-/** Turns a rotated centre back into the prefab's m_Center. */
+/** Turns a rotated centre back into the box centre. */
 export function unrotateBoxPoint(
   rotation: EulerDegrees,
   point: [number, number, number],
@@ -85,12 +85,12 @@ const onLandSchema = z.object({
 })
 
 /**
- * Default muzzle height in raw prefab units. It is the height shots used before
+ * Default muzzle height in raw art units. It is the height shots used before
  * spawn points could move on Y.
  */
 export const DEFAULT_SPAWN_Y = 2
 
-/** A muzzle in raw prefab units, relative to the part pivot. */
+/** A muzzle in raw art units, relative to the part pivot. */
 const spawnPointSchema = z.object({
   x: z.number(),
   y: z.number().default(DEFAULT_SPAWN_Y),
@@ -138,35 +138,35 @@ const attackSchema = z.discriminatedUnion('kind', [
 ])
 
 /**
- * A trigger BoxCollider in raw prefab units, which are arena units because the
- * art renders at its authored size. The simulation runs on the XZ plane, but Y
- * is kept so the editor can draw the box at the same height as the art.
+ * A trigger box in raw art units, which are arena units because the art
+ * renders at its authored size. The simulation runs on the XZ plane, but Y is
+ * kept so the editor can draw the box at the same height as the art.
  */
-const prefabBoxSchema = z.object({
+const boxSchema = z.object({
   center: z.tuple([z.number(), z.number(), z.number()]),
   size: z.tuple([z.number().positive(), z.number().positive(), z.number().positive()]),
   /**
-   * The rotation of the GameObject the collider is attached to, in Unity Euler
-   * degrees. The box centre and its axes both rotate around the part pivot.
+   * Box rotation in degrees, ZXY order. The centre and the box axes both turn
+   * around the part pivot.
    */
   rotation: z.tuple([z.number(), z.number(), z.number()]).default([0, 0, 0]),
   /**
-   * True for the prefab's "Claw" colliders. Only these boxes deal contact
-   * damage; every box is a hurtbox that projectiles and attacks can hit.
+   * True for boxes that deal contact damage. Only these boxes hurt on touch;
+   * every box is a hurtbox that projectiles and attacks can hit.
    */
   hitbox: z.boolean().default(false),
 })
 
 /** A collider box in part-local arena units, ready for the simulation. */
 export interface ColliderBox {
-  /** Centre after the prefab rotation is applied, in arena units. */
+  /** Centre after the box rotation is applied, in arena units. */
   x: number
   y: number
   z: number
   halfWidth: number
   halfHeight: number
   halfDepth: number
-  /** Unity transform rotation in degrees, kept for the editor. */
+  /** Box rotation in degrees, kept for the editor. */
   rotation: EulerDegrees
   /** Yaw of the rotated box on the XZ plane, in radians. */
   angle: number
@@ -185,7 +185,7 @@ const baseSchema = z.object({
   /** Asset key. Defaults to the part id. */
   model: z.string().optional(),
   /**
-   * Shifts the art only, in raw prefab units like `boxes`. Used to line a head
+   * Shifts the art only, in raw art units like `boxes`. Used to line a head
    * up with the body chain without moving its colliders.
    */
   offset: z.tuple([z.number(), z.number()]).default([0, 0]),
@@ -197,7 +197,7 @@ const baseSchema = z.object({
 })
 
 const inputSchema = baseSchema.extend({
-  boxes: z.array(prefabBoxSchema).min(1),
+  boxes: z.array(boxSchema).min(1),
 })
 
 const colliderSchema = z.object({
@@ -231,10 +231,9 @@ export type PartDef = z.infer<typeof partSchema>
 /** Validates a part file before it is written to disk. */
 export const parsePartInput = (value: unknown): ParsedPartInput => inputSchema.parse(value)
 
-function buildCollider(boxes: z.infer<typeof prefabBoxSchema>[]): PartCollider {
+function buildCollider(boxes: z.infer<typeof boxSchema>[]): PartCollider {
   const scaled = boxes.map((box) => {
-    // The prefab rotates the box's GameObject, so the centre and the axes both
-    // turn around the part pivot.
+    // The box rotation turns its centre and axes around the part pivot.
     const center = rotateBoxPoint(box.rotation, box.center)
     const forward = rotateBoxPoint(box.rotation, [0, 0, 1])
     return {

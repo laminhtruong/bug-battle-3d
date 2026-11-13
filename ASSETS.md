@@ -1,18 +1,18 @@
 # Assets
 
-The Unity project this game is ported from ships original art created by the
-project author. The author has confirmed the rights to publish it. The particle
-textures under `textures/fx/` come from the same project and require the Epic
-Toon FX license described below; no paid plugin code is copied.
+The art, textures and sounds were created by the project author, who has
+confirmed the rights to publish them. The particle textures under `textures/fx/`
+require the Epic Toon FX license described below; no paid plugin code is
+included.
 
-The current build ships the original part models as GLB, the apple and power-up
-props, plus the floor, palette and FX textures. This document records what the
-art is, where it comes from and how it was converted.
+The current build ships the part models as GLB, the apple and power-up props,
+plus the floor, palette and FX textures. This document records the file layout,
+naming rules, conversion notes and third-party notices.
 
 ## Naming rules
 
 - Lowercase kebab-case, ASCII only.
-- The file stem is the content id, so `head_01` becomes `claw01`.
+- The file stem is the content id, so `claw01.glb` belongs to `claw01`.
 - Head and body ids may repeat (`gun`, `fire`); the folder separates the slots.
 - All shipped assets live under `public/assets` and are checked by
   `npm run check:assets`.
@@ -32,8 +32,8 @@ public/assets/
   audio/sfx/<name>.mp3
 ```
 
-The bone models are the remains the original leaves behind when a part
-explodes: a skull for the head and a small bone for the body.
+The bone models show the remains left when a part explodes: a skull for the head
+and a small bone for the body.
 
 Sound effects ship under `audio/sfx/`. Each file is played from a simulation
 event and is tagged with the snake it belongs to, so a player only hears the
@@ -42,87 +42,27 @@ effects of their own snake.
 ## FX textures
 
 The fire, lightning and poison particle textures under
-`public/assets/textures/fx/` are copied from the original Unity project's
-particle materials. Most are from the Epic Toon FX pack; `decal-poison.png` is
-the project author's own art. These files are not covered by this repository's
-MIT license. Keep or redistribute them only if you hold the applicable Epic
-Toon FX license.
+`public/assets/textures/fx/` come from the particle materials used by the game.
+Most are from the Epic Toon FX pack; `decal-poison.png` is the project author's
+own art. These files are not covered by this repository's MIT license. Keep or
+redistribute them only if you hold the applicable Epic Toon FX license.
 
-## Rename map
+## Models
 
-Verified from the Unity prefabs to their mesh GUIDs.
+The models were converted once, keeping only position, normal and the first UV
+set. The art files live outside this repository, so the GLBs are committed
+instead. `src/render/models.ts` applies the shared palette texture and keeps
+each model at its authored size. Props keep a fixed scale and rotation:
+`apple` is 0.75 turned 90 degrees, and `powerup` is 0.9, doubled so the crate
+still reads at this camera distance. Placeholder primitives stay as a fallback
+while a model loads. Do not commit raw model, PSD or package files.
 
-| Original  | Published id | Slot |
-| --------- | ------------ | ---- |
-| `head_01` | `claw01`     | head |
-| `head_02` | `gun`        | head |
-| `head_03` | `claw02`     | head |
-| `head_04` | `claw03`     | head |
-| `head_05` | `claw04`     | head |
-| `head_08` | `fire`       | head |
-| `head_09` | `poison`     | head |
-| `head_10` | `lightning`  | head |
-| `body_01` | `normal`     | body |
-| `body_02` | `spike01`    | body |
-| `body_03` | `gun`        | body |
-| `body_04` | `spike02`    | body |
-| `body_08` | `fire`       | body |
-| `body_09` | `poison`     | body |
-| `body_10` | `lightning`  | body |
-
-| Original prefab | Published id | Model           |
-| --------------- | ------------ | --------------- |
-| `PowerUp`       | `powerup`    | `box.fbx`       |
-| `FoodApple`     | `apple`      | `item_full.fbx` |
-
-| Original texture | Target                                   |
-| ---------------- | ---------------------------------------- |
-| `bug.png`        | `textures/parts/bug-atlas.png`           |
-| `floor02a`       | `textures/arenas/classic/floor-base.png` |
-
-| Original sound | Target                    |
-| -------------- | ------------------------- |
-| `eat_apple`    | `audio/sfx/eat-apple.mp3` |
-| `pop`          | `audio/sfx/pop.mp3`       |
-| `bite`         | `audio/sfx/bite.mp3`      |
-| `power_up`     | `audio/sfx/power-up.mp3`  |
-| `win`          | `audio/sfx/win.mp3`       |
-| `lose`         | `audio/sfx/lose.mp3`      |
-| `button_tap`   | `audio/sfx/click.mp3`     |
-
-The sounds are copied from the Unity project unchanged, so no audio tooling is
-needed. `quest_completed` and `popup_show` are left out with the rest of the
-quest and shop systems.
-
-## Conversion
-
-The models were converted once from the Unity FBX sources with
-[FBX2glTF](https://github.com/facebookincubator/FBX2glTF) 0.9.7 (BSD-3-Clause),
-keeping only position, normal and the first UV set:
-
-```sh
-FBX2glTF -b -k position -k normal -k uv0 -o public/assets/models/parts/head/claw01.glb head_01.fbx
-FBX2glTF -b -k position -k normal -k uv0 -o public/assets/models/bones/head.glb head_00.fbx
-FBX2glTF -b -k position -k normal -k uv0 -o public/assets/models/bones/body.glb body_00.fbx
-FBX2glTF -b -k position -k normal -k uv0 -o public/assets/models/props/powerup.glb box.fbx
-FBX2glTF -b -k position -k normal -k uv0 -o public/assets/models/props/apple.glb item_full.fbx
-```
-
-The FBX files live outside this repository, so the GLBs are committed instead.
-`src/render/models.ts` applies the shared palette texture and keeps each model at
-its authored size; the source scenes place the parts far from the origin at that
-same scale. Props also keep the scale and rotation of their Unity prefabs:
-`apple` is `item_full.fbx` at 0.75 turned 90 degrees, and `powerup` is `box.fbx`
-at 0.9 (the prefab uses 0.45, doubled so the crate still reads at this camera
-distance). Placeholder primitives stay as a fallback while a model loads. Do not
-commit raw FBX, PSD or Unity package files.
-
-FBX2glTF 0.9.7 writes NaN weights for vertices that the source FBX leaves
+The converter writes NaN weights for vertices that the art file leaves
 unweighted, which makes the GPU drop their triangles. This hit the side spikes
 and pods of `fire`, `lightning`, `poison` and `spike01`; those vertices are bound
-to the root joint with weight 1, which keeps them in the bind pose like Unity
-does. `npm run check:assets` rejects NaN or unnormalised skin weights, so a
-future conversion that drops them fails the check instead of losing art.
+to the root joint with weight 1, which keeps them in the bind pose.
+`npm run check:assets` rejects NaN or unnormalised skin weights, so a future
+conversion that drops them fails the check instead of losing art.
 
 ## Third-party notices
 

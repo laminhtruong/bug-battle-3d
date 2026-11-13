@@ -2,7 +2,7 @@ import type { ColliderBox, PartDef } from '@/content/define'
 import type { Segment } from './types'
 
 /**
- * Collision helpers for the BoxColliders authored on each part.
+ * Collision helpers for the boxes authored on each part.
  * Every box is a hurtbox; boxes marked as hitboxes also deal contact damage.
  * The simulation runs on the XZ plane, so the box Y fields are ignored here.
  */
@@ -171,7 +171,7 @@ function boxOverlapsBox(
 
 /**
  * True when the two part boxes touch. Set a flag to consider only the boxes
- * that deal contact damage, which is how the Unity "Claw" colliders behave.
+ * that deal contact damage.
  */
 export function collidersOverlap(
   firstPart: PartDef,

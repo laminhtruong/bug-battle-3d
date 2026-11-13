@@ -27,7 +27,7 @@ function equipHead(snake: Snake, partId: string): void {
   head.hp = part.hp
   head.maxHp = part.hp
   head.cooldown = part.attack?.cooldown ?? 0
-  // Picking up a head brings a lost head back, like in the original.
+  // Picking up a head brings a lost head back.
   head.dead = false
   snake.baseHeadId = partId
 }

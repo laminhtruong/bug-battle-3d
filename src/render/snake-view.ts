@@ -131,7 +131,7 @@ function createSegment(slot: PartDef['slot'], id: string, prop?: PropId): Segmen
     const clip = prop ? undefined : getPartClip(slot, id)
     const mixer = clip ? new THREE.AnimationMixer(model) : undefined
     if (clip && mixer) {
-      // The source walk cycle reads too slow at 1x.
+      // The walk cycle reads too slow at 1x.
       mixer.timeScale = 2
       mixer.clipAction(clip).play()
     }
@@ -351,7 +351,7 @@ export function createSnakeViewer(scene: THREE.Scene) {
             }
             entry.node.scale.copy(entry.baseScale).multiplyScalar(Math.max(0.001, scale))
           }
-          // Legs only walk while the segment is moving, like Idle/Move in the original.
+          // Legs only walk while the segment is moving, matching the idle and move states.
           if (entry.mixer && !segment.dead) {
             const moved =
               Number.isNaN(entry.lastX) ||
@@ -368,7 +368,7 @@ export function createSnakeViewer(scene: THREE.Scene) {
           entry.shadow.visible = true
           entry.shadow.position.set(segment.x, 0.02, segment.z)
 
-          // One flash per hit, like the original.
+          // One flash per hit.
           const flash = hurtFlash(remaining)
           if (entry.flash !== flash) {
             entry.flash = flash

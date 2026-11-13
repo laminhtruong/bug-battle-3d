@@ -25,8 +25,8 @@ const exists = async (target) => {
 }
 
 /**
- * FBX2glTF writes NaN weights for vertices the source FBX leaves unweighted,
- * and the GPU then drops those triangles. Catch it instead of losing art.
+ * The converter writes NaN weights for unweighted vertices, and the GPU then
+ * drops those triangles. Catch it instead of losing art.
  */
 function badWeights(buffer) {
   const jsonLength = buffer.readUInt32LE(12)

@@ -9,10 +9,9 @@ export interface View {
 }
 
 /**
- * The in-game rig of the original, scaled to the native-size art: the camera
- * sits four times farther so a part keeps the on-screen size it had when the
- * prefabs were shrunk to a quarter. The pitch stays at the original 75 degrees.
- * The menu rig sits lower at 45 degrees, which is what this view used to show.
+ * The fixed in-game camera, scaled to the art: it sits four times farther so a
+ * part keeps its on-screen size. The pitch is 75 degrees; the menu rig sits
+ * lower at 45 degrees, which is what this view used to show.
  */
 const CAMERA_OFFSET = new THREE.Vector3(0, 40, -14)
 const CAMERA_AIM = new THREE.Vector3(

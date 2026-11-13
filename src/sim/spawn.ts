@@ -293,7 +293,7 @@ export function spawnPowerup(world: World): Snake {
     bodyIds: [],
     x: point.x,
     z: point.z,
-    // The crate keeps its prefab facing; a random angle would turn it away.
+    // The crate keeps its authored facing; a random angle would turn it away.
     angle: 0,
     speed: 0,
   })

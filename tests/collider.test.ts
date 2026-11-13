@@ -20,7 +20,7 @@ function makeSegment(partId: string, x: number, z: number, angle: number): Segme
 }
 
 describe('part colliders', () => {
-  it('uses the Unity BoxCollider sizes directly', () => {
+  it('uses the box sizes directly', () => {
     const claw = requirePart('head', 'claw01')
     expect(claw.collider.boxes[0]).toMatchObject({
       x: 0,

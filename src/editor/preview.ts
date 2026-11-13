@@ -16,12 +16,12 @@ export interface PreviewBox {
   halfWidth: number
   halfHeight: number
   halfDepth: number
-  /** Unity transform rotation in degrees, ZXY order. */
+  /** Box rotation in degrees, ZXY order. */
   rotation: [number, number, number]
   hitbox: boolean
 }
 
-/** A muzzle in raw prefab units, relative to the part pivot. */
+/** A muzzle in raw art units, relative to the part pivot. */
 export interface PreviewSpawn {
   x: number
   y: number
@@ -32,7 +32,7 @@ export interface PreviewSpawn {
 export interface PreviewState {
   slot: Slot
   model: string
-  /** Raw prefab units, applied to the art only. */
+  /** Raw art units, applied to the art only. */
   offset: [number, number]
   boxes: PreviewBox[]
   selected: number
@@ -52,9 +52,9 @@ export interface PreviewHandlers {
   onDragStart(): void
   onMove(index: number, x: number, y: number, z: number): void
   onScale(index: number, halfWidth: number, halfHeight: number, halfDepth: number): void
-  /** Raw prefab offset for the art. */
+  /** Raw art offset for the art. */
   onOffset(x: number, z: number): void
-  /** Raw prefab position for a muzzle. Y is visual only. */
+  /** Raw art position for a muzzle. Y is visual only. */
   onSpawnMove(index: number, x: number, y: number, z: number): void
   /** Y rotation of a muzzle in degrees, the effect and cone direction. */
   onSpawnRotate(index: number, degrees: number): void
@@ -350,7 +350,7 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
       spawnGizmoGroup,
       spawnGizmoHandles,
     )
-    // Ring in the floor plane, like Unity's green Y rotation handle.
+    // Ring in the floor plane, matching the green Y rotation handle.
     addGizmoHandle(
       new THREE.TorusGeometry(0.55, 0.035, 8, 48).rotateX(Math.PI / 2),
       AXIS_Y_COLOR,
@@ -1144,7 +1144,7 @@ export function createPreview(canvas: HTMLCanvasElement, handlers: PreviewHandle
   controls.enableDamping = true
   controls.minDistance = 1.2
   controls.maxDistance = 12
-  // Unity lets you look from below too; the orientation gizmo snaps to that.
+  // Allow looking from below; the orientation gizmo snaps to that.
   controls.maxPolarAngle = Math.PI - 0.02
   controls.update()
 

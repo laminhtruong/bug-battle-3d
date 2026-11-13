@@ -1,6 +1,5 @@
 /**
- * Gameplay balance. Values are adapted from the original Unity project so the
- * feel stays close; tuning happens here, not in the simulation code.
+ * Gameplay balance. Tuning happens here, not in the simulation code.
  */
 export const BALANCE = {
   tickRate: 30,
@@ -11,17 +10,17 @@ export const BALANCE = {
   /** Radians per second. High enough to feel direct, low enough to avoid snapping. */
   turnRate: 16,
   bodySpacing: 1.2,
-  /** Same distance the original uses between a part and the one in front of it. */
+  /** Distance between a part and the one in front of it. */
   headSpacing: 1.2,
   maxSegments: 48,
-  /** Keeps the snake centre away from the arena wall, like the original NavMesh. */
+  /** Keeps the snake centre away from the arena wall. */
   edgeMargin: 1.8,
   projectileRadius: 0.72,
   hurtCooldownSec: 0.25,
   respawnDelaySec: 3,
   /** The boss attacks a little slower than a player, but carries many parts. */
   bossCooldownScale: 1.2,
-  /** Wandering bugs attack slower than players, as in the original. */
+  /** Wandering bugs attack slower than players. */
   enemyCooldownScale: 1.5,
   /** Bots roll gear this much stronger than the best part the human owns. */
   botGearBonus: 10,

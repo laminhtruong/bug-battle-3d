@@ -41,7 +41,7 @@ function entersSolid(
 
 /**
  * Moves the head, records the path and rebuilds every segment from it.
- * The snake only moves while the player pushes the stick, like the original.
+ * The snake only moves while the player pushes the stick.
  * Power-ups are solid: the move is split per axis so the snake slides around
  * a crate instead of walking through it.
  */
@@ -61,7 +61,7 @@ export function updateMovement(
 
   const direction = directionFromAngle(snake.angle)
   const margin = BALANCE.edgeMargin
-  // A light push moves slower, exactly like the joystick of the original.
+  // A light push moves slower.
   const speed = snake.speed * Math.min(1, push)
   const startX = snake.x
   const startZ = snake.z

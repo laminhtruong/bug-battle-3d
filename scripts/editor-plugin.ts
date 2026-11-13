@@ -19,10 +19,10 @@ const ID_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/
 /** Set from the Vite config, because `import.meta.url` points at the bundled config. */
 let projectRoot = process.cwd()
 
-export interface PrefabBoxDraft {
+export interface BoxDraft {
   center: [number, number, number]
   size: [number, number, number]
-  /** Unity transform rotation in degrees, ZXY order. */
+  /** Box rotation in degrees, ZXY order. */
   rotation?: [number, number, number]
   hitbox?: boolean
 }
@@ -34,7 +34,7 @@ export interface PartDraft {
   hp: number
   score: number
   contact: { damage: number }
-  boxes: PrefabBoxDraft[]
+  boxes: BoxDraft[]
   offset?: [number, number]
   attack?: AttackDef
 }

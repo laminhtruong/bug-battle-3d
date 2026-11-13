@@ -14,4 +14,4 @@
 - [ ] New gameplay logic has a test or a self-check
 - [ ] No non-ASCII source, no `Math.random` in `src/sim`, `src/content` or `src/data`
 - [ ] Network changes bump `PROTOCOL_VERSION` and validate input
-- [ ] No paid Unity plugin code or raw source assets added
+- [ ] No paid third-party plugin code or raw source assets added

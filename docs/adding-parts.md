@@ -10,11 +10,11 @@ same files described below: it lists heads and bodies, lets you add and delete
 parts, edit their stats and model, author attacks, and align the art with the
 body chain. The collider boxes are hidden by default: tick **Edit** in the Colliders section to
 show and change them, or drag the X/Z arrows on the selected part or type X/Z in
-its position fields to move the art offset. Y is fixed by the prefab lift. The
-body reference is always shown for heads. The view gizmo snaps the camera like
-Unity, `W`/`R` switch tools, and `Ctrl+Z` / `Ctrl+Shift+Z` undo and redo edits. It
-validates before writing, so a bad save never leaves the content registry
-broken.
+its position fields to move the art offset. Y is fixed by the part lift. The
+body reference is always shown for heads. The view gizmo snaps the camera to the
+nearest axis, `W`/`R` switch tools, and `Ctrl+Z` / `Ctrl+Shift+Z` undo and redo
+edits. It validates before writing, so a bad save never leaves the content
+registry broken.
 
 The editor is a dev tool. It is not part of the production build and needs the
 Vite dev server for its file API.
@@ -52,14 +52,14 @@ Vite dev server for its file API.
 - `id` must match `^[a-z0-9]+(-[a-z0-9]+)*$`.
 - Head and body ids may repeat. `head:gun` and `body:gun` are different parts.
 - The slot comes from the folder (`heads` or `bodies`), never from the file.
-- `boxes` is required and must contain at least one Unity BoxCollider. It is the
+- `boxes` is required and must contain at least one trigger box. It is the
   part's hit shape; there is no fallback circle.
 - `attack` is optional. Parts without an attack only deal contact damage through
   their `hitbox` boxes.
 - `offset` is optional and defaults to `[0, 0]`. It shifts the art only, in raw
-  prefab units, so a head can line up with the body chain without moving its
+  art units, so a head can line up with the body chain without moving its
   colliders. Drag the X/Z arrows in the editor or type X/Z into the position
-  fields; Y is fixed by the prefab lift.
+  fields; Y is fixed by the part lift.
 - Attacks are data, not functions. The simulation interprets them; do not import
   three.js, the DOM or `Math.random`.
 - `score` is what a killer earns for destroying this part.
@@ -67,27 +67,19 @@ Vite dev server for its file API.
 
 ## Colliders
 
-The original game has no simple circle around a head or a body. Each part
-carries the trigger BoxColliders authored in its Unity art prefab. The editor is
-the primary way to author them now: tick **Edit**, then drag a box over the art,
-edit its centre and size, and mark the claw boxes. The shipped values are copied
-straight from the prefab `m_Center` and `m_Size`, so they are exact:
+Each part carries trigger boxes that define its hit shape. The editor is the
+primary way to author them: tick **Edit**, then drag a box over the art, edit its
+centre and size, and mark the boxes that should deal contact damage.
 
-1. Open the art prefab, for example `HeadClaw01.prefab` or `BodySpike02.prefab`.
-   Do not copy from the gameplay `Head.prefab` or `Body.prefab`.
-2. For every BoxCollider with `m_IsTrigger: 1`, copy `m_Center` and `m_Size`
-   x/y/z into one `boxes` entry.
-3. Copy the rotation of the GameObject the collider hangs on, in Unity Euler
-   degrees, into `rotation`. The Inspector shows these values; leave it out for
-   an identity rotation. Both the centre and the box axes turn around the part
-   pivot.
-4. A child named `Body` is only a hurtbox: leave `hitbox` off. A child named
-   `Claw` also deals contact damage: add `"hitbox": true`.
-5. Ignore `BulletFire`, `Skeleton`, MeshCollider and any non-trigger collider.
-6. Use the raw Unity numbers. Models render at their authored size, so the
-   numbers are already arena units and the boxes line up with the model.
-7. The centre is relative to the part pivot. Local `+z` points forward, the same
-   direction the model faces.
+- `center` and `size` are in raw art units. Models render at their authored size,
+  so these are arena units and the boxes line up with the model.
+- `center` is relative to the part pivot. Local `+z` points forward, the same
+  direction the model faces.
+- `rotation` is the box rotation in degrees, ZXY order. Both the centre and the
+  box axes turn around the part pivot. Leave it out for no rotation.
+- Every box is a hurtbox, so projectiles and other claws can damage any of them.
+  Add `"hitbox": true` to boxes that also deal contact damage, using the part's
+  `contact.damage`.
 
 For the spike body, the main body plus a rotated claw looks like this:
 
@@ -100,16 +92,14 @@ For the spike body, the main body plus a rotated claw looks like this:
 
 The simulation runs on the XZ plane, so collision uses the rotated centre and
 the box yaw. X/Z tilt barely changes the footprint and is ignored there, but the
-editor still draws the box with the full rotation. Y is kept so the box matches
-the Unity BoxCollider; the editor adds the prefab's 0.5 lift when it draws the
-box, so it sits at the same height as the art.
+editor still draws the box with the full rotation. Y is kept so the box sits at
+the same height as the art; the editor adds the 0.5 part lift when it draws the
+box.
 
-All boxes are hurtboxes, so a projectile or another claw can damage any of them.
-Only `hitbox` boxes cause contact damage, with the part's `contact.damage`.
-That is why a gun head has `"contact": { "damage": 0 }`: its Unity prefab has only
-a `Body` collider, while every claw head has `Claw` boxes.
+That is why a gun head has `"contact": { "damage": 0 }`: it has only a body box,
+while every claw head has claw boxes.
 
-If a part has no Unity prefab yet, start from a box that covers the visible
+If a part has no authored boxes yet, start from a box that covers the visible
 model. The box may be smaller than the art, but it must not be empty.
 
 ## Attacks
@@ -147,7 +137,7 @@ editor draws the 3D cone volume so its direction and reach are easy to see.
 }
 ```
 
-Spawn points are raw prefab units, like `boxes` and `offset`. The game uses them
+Spawn points are raw art units, like `boxes` and `offset`. The game uses them
 as arena units and rotates them with the part. `y` defaults to `2`,
 the height shots used before spawn points existed, and only changes presentation:
 the simulation still runs on the XZ plane. Omit `y` when it is `2`, `angle` when
@@ -179,9 +169,9 @@ expects `models/parts/head/<model>.glb` or `models/parts/body/<model>.glb`. A pa
 without a model file still plays; the renderer falls back to a colored primitive.
 
 `src/render/models.ts` loads every registered model in the background. It keeps
-the pivot authored in the model file, drops the arbitrary offset of the source
-FBX scene, then applies the prefab's 0.5 lift. The `boxes` values use the same
-units, so the collider and the art share one pivot. Body
+the pivot authored in the model file, drops the arbitrary offset of the exported
+scene, then applies the 0.5 part lift. The `boxes` values use the same units, so
+the collider and the art share one pivot. Body
 models are skinned, so they are copied with `SkeletonUtils.clone`; a plain
 `clone` would leave them bound to the template bones and they would never draw
 under the snake. Models must keep their first UV set: the parts share one

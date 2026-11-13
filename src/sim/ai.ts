@@ -369,7 +369,7 @@ function updateBoss(world: World, boss: Snake): void {
   steerAway(world, boss, aimX, aimZ)
 }
 
-/** Bots and bosses steer themselves; wandering bugs only roam, like the original. */
+/** Bots and bosses steer themselves; wandering bugs only roam. */
 export function updateAi(world: World, snake: Snake): void {
   if (snake.control === 'boss') {
     updateBoss(world, snake)

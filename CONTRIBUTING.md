@@ -42,8 +42,8 @@ See [docs/adding-parts.md](docs/adding-parts.md). In short:
 
 1. Add one JSON file to `src/content/heads` or `src/content/bodies`.
 2. Give it a unique kebab-case id per slot.
-3. Copy the trigger BoxColliders from the Unity prefab into `boxes`; mark
-   `Claw` boxes with `hitbox: true`.
+3. Add at least one trigger box to `boxes`; mark the boxes that deal contact
+   damage with `hitbox: true`.
 4. Add the model to `public/assets` or let the renderer use its placeholder.
 5. Run `npm run check`.
 

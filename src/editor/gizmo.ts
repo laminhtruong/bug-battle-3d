@@ -35,7 +35,7 @@ export interface ViewGizmo {
   dispose(): void
 }
 
-/** The Unity-style axis widget: click an axis to snap, drag it to orbit. */
+/** The axis widget: click an axis to snap, drag it to orbit. */
 export function createViewGizmo(
   container: HTMLElement,
   camera: THREE.PerspectiveCamera,

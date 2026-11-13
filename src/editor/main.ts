@@ -11,7 +11,7 @@ import { ATTACK_PRESETS, ATTACK_VISUALS, attackPreset } from './attacks'
 import { createPreview } from './preview'
 import type { Tool } from './preview'
 
-interface PrefabBox {
+interface BoxDraft {
   center: [number, number, number]
   size: [number, number, number]
   rotation?: [number, number, number]
@@ -25,7 +25,7 @@ interface PartDraft {
   hp: number
   score: number
   contact: { damage: number }
-  boxes: PrefabBox[]
+  boxes: BoxDraft[]
   offset?: [number, number]
   attack?: AttackDef
 }
@@ -305,11 +305,11 @@ function currentArenaBoxes(): {
   }
   return current.draft.boxes.map((box) => {
     const rotation: [number, number, number] = box.rotation ?? [0, 0, 0]
-    // The prefab rotates the box around the part pivot, so its centre turns too.
+    // The box rotates around the part pivot, so its centre turns too.
     const center = rotateBoxPoint(rotation, box.center)
     return {
       x: center[0],
-      // The prefab lifts the art and its colliders above the pivot.
+      // The art and its colliders sit above the pivot by the part lift.
       y: center[1] + PART_LIFT,
       z: center[2],
       halfWidth: box.size[0] / 2,
@@ -400,7 +400,7 @@ const preview = createPreview(canvas, {
     if (!box) {
       return
     }
-    // The gizmo works in world space; the draft stores the prefab centre.
+    // The gizmo works in world space; the draft stores the unrotated centre.
     const center = unrotateBoxPoint(box.rotation ?? [0, 0, 0], [x, y - PART_LIFT, z])
     box.center = [snap(center[0]), snap(center[1]), snap(center[2])]
     syncBoxInputs(index)
@@ -642,10 +642,10 @@ function renderInspector(): void {
     </section>
     <section class="group">
       <h3>${current.slot === 'head' ? 'Head position' : 'Body position'}</h3>
-      <p class="hint">X and Z move the art only, in prefab units. Y is fixed by the prefab lift.</p>
+      <p class="hint">X and Z move the art only, in art units. Y is fixed by the part lift.</p>
       <div class="row">
         <label>X<input data-field="offset-x" type="number" step="0.05" value="${fmt(offset[0])}"></label>
-        <label>Y<input type="number" value="0" disabled title="Fixed by the prefab lift"></label>
+        <label>Y<input type="number" value="0" disabled title="Fixed by the part lift"></label>
         <label>Z<input data-field="offset-z" type="number" step="0.05" value="${fmt(offset[1])}"></label>
       </div>
     </section>
@@ -659,7 +659,7 @@ function renderInspector(): void {
       </div>
       ${
         editColliders
-          ? `<p class="hint">C is the centre, S is the size, like the Unity BoxCollider. Green is a hurtbox, red is a hitbox. RX and RZ are locked; only RY can be edited.</p>
+          ? `<p class="hint">C is the centre, S is the size. Green is a hurtbox, red is a hitbox. RX and RZ are locked; only RY can be edited.</p>
              <div class="boxes">${boxRows()}</div>`
           : '<p class="hint">Hidden. Drag the arrows to move the art, or tick Edit to change the boxes.</p>'
       }

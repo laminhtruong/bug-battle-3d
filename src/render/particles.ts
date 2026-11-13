@@ -24,10 +24,9 @@ import {
 import type { Slot } from '@/content/define'
 
 /**
- * Particle presets copied from the Unity project at
- * D:/Unity/Projects/battle-bug. The game renders parts four times their
- * original world size, so speeds, sizes and offsets are scaled by the same
- * factor while lifetimes and emission rates stay in seconds.
+ * Particle presets. The game renders parts four times the size these presets
+ * assume, so speeds, sizes and offsets are scaled by the same factor while
+ * lifetimes and emission rates stay in seconds.
  */
 
 function texture(name: string): THREE.Texture {
@@ -55,7 +54,7 @@ function material(name: string, additive: boolean): THREE.MeshBasicMaterial {
   return created
 }
 
-/** Linear copy of a Unity animation curve, sampled on 0..1. */
+/** Linear copy of an animation curve, sampled on 0..1. */
 class Curve implements FunctionValueGenerator {
   readonly type = 'function' as const
 
@@ -84,7 +83,7 @@ class Curve implements FunctionValueGenerator {
   }
 
   toJSON(): FunctionJSON {
-    return { type: 'UnityCurve' }
+    return { type: 'Curve' }
   }
 
   clone(): Curve {
@@ -93,8 +92,8 @@ class Curve implements FunctionValueGenerator {
 }
 
 /**
- * Lays a ground billboard along its own velocity and stretches it, standing in
- * for Unity's stretched billboard while staying flat on the floor.
+ * Lays a ground billboard along its own velocity and stretches it, keeping it
+ * flat on the floor.
  */
 class GroundBolt implements Behavior {
   readonly type = 'GroundBolt'
@@ -130,7 +129,7 @@ class GroundBolt implements Behavior {
   reset(): void {}
 }
 
-/** Unity texture-sheet animation: whole sheet or one row, over particle life. */
+/** Texture-sheet animation: whole sheet or one row, over particle life. */
 class TileOverLife implements Behavior {
   readonly type = 'TileOverLife'
 
@@ -403,7 +402,7 @@ function headFire(): SystemSpec[] {
 }
 
 function bodyFire(): SystemSpec[] {
-  // Body.prefab scales both side jets by 0.75; gravity is not hierarchy-scaled.
+  // The side jets use a 0.75 scale; gravity is not hierarchy-scaled.
   const scale = 0.75
   return headFire().map((spec) => ({
     ...spec,
@@ -538,8 +537,8 @@ function lightningImpact(): SystemSpec[] {
       ],
       material: 'circlestretchy',
       additive: false,
-      // Sparks are stretched billboards in Unity; flat here so the whole nova
-      // stays in the floor plane instead of standing up at the camera.
+      // Sparks are stretched billboards; flat here so the whole nova stays in
+      // the floor plane instead of standing up at the camera.
       mode: 'horizontal',
       stretch: [4, 8],
     },
@@ -593,7 +592,7 @@ function lightningImpact(): SystemSpec[] {
       uv: { x: 3, y: 3, frames: 9, start: 0, cycles: 1 },
       material: 'lightning-3x3',
       additive: true,
-      // Unity stretches these along the velocity; a camera-facing stretch would
+      // These bolts stretch along their velocity; a camera-facing stretch would
       // stand the bolts up, so they are stretched flat along the ground instead.
       mode: 'horizontal',
       stretch: [8, 13],
@@ -726,7 +725,7 @@ function poisonImpact(): SystemSpec[] {
       size: [4, 4],
       gravity: -9.81 * 0.125 * 4,
       rate: 0,
-      // The prefab bursts 12 identical copies on one spot; one sprite reads the same.
+      // Twelve identical copies burst on one spot; one sprite reads the same.
       bursts: [{ time: 0, count: 1 }],
       shape: { kind: 'point' },
       startColor: [1, 1, 1, 1],
@@ -784,8 +783,8 @@ export function createParticles(scene: THREE.Scene) {
   }
 
   /**
-   * The three fire systems, at their offsets inside the prefab. Unity units are
-   * scaled by four to match the art.
+   * The three fire systems and their offsets. Preset units are scaled by four
+   * to match the art.
    */
   const FIRE_OFFSETS: [number, number, number][] = [
     [0, 0, 0],
@@ -794,9 +793,8 @@ export function createParticles(scene: THREE.Scene) {
   ]
 
   /**
-   * Adds one fire prefab at a local point of the part. The systems stay in
-   * local space, so they ride along when the part moves, like the Unity
-   * children they copy.
+   * Adds one fire system at a local point of the part. The systems stay in
+   * local space, so they ride along when the part moves.
    */
   function spawnFire(
     specs: SystemSpec[],
@@ -818,7 +816,7 @@ export function createParticles(scene: THREE.Scene) {
   function spawnImpact(specs: SystemSpec[], x: number, y: number, z: number): void {
     for (const spec of specs) {
       const system = add(spec, scene, x, y, z)
-      // The Unity hit prefabs are laid flat with a -90 degree X rotation.
+      // The hit effects are laid flat with a -90 degree X rotation.
       system.emitter.rotation.x = -Math.PI / 2
     }
   }
@@ -838,8 +836,8 @@ export function createParticles(scene: THREE.Scene) {
 
   return {
     /**
-     * One fire prefab at a spawn point from the part's JSON: the point carries
-     * the mount position and the Y rotation the Unity transform had.
+     * One fire system at a spawn point from the part's JSON: the point carries
+     * the mount position and Y rotation.
      */
     flame(
       parent: THREE.Object3D,
