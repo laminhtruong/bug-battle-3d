@@ -18,11 +18,21 @@ All notable changes to this project are documented here. The format follows
   from the original Unity audio and played from the simulation events.
 - Blob shadows under the segments and name labels above the players.
 - A dev-only web editor for heads and bodies: part CRUD, stats, model, art
-  offset, undo/redo, a Unity-style view gizmo and collider box editing. It reads
-  and writes the same `src/content` JSON files the game loads.
+  offset, attack presets and spawn points, undo/redo, a Unity-style view gizmo
+  and collider box editing. It reads and writes the same `src/content` JSON
+  files the game loads.
+- Attack editing from presets (projectile, side projectiles, hazard projectile,
+  side hazard projectiles and cone), with add/remove and editable values.
+- Projectile attacks take any number of spawn points, each with a position and
+  a direction. The editor draws them as handles that can be dragged on the
+  arena plane or edited with X/Z/A fields.
 
 ### Changed
 
+- Projectile attacks now store their muzzles in `spawnPoints` instead of a
+  single `mount`. Each point has a raw prefab position and an optional direction
+  in degrees, so one part can fire from several places. The simulation rotates
+  each point with the part and scales it like the art.
 - Head and body definitions now live in JSON files under `src/content/heads` and
   `src/content/bodies`. The game registry and the editor both read them, and the
   editor writes JSON, so content can be authored without touching TypeScript.

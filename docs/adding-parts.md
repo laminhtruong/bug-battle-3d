@@ -7,8 +7,8 @@ it, validates it with zod and hashes it for network compatibility.
 
 `npm run editor` starts Vite and opens `/editor.html`. The editor works on the
 same files described below: it lists heads and bodies, lets you add and delete
-parts, edit their stats and model, and align the art with the body chain. The
-collider boxes are hidden by default: tick **Edit** in the Colliders section to
+parts, edit their stats and model, author attacks, and align the art with the
+body chain. The collider boxes are hidden by default: tick **Edit** in the Colliders section to
 show and change them, or drag the X/Z arrows on the selected part or type X/Z in
 its position fields to move the art offset. Y is fixed by the prefab lift. The
 body reference is always shown for heads. The view gizmo snaps the camera like
@@ -113,28 +113,43 @@ a `Body` collider, while every claw head has `Claw` boxes.
 If a part has no Unity prefab yet, start from a box that covers the visible
 model. The box may be smaller than the art, but it must not be empty.
 
-## Attack shapes
+## Attacks
 
-A projectile, with an optional hazard left where it lands:
+The editor authors attacks from presets: **Projectile**, **Side projectiles**,
+**Hazard projectile**, **Side hazard projectiles** and **Cone**. Pick one in the
+Attack section to add an attack; pick **No attack** to remove it. The preset only
+fills sensible defaults, so every value stays editable afterwards.
+
+A projectile can have any number of spawn points. They are drawn in the 3D view:
+drag a point to move it, or edit its X/Z/A fields. A is the firing direction in
+degrees relative to the part facing: `0` is forward, `90` is right and `-90` is
+left. Add or remove points with **+ point** and the row's delete button.
 
 ```json
 "attack": {
   "kind": "projectile",
   "cooldown": 1,
-  "mount": "forward",
   "projectile": {
     "speed": 14,
     "ttl": 1.1,
     "visual": "poison",
     "damage": 1,
+    "spawnPoints": [
+      { "x": 0, "z": 1.96 },
+      { "x": 1.96, "z": 0, "angle": 90 }
+    ],
     "onLand": { "delay": 0.1, "duration": 4, "radius": 1.6 }
   }
 }
 ```
 
-`mount` is `"forward"` or `"sides"` to fire left and right.
+Spawn points are raw prefab units, like `boxes` and `offset`. The game scales
+them by the prefab's 0.25 and rotates them with the part. Omit `angle` when it is
+zero and `damage` when it is `1`; the schema supplies those defaults. `onLand`
+is optional and turns the shot into a delayed area hazard. `visual` is one of
+`bullet`, `poison` or `lightning`.
 
-An immediate cone hit around the part:
+An immediate cone hit around the part: `damage` is fixed at 1 for cones.
 
 ```json
 "attack": {
