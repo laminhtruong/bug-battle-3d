@@ -285,6 +285,18 @@ function currentArenaBoxes(): {
   }))
 }
 
+function syncOffsetInputs(): void {
+  const offset = current?.draft.offset ?? [0, 0]
+  const x = inspector.querySelector<HTMLInputElement>('[data-field="offset-x"]')
+  const z = inspector.querySelector<HTMLInputElement>('[data-field="offset-z"]')
+  if (x) {
+    x.value = fmt(offset[0])
+  }
+  if (z) {
+    z.value = fmt(offset[1])
+  }
+}
+
 function syncBoxInputs(index: number): void {
   const box = current?.draft.boxes[index]
   if (!box) {
@@ -329,6 +341,7 @@ const preview = createPreview(canvas, {
       return
     }
     current.draft.offset = [snap(x), snap(z)]
+    syncOffsetInputs()
     markDirty()
   },
   onScale(index, halfWidth, halfHeight, halfDepth) {
@@ -425,6 +438,7 @@ function renderInspector(): void {
     return
   }
   const draft = current.draft
+  const offset = draft.offset ?? [0, 0]
   const modelOptions = modelsBySlot[current.slot]
   inspector.innerHTML = `
     <header class="inspector-head">
@@ -442,6 +456,15 @@ function renderInspector(): void {
         <label>HP<input data-field="hp" type="number" min="1" step="1" value="${draft.hp}"></label>
         <label>Score<input data-field="score" type="number" min="0" step="1" value="${draft.score}"></label>
         <label>Contact<input data-field="damage" type="number" min="0" step="1" value="${draft.contact.damage}"></label>
+      </div>
+    </section>
+    <section class="group">
+      <h3>${current.slot === 'head' ? 'Head position' : 'Body position'}</h3>
+      <p class="hint">X and Z move the art only, in prefab units. Y is fixed by the prefab lift.</p>
+      <div class="row">
+        <label>X<input data-field="offset-x" type="number" step="0.05" value="${fmt(offset[0])}"></label>
+        <label>Y<input type="number" value="0" disabled title="Fixed by the prefab lift"></label>
+        <label>Z<input data-field="offset-z" type="number" step="0.05" value="${fmt(offset[1])}"></label>
       </div>
     </section>
     <section class="group">
@@ -542,6 +565,14 @@ function setField(target: HTMLInputElement): void {
       break
     case 'damage':
       draft.contact.damage = toNumber(target.value)
+      break
+    case 'offset-x':
+      draft.offset = [toNumber(target.value), draft.offset?.[1] ?? 0]
+      applyPreview()
+      break
+    case 'offset-z':
+      draft.offset = [draft.offset?.[0] ?? 0, toNumber(target.value)]
+      applyPreview()
       break
     default:
       return

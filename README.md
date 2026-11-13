@@ -83,11 +83,12 @@ Rules that keep the project maintainable:
 
 Run `npm run editor` and open the page it launches. It is a dev-only web editor
 for heads and bodies: add, delete, or edit a part, change its stats and model,
-and align the art on the pivot with the X/Z arrows. Collider boxes stay hidden
-until you tick **Edit** in the Colliders section. The axis widget snaps the
-camera like Unity, and undo/redo is available with `Ctrl+Z` / `Ctrl+Shift+Z`. It
-writes the same `src/content` TypeScript files the game loads, so `npm run check`
-still validates everything afterwards.
+and align the art on the pivot with the X/Z arrows or the X/Z fields. Y is
+locked to the prefab lift. Collider boxes stay hidden until you tick **Edit** in
+the Colliders section. The axis widget snaps the camera like Unity, and undo/redo
+is available with `Ctrl+Z` / `Ctrl+Shift+Z`. It writes the same `src/content`
+TypeScript files the game loads, so `npm run check` still validates everything
+afterwards.
 
 ## Adding content
 

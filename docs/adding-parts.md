@@ -9,11 +9,12 @@ validates it with zod and hashes it for network compatibility.
 same files described below: it lists heads and bodies, lets you add and delete
 parts, edit their stats and model, and align the art with the body chain. The
 collider boxes are hidden by default: tick **Edit** in the Colliders section to
-show and change them, or drag the X/Z arrows on the selected part to move its
-art offset. The body reference is always shown for heads. The view gizmo snaps
-the camera like Unity, `W`/`R` switch tools, and `Ctrl+Z` / `Ctrl+Shift+Z` undo
-and redo edits. It validates before writing, so a bad save never leaves the
-content registry broken.
+show and change them, or drag the X/Z arrows on the selected part or type X/Z in
+its position fields to move the art offset. Y is fixed by the prefab lift. The
+body reference is always shown for heads. The view gizmo snaps the camera like
+Unity, `W`/`R` switch tools, and `Ctrl+Z` / `Ctrl+Shift+Z` undo and redo edits. It
+validates before writing, so a bad save never leaves the content registry
+broken.
 
 The editor is a dev tool. It is not part of the production build and needs the
 Vite dev server for its file API.
@@ -63,7 +64,8 @@ export default defineBody({
   their `hitbox` boxes.
 - `offset` is optional and defaults to `[0, 0]`. It shifts the art only, in raw
   prefab units, so a head can line up with the body chain without moving its
-  colliders. Drag the X/Z arrows in the editor to set it.
+  colliders. Drag the X/Z arrows in the editor or type X/Z into the position
+  fields; Y is fixed by the prefab lift.
 - Attacks are data, not functions. The simulation interprets them; do not import
   three.js, the DOM or `Math.random`.
 - `score` is what a killer earns for destroying this part.
