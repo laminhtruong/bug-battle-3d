@@ -3,7 +3,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import path from 'node:path'
 import { format, resolveConfig } from 'prettier'
 import type { Plugin } from 'vite'
-import { parsePartInput } from '../src/content/define.ts'
+import { DEFAULT_SPAWN_Y, parsePartInput } from '../src/content/define.ts'
 import type { AttackDef, Slot, SpawnPoint } from '../src/content/define'
 
 /**
@@ -45,9 +45,10 @@ export interface LoadedPartDraft {
   draft: PartDraft
 }
 
-function cleanSpawns(points: SpawnPoint[]): { x: number; z: number; angle?: number }[] {
-  return points.map(({ x, z, angle }) => ({
+function cleanSpawns(points: SpawnPoint[]): { x: number; y?: number; z: number; angle?: number }[] {
+  return points.map(({ x, y, z, angle }) => ({
     x,
+    ...(y !== DEFAULT_SPAWN_Y ? { y } : {}),
     z,
     ...(angle !== 0 ? { angle } : {}),
   }))
@@ -60,6 +61,7 @@ function cleanAttack(attack: AttackDef): unknown {
     const isDefault =
       spawnPoints.length === 1 &&
       spawnPoints[0]?.x === 0 &&
+      spawnPoints[0]?.y === DEFAULT_SPAWN_Y &&
       spawnPoints[0]?.z === 0 &&
       spawnPoints[0]?.angle === 0
     return {

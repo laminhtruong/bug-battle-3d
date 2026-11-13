@@ -101,7 +101,7 @@ export function createPropViewer(scene: THREE.Scene) {
           scene.add(mesh)
         }
         mesh.material = shotMaterial(projectile.visual)
-        mesh.position.set(projectile.x, 0.5, projectile.z)
+        mesh.position.set(projectile.x, projectile.y, projectile.z)
       }
       for (const [id, mesh] of shots) {
         if (!seenShots.has(id)) {

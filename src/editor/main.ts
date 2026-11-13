@@ -1,5 +1,6 @@
 import './editor.css'
 import {
+  DEFAULT_SPAWN_Y,
   idPattern,
   PART_LIFT,
   PART_SCALE,
@@ -140,7 +141,8 @@ let parts: LoadedPart[] = []
 let current: LoadedPart | undefined
 const modelsBySlot: Record<Slot, string[]> = { head: [], body: [] }
 let selectedBox = 0
-let selectedSpawn = 0
+/** -1 selects the part itself, so only one object shows its arrows. */
+let selectedSpawn = -1
 let dirty = false
 let editColliders = false
 let activeTool: Tool = 'move'
@@ -280,10 +282,13 @@ function attackSpawns(attack: AttackDef): SpawnPoint[] {
 function clampSelectedSpawn(): void {
   const attack = current?.draft.attack
   if (!attack) {
-    selectedSpawn = 0
+    selectedSpawn = -1
     return
   }
-  selectedSpawn = Math.max(0, Math.min(selectedSpawn, attackSpawns(attack).length - 1))
+  if (selectedSpawn < 0) {
+    return
+  }
+  selectedSpawn = Math.min(selectedSpawn, attackSpawns(attack).length - 1)
 }
 
 function currentArenaBoxes(): {
@@ -373,6 +378,7 @@ function syncSpawnInputs(index: number): void {
     }
   }
   set('x', point.x)
+  set('y', point.y)
   set('z', point.z)
   set('angle', point.angle)
 }
@@ -383,6 +389,9 @@ const preview = createPreview(canvas, {
   },
   onSelectSpawn(index) {
     selectSpawn(index)
+  },
+  onSelectPart() {
+    selectPartTarget()
   },
   onDragStart() {
     beginHistory()
@@ -410,7 +419,7 @@ const preview = createPreview(canvas, {
     syncOffsetInputs()
     markDirty()
   },
-  onSpawnMove(index, x, z) {
+  onSpawnMove(index, x, y, z) {
     const attack = current?.draft.attack
     if (!attack) {
       return
@@ -420,6 +429,7 @@ const preview = createPreview(canvas, {
       return
     }
     point.x = snap(x)
+    point.y = snap(y)
     point.z = snap(z)
     syncSpawnInputs(index)
     markDirty()
@@ -518,6 +528,7 @@ function spawnRows(points: SpawnPoint[]): string {
       ) => `<div class="spawn-row${index === selectedSpawn ? ' selected' : ''}" data-spawn-index="${index}">
         <button type="button" class="box-index" data-action="select-spawn" data-index="${index}">${index + 1}</button>
         <label>X<input data-spawn-field="x" data-spawn-index="${index}" type="number" step="0.05" value="${fmt(point.x)}"></label>
+        <label>Y<input data-spawn-field="y" data-spawn-index="${index}" type="number" step="0.05" value="${fmt(point.y)}"></label>
         <label>Z<input data-spawn-field="z" data-spawn-index="${index}" type="number" step="0.05" value="${fmt(point.z)}"></label>
         <label>A<input data-spawn-field="angle" data-spawn-index="${index}" type="number" step="5" value="${fmt(point.angle)}" title="Firing direction in degrees, relative to the part"></label>
         <button type="button" class="icon danger" data-action="delete-spawn" data-index="${index}" ${points.length <= 1 ? 'disabled' : ''}>x</button>
@@ -531,7 +542,7 @@ function spawnSection(points: SpawnPoint[]): string {
       <h4>Spawn points</h4>
       <button type="button" data-action="add-spawn">+ point</button>
     </div>
-    <p class="hint">Drag the arrows or a point in the view. A is the direction in degrees, relative to the part.</p>
+    <p class="hint">Select a point to show its arrows, then drag them or the point. A is the direction in degrees, relative to the part.</p>
     <div class="spawns">${spawnRows(points)}</div>`
 }
 
@@ -702,9 +713,25 @@ function selectSpawn(index: number): void {
   preview.selectSpawn(selectedSpawn)
 }
 
+/** The part itself owns the arrows when no muzzle is selected. */
+function selectPartTarget(): void {
+  if (!current) {
+    return
+  }
+  selectedSpawn = -1
+  for (const row of inspector.querySelectorAll<HTMLElement>('.spawn-row')) {
+    row.classList.remove('selected')
+  }
+  preview.selectSpawn(-1)
+}
+
 function selectPart(slot: Slot, id: string): void {
   const target = parts.find((part) => part.slot === slot && part.draft.id === id)
-  if (!target || target === current) {
+  if (!target) {
+    return
+  }
+  if (target === current) {
+    selectPartTarget()
     return
   }
   if (dirty && !window.confirm('Discard unsaved changes?')) {
@@ -712,7 +739,7 @@ function selectPart(slot: Slot, id: string): void {
   }
   current = target
   selectedBox = 0
-  selectedSpawn = 0
+  selectedSpawn = -1
   dirty = false
   pendingHistory = undefined
   renderList()
@@ -815,7 +842,7 @@ function setAttackPreset(value: string): void {
   beginHistory()
   const preset = ATTACK_PRESETS.find((candidate) => candidate.id === value)
   current.draft.attack = preset?.create()
-  selectedSpawn = 0
+  selectedSpawn = -1
   renderInspector()
   applyPreview()
   markDirty()
@@ -914,6 +941,9 @@ function setSpawnField(target: HTMLInputElement): void {
   switch (target.dataset.spawnField) {
     case 'x':
       point.x = toNumber(target.value)
+      break
+    case 'y':
+      point.y = toNumber(target.value)
       break
     case 'z':
       point.z = toNumber(target.value)
@@ -1024,7 +1054,11 @@ function addSpawn(): void {
   }
   const points = attackSpawns(attack)
   beginHistory()
-  points.push(attack.kind === 'cone' ? { x: 0, z: 0, angle: 0 } : { x: 0, z: 1.96, angle: 0 })
+  points.push(
+    attack.kind === 'cone'
+      ? { x: 0, y: DEFAULT_SPAWN_Y, z: 0, angle: 0 }
+      : { x: 0, y: DEFAULT_SPAWN_Y, z: 1.96, angle: 0 },
+  )
   selectedSpawn = points.length - 1
   renderInspector()
   applyPreview()
@@ -1075,7 +1109,7 @@ function addPart(slot: Slot): void {
   parts.push(part)
   current = part
   selectedBox = 0
-  selectedSpawn = 0
+  selectedSpawn = -1
   dirty = true
   pendingHistory = undefined
   renderList()
@@ -1102,7 +1136,7 @@ async function removePart(): Promise<void> {
     histories.delete(removed)
     current = parts[0]
     selectedBox = 0
-    selectedSpawn = 0
+    selectedSpawn = -1
     dirty = false
     pendingHistory = undefined
     renderList()
@@ -1207,6 +1241,10 @@ inspector.addEventListener('focusin', (event) => {
   }
   if (target.closest('[data-field], [data-box-field], [data-attack-field], [data-spawn-field]')) {
     pendingHistory = { part: current, snapshot: cloneDraft(current.draft) }
+  }
+  const spawnField = target.closest<HTMLElement>('[data-spawn-field]')
+  if (spawnField) {
+    selectSpawn(Number(spawnField.dataset.spawnIndex))
   }
 })
 

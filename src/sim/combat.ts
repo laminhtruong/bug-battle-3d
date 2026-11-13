@@ -117,13 +117,15 @@ export function killSnake(world: World, snake: Snake): void {
 }
 
 /** Turns an authored muzzle into a world point, rotated and scaled with the part. */
-function spawnOrigin(segment: Segment, spawn: SpawnPoint): { x: number; z: number } {
+function spawnOrigin(segment: Segment, spawn: SpawnPoint): { x: number; y: number; z: number } {
   const cos = Math.cos(segment.angle)
   const sin = Math.sin(segment.angle)
   const localX = spawn.x * PART_SCALE
   const localZ = spawn.z * PART_SCALE
   return {
     x: segment.x + localX * cos + localZ * sin,
+    // Y is visual only: the simulation runs on the XZ plane.
+    y: spawn.y * PART_SCALE,
     z: segment.z - localX * sin + localZ * cos,
   }
 }
@@ -144,6 +146,7 @@ function spawnProjectile(
     partId: segment.partId,
     visual: attack.projectile.visual,
     x: origin.x,
+    y: origin.y,
     z: origin.z,
     vx: direction.x * attack.projectile.speed,
     vz: direction.z * attack.projectile.speed,

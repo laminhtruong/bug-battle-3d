@@ -21,7 +21,7 @@ function makeState(): RenderState {
         ],
       },
     ],
-    projectiles: [{ id: 'p-1', visual: 'bullet', x: 0, z: 0 }],
+    projectiles: [{ id: 'p-1', visual: 'bullet', x: 0, y: 0.5, z: 0 }],
     areas: [],
     pickups: [],
   }

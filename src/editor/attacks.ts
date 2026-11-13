@@ -1,3 +1,4 @@
+import { DEFAULT_SPAWN_Y } from '@/content/define'
 import type { AttackDef, SpawnPoint } from '@/content/define'
 
 /** Editor-only presets. The saved part keeps only the resulting attack data. */
@@ -9,10 +10,10 @@ export interface AttackPreset {
 
 export const ATTACK_VISUALS = ['bullet', 'poison', 'lightning'] as const
 
-const FORWARD: SpawnPoint = { x: 0, z: 1.96, angle: 0 }
+const FORWARD: SpawnPoint = { x: 0, y: DEFAULT_SPAWN_Y, z: 1.96, angle: 0 }
 const SIDES: SpawnPoint[] = [
-  { x: 1.96, z: 0, angle: 90 },
-  { x: -1.96, z: 0, angle: -90 },
+  { x: 1.96, y: DEFAULT_SPAWN_Y, z: 0, angle: 90 },
+  { x: -1.96, y: DEFAULT_SPAWN_Y, z: 0, angle: -90 },
 ]
 
 function projectile(spawnPoints: SpawnPoint[], hazard: boolean): AttackDef {
@@ -45,7 +46,7 @@ export const ATTACK_PRESETS: readonly AttackPreset[] = [
         range: 4,
         halfAngleDeg: 25,
         duration: 0.3,
-        spawnPoints: [{ x: 0, z: 0, angle: 0 }],
+        spawnPoints: [{ x: 0, y: DEFAULT_SPAWN_Y, z: 0, angle: 0 }],
       },
     }),
   },

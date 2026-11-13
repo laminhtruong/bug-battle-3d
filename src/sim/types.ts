@@ -63,6 +63,8 @@ export interface Projectile {
   partId: string
   visual: string
   x: number
+  /** Visual height only; collisions stay on the XZ plane. */
+  y: number
   z: number
   vx: number
   vz: number

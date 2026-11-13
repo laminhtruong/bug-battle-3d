@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { defineHead } from '@/content/define'
+import { DEFAULT_SPAWN_Y, defineHead } from '@/content/define'
 import { ATTACK_PRESETS, attackPreset } from '@/editor/attacks'
 import { draftToJson } from '../scripts/editor-plugin'
 import type { PartDraft } from '../scripts/editor-plugin'
@@ -50,8 +50,8 @@ describe('part editor files', () => {
             visual: 'bullet',
             damage: 1,
             spawnPoints: [
-              { x: 0, z: 1.96, angle: 0 },
-              { x: 1.96, z: 0, angle: 90 },
+              { x: 0, y: DEFAULT_SPAWN_Y, z: 1.96, angle: 0 },
+              { x: 1.96, y: DEFAULT_SPAWN_Y, z: 0, angle: 90 },
             ],
             onLand: { delay: 0, duration: 0.5, radius: 1.5 },
           },
@@ -81,7 +81,9 @@ describe('part editor files', () => {
   })
 
   it('writes a cone spawn point when it moves', async () => {
-    const cone = (spawnPoints: { x: number; z: number; angle: number }[]): PartDraft => ({
+    const cone = (
+      spawnPoints: { x: number; y: number; z: number; angle: number }[],
+    ): PartDraft => ({
       ...claw,
       attack: {
         kind: 'cone',
@@ -90,14 +92,17 @@ describe('part editor files', () => {
       },
     })
 
-    const atOrigin = JSON.parse(await draftToJson(cone([{ x: 0, z: 0, angle: 0 }]), 'claw01.json'))
+    const atOrigin = JSON.parse(
+      await draftToJson(cone([{ x: 0, y: DEFAULT_SPAWN_Y, z: 0, angle: 0 }]), 'claw01.json'),
+    )
     expect(atOrigin.attack.cone.spawnPoints).toBeUndefined()
 
-    const source = await draftToJson(cone([{ x: 0, z: 2, angle: 15 }]), 'claw01.json')
+    const source = await draftToJson(cone([{ x: 0, y: 4, z: 2, angle: 15 }]), 'claw01.json')
+    expect(JSON.parse(source).attack.cone.spawnPoints).toEqual([{ x: 0, y: 4, z: 2, angle: 15 }])
     const part = defineHead(JSON.parse(source))
     expect(part.attack?.kind).toBe('cone')
     if (part.attack?.kind === 'cone') {
-      expect(part.attack.cone.spawnPoints).toEqual([{ x: 0, z: 2, angle: 15 }])
+      expect(part.attack.cone.spawnPoints).toEqual([{ x: 0, y: 4, z: 2, angle: 15 }])
     }
   })
 

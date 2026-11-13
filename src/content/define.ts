@@ -82,9 +82,16 @@ const onLandSchema = z.object({
   radius: z.number().positive(),
 })
 
+/**
+ * Default muzzle height in raw prefab units. 2 * PART_SCALE is the height the
+ * game used before spawn points could move on Y.
+ */
+export const DEFAULT_SPAWN_Y = 2
+
 /** A muzzle in raw prefab units, relative to the part pivot. */
 const spawnPointSchema = z.object({
   x: z.number(),
+  y: z.number().default(DEFAULT_SPAWN_Y),
   z: z.number(),
   /** Firing direction relative to the part facing, in degrees. */
   angle: z.number().default(0),
@@ -101,7 +108,7 @@ const projectileSchema = z.object({
   spawnPoints: z
     .array(spawnPointSchema)
     .min(1)
-    .default(() => [{ x: 0, z: 1.96, angle: 0 }]),
+    .default(() => [{ x: 0, y: DEFAULT_SPAWN_Y, z: 1.96, angle: 0 }]),
   /** When set the projectile deals no damage while flying, only on landing. */
   onLand: onLandSchema.optional(),
 })
@@ -123,7 +130,7 @@ const attackSchema = z.discriminatedUnion('kind', [
       spawnPoints: z
         .array(spawnPointSchema)
         .min(1)
-        .default(() => [{ x: 0, z: 0, angle: 0 }]),
+        .default(() => [{ x: 0, y: DEFAULT_SPAWN_Y, z: 0, angle: 0 }]),
     }),
   }),
 ])

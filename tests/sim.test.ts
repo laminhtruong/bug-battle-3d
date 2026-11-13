@@ -309,7 +309,7 @@ describe('combat', () => {
     }
     const original = part.attack.cone.spawnPoints
     // Two arena units forward: the target at 4.5 is out of range from the part.
-    part.attack.cone.spawnPoints = [{ x: 0, z: 8, angle: 0 }]
+    part.attack.cone.spawnPoints = [{ x: 0, y: 2, z: 8, angle: 0 }]
     const hp = target.segments[0]?.hp ?? 0
     try {
       fireAttacks(world, 0)
@@ -332,6 +332,7 @@ describe('combat', () => {
       partId: 'gun',
       visual: 'bullet',
       x: 0,
+      y: 0.5,
       z: 0,
       vx: 0,
       vz: 0,

@@ -30,6 +30,7 @@ export function createSnapshot(world: World, sfx: SoundEvent[] = []): Snapshot {
       id: projectile.id,
       visual: projectile.visual,
       x: projectile.x,
+      y: projectile.y,
       z: projectile.z,
     })),
     areas: world.areas.map((area) => ({

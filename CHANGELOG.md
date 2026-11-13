@@ -24,8 +24,11 @@ All notable changes to this project are documented here. The format follows
 - Attack editing from presets (projectile, side projectiles, hazard projectile,
   side hazard projectiles and cone), with add/remove and editable values.
 - Projectile and cone attacks take any number of spawn points, each with a
-  position and a direction. The editor draws them as handles with X/Z arrows so
-  a point can be dragged per axis or edited with X/Z/A fields.
+  position and a direction. Spawn points can also move on Y, which sets how high
+  shots and the cone are drawn. The editor draws them as handles with X/Y/Z
+  arrows so a point can be dragged per axis or edited with X/Y/Z/A fields.
+- The editor shows arrows only for the selected object: a spawn point shows its
+  muzzle arrows, and clicking the part art switches back to the art arrows.
 - Cone attacks draw their sector in the editor, so the effect origin, direction
   and reach are visible while authoring.
 

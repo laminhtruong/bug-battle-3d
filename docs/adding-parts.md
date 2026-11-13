@@ -120,12 +120,13 @@ Attack section to add an attack; pick **No attack** to remove it. The preset onl
 fills sensible defaults, so every value stays editable afterwards.
 
 A projectile and a cone can have any number of spawn points. They are drawn in
-the 3D view as orange handles: drag a point, drag the orange X/Z arrows on the
-selected point, or edit its X/Z/A fields. A is the direction in degrees relative
-to the part facing: `0` is forward, `90` is right and `-90` is left. Add or
-remove points with **+ point** and the row's delete button. For a cone the
-spawn point is where the effect starts, and the editor draws the whole sector so
-its reach is easy to see.
+the 3D view as orange handles. Click a point to select it: its orange X/Y/Z
+arrows appear, and dragging a point or an arrow moves it. The X/Y/Z/A fields do
+the same. A is the direction in degrees relative to the part facing: `0` is
+forward, `90` is right and `-90` is left. Add or remove points with **+ point**
+and the row's delete button. Clicking the part art selects the part itself and
+shows its art-offset arrows instead. For a cone the spawn point is where the
+effect starts, and the editor draws the whole sector so its reach is easy to see.
 
 ```json
 "attack": {
@@ -146,10 +147,12 @@ its reach is easy to see.
 ```
 
 Spawn points are raw prefab units, like `boxes` and `offset`. The game scales
-them by the prefab's 0.25 and rotates them with the part. Omit `angle` when it is
-zero and `damage` when it is `1`; the schema supplies those defaults. `onLand`
-is optional and turns the shot into a delayed area hazard. `visual` is one of
-`bullet`, `poison` or `lightning`.
+them by the prefab's 0.25 and rotates them with the part. `y` defaults to `2`,
+the height shots used before spawn points existed, and only changes presentation:
+the simulation still runs on the XZ plane. Omit `y` when it is `2`, `angle` when
+it is zero and `damage` when it is `1`; the schema supplies those defaults.
+`onLand` is optional and turns the shot into a delayed area hazard. `visual` is
+one of `bullet`, `poison` or `lightning`.
 
 An immediate cone hit: `damage` is fixed at 1 for cones. The optional
 `spawnPoints` move the cone origin; without them it starts at the part pivot and

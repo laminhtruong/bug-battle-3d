@@ -508,7 +508,7 @@ select:focus {
 
 .spawn-row {
   display: grid;
-  grid-template-columns: 22px repeat(3, minmax(0, 1fr)) 22px;
+  grid-template-columns: 22px repeat(4, minmax(0, 1fr)) 22px;
   align-items: end;
   gap: 4px;
   padding: 5px;
