@@ -18,8 +18,10 @@ import type { World } from './types'
 export interface WorldOptions {
   seed: number
   arena: ArenaDef
-  /** Human players in slot order. Missing slots are filled with bots. */
+  /** Human players in slot order. Missing slots are filled with bots by default. */
   players?: readonly PlayerSetup[]
+  /** Fill unused player slots with bots. Off for online matches. */
+  bots?: boolean
 }
 
 /** Bots get real-sounding names, so the arena does not show "Bot 2". */
@@ -46,7 +48,7 @@ const BOT_NAMES = [
   'Ziggy',
 ]
 
-export function createWorld({ seed, arena, players = [] }: WorldOptions): World {
+export function createWorld({ seed, arena, players = [], bots = true }: WorldOptions): World {
   const world: World = {
     arena,
     rng: createRng(seed),
@@ -68,7 +70,7 @@ export function createWorld({ seed, arena, players = [] }: WorldOptions): World 
 
   const setups: PlayerSetup[] = [...players]
   const botNames = [...BOT_NAMES]
-  while (setups.length < BALANCE.maxPlayers) {
+  while (bots && setups.length < BALANCE.maxPlayers) {
     const slot = setups.length
     const name = botNames.splice(world.rng.int(0, botNames.length), 1)[0] ?? `Bug ${slot + 1}`
     setups.push({

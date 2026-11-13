@@ -51,6 +51,17 @@ describe('world', () => {
     expect(world.snakes.some((snake) => snake.control === 'boss')).toBe(false)
   })
 
+  it('leaves empty player slots alone when bots are off', () => {
+    const world = createWorld({
+      seed: 2,
+      arena: classicArena,
+      bots: false,
+      players: [{ id: 'host', name: 'You', control: 'human', slot: 0, headId: DEFAULT_HEAD_ID }],
+    })
+    const players = world.snakes.filter((snake) => isPlayerControl(snake.control))
+    expect(players.map((snake) => snake.id)).toEqual(['host'])
+  })
+
   it('spawns each player at a random, spaced out arena point', () => {
     const spot = (seed: number) =>
       createWorld({ seed, arena: classicArena })

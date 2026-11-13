@@ -4,7 +4,7 @@ A browser snake arena game built with three.js and TypeScript.
 
 Grow your bug by eating apples and breaking power-ups, fight wandering bugs, and
 take down the boss that arrives every 30 seconds. One 90 second round, up to four
-players, bots fill empty slots.
+players online; local play fills the empty slots with bots.
 
 - **Local play** against three bots.
 - **Online play** with a five character room code. The host runs the simulation.
@@ -35,7 +35,8 @@ light push moves slower.
 
 1. One player clicks **Create room** and shares the five character code.
 2. Everyone else types the code and clicks **Join**.
-3. The host clicks **Start match**. Empty slots are filled with bots.
+3. The host clicks **Start match**. Only joined players play; online matches
+   have no bots.
 
 There is no game server. The host owns the authoritative simulation and sends
 15 snapshots per second; guests send input at 30 Hz. WebRTC signaling uses the
@@ -44,6 +45,7 @@ public PeerJS broker.
 Known limits, by design:
 
 - No host migration. If the host leaves, the match ends.
+- No bots online. A dropped player leaves the arena instead of being taken over.
 - No TURN relay. A small fraction of symmetric NAT pairs will not connect.
 - No server-side anti-cheat. The host can trivially cheat in its own room.
 
@@ -115,7 +117,7 @@ third-party notices are documented in [ASSETS.md](ASSETS.md).
 
 Early playable version (`0.1.0`):
 
-- One arena, four players plus bots, 90 second rounds.
+- One arena, up to four players, 90 second rounds; local play adds bots.
 - You start with a head and three normal bodies; bots roll a random head and
   three random bodies whose strength follows the best part you own.
 - Eight wandering bugs roam the map at random and are replaced a couple of

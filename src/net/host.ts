@@ -160,10 +160,8 @@ export async function startHost({ playerName, handlers }: HostOptions): Promise<
       remotes.delete(connection.peer)
       const snake = findSnake(remote.playerId)
       if (snake && world && !world.ended) {
-        // A dropped player keeps their snake, now driven by the bot AI.
-        snake.control = 'bot'
-        snake.steerX = 0
-        snake.steerZ = 0
+        // Online matches have no bots, so a dropped player leaves the arena.
+        world.snakes = world.snakes.filter((candidate) => candidate !== snake)
       }
       if (!world) {
         broadcastLobby()
@@ -215,6 +213,7 @@ export async function startHost({ playerName, handlers }: HostOptions): Promise<
       seed,
       arena: classicArena,
       players: setups,
+      bots: false,
     })
     resultsSent = false
     snapshotClock = 0

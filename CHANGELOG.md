@@ -48,7 +48,7 @@ All notable changes to this project are documented here. The format follows
 - Power-ups are solid: a snake head stops at the crate and slides around it
   instead of passing through.
 - Host-authoritative online play with five character room codes over PeerJS.
-- Lobby, guest handshake, content hash check and disconnect-to-bot fallback.
+- Lobby, guest handshake and content hash check.
 - Wire protocol with zod validation, message size limits and input rate limits.
 - Protocol and snapshot tests.
 - Part models and the arena floor texture, rendered in place of the placeholder
@@ -81,6 +81,9 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- Online matches no longer fill empty slots with bots. A player who drops leaves
+  the arena instead of being taken over by the bot AI; local play still fills its
+  empty slots with bots.
 - Spawn points carry a Y rotation that can be dragged with the editor's green
   ring or typed as RY, and the fire head and body now take their mounts from the
   part JSON instead of hardcoded offsets, so the flames, the cone and the damage
