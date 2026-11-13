@@ -47,8 +47,9 @@ export function createView(canvas: HTMLCanvasElement): View {
   floorTexture.colorSpace = THREE.SRGBColorSpace
   floorTexture.wrapS = THREE.RepeatWrapping
   floorTexture.wrapT = THREE.RepeatWrapping
-  // One texture tile covers four world units, so the paving stones stay readable.
-  floorTexture.repeat.set(arena.width / 4, arena.depth / 4)
+  // One tile covers sixteen world units, so the paving keeps the same share of
+  // the arena it had before the parts and the map grew four times.
+  floorTexture.repeat.set(arena.width / 16, arena.depth / 16)
 
   const floor = new THREE.Mesh(
     new THREE.PlaneGeometry(arena.width, arena.depth),
