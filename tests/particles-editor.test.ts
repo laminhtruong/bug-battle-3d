@@ -4,13 +4,14 @@ import {
   BatchedRenderer,
   ConstantValue,
   FrameOverLife,
+  IntervalValue,
   ParticleSystem,
   PiecewiseBezier,
   SpriteParticle,
 } from 'three.quarks'
 import { quarksDocumentSchema } from '@/content/particles'
 import lightningImpact from '@/content/particles/lightning-impact.json'
-import { updateParticlePreview } from '@/editor/particles-preview'
+import { intervalBounds, updateParticlePreview } from '@/editor/particles-preview'
 
 const bundled = import.meta.glob('../src/content/particles/*.json', {
   eager: true,
@@ -42,8 +43,14 @@ function systems(node: unknown): NativeSystem[] {
 }
 
 describe('native Quarks particle documents', () => {
+  it('reads live Quarks generator values instead of looking for their serialized type names', () => {
+    expect(intervalBounds(new IntervalValue(0.1, 0.2), [1, 1])).toEqual([0.1, 0.2])
+    expect(intervalBounds(new ConstantValue(80), [0, 0])).toEqual([80, 80])
+    expect(intervalBounds(undefined, [1, 1])).toEqual([1, 1])
+  })
+
   it('stores every game effect as a Three.js Object3D document with ParticleEmitters', () => {
-    expect(Object.keys(bundled)).toHaveLength(6)
+    expect(Object.keys(bundled)).toHaveLength(7)
     for (const document of Object.values(bundled)) {
       expect(quarksDocumentSchema.parse(document)).toEqual(document)
     }
@@ -99,17 +106,17 @@ describe('native Quarks particle documents', () => {
           systems(document.object)
             .filter((system) => system.renderMode === 1)
             .map((system) => system.rendererEmitterSettings.lengthFactor),
-        ).toEqual([4, -4])
+        ).toEqual([2, -4])
         expect(
           systems(document.object)
-            .filter((system) => system.rendererEmitterSettings.lengthFactor === 4)
+            .filter((system) => system.rendererEmitterSettings.lengthFactor === 2)
             .map((system) => [system.startSpeed.a, system.startSpeed.b]),
-        ).toEqual([[0.5, 4]])
+        ).toEqual([[expect.closeTo(7), expect.closeTo(30.8)]])
         expect(
           systems(document.object)
-            .filter((system) => system.rendererEmitterSettings.lengthFactor === 4)
+            .filter((system) => system.rendererEmitterSettings.lengthFactor === 2)
             .map((system) => system.shape.thickness),
-        ).toEqual([1])
+        ).toEqual([0])
       }
     }
   })

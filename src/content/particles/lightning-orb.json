@@ -262,7 +262,7 @@
       {
         "uuid": "a9f3aac3-303d-48de-bdef-14a3868b11be",
         "type": "ParticleEmitter",
-        "name": "",
+        "name": "OrbGlow",
         "castShadow": false,
         "receiveShadow": false,
         "visible": true,
@@ -304,30 +304,27 @@
             "type": "point"
           },
           "startLife": {
-            "type": "IntervalValue",
-            "a": 0.25,
-            "b": 0.25
+            "type": "ConstantValue",
+            "value": 0.25
           },
           "startSpeed": {
-            "type": "IntervalValue",
-            "a": 0,
-            "b": 0
+            "type": "ConstantValue",
+            "value": 0.0
           },
           "startRotation": {
             "type": "IntervalValue",
             "a": 0,
-            "b": 6.283185307179586
+            "b": 6.283185
           },
           "startSize": {
-            "type": "IntervalValue",
-            "a": 2.1,
-            "b": 2.1
+            "type": "ConstantValue",
+            "value": 2.0999999999999996
           },
           "startColor": {
             "type": "ConstantColor",
             "color": {
               "r": 1,
-              "g": 1,
+              "g": 0.14901961,
               "b": 1,
               "a": 1
             }
@@ -348,7 +345,7 @@
                 "value": 1
               },
               "probability": 1,
-              "interval": 0,
+              "interval": 0.01,
               "cycle": 1
             }
           ],
@@ -384,7 +381,7 @@
                         "g": 1,
                         "b": 1
                       },
-                      "pos": 0
+                      "pos": 0.0
                     },
                     {
                       "value": {
@@ -392,7 +389,7 @@
                         "g": 1,
                         "b": 1
                       },
-                      "pos": 1
+                      "pos": 1.0
                     }
                   ]
                 },
@@ -401,16 +398,16 @@
                   "subType": "Number",
                   "keys": [
                     {
-                      "value": 0.4902,
-                      "pos": 0
+                      "value": 0.49019608,
+                      "pos": 0.0
                     },
                     {
                       "value": 1,
-                      "pos": 0.5321
+                      "pos": 0.5321126115815976
                     },
                     {
-                      "value": 0.4902,
-                      "pos": 1
+                      "value": 0.49019608,
+                      "pos": 1.0
                     }
                   ]
                 }
@@ -423,33 +420,33 @@
                 "functions": [
                   {
                     "function": {
-                      "p0": 0.7609,
-                      "p1": 0.8369666666666666,
-                      "p2": 0.9130333333333334,
-                      "p3": 0.9891
+                      "p0": 3.04348,
+                      "p1": 3.04348,
+                      "p2": 3.9565232,
+                      "p3": 3.9565232
                     },
                     "start": 0
                   },
                   {
                     "function": {
-                      "p0": 0.9891,
-                      "p1": 0.9130333333333334,
-                      "p2": 0.8369666666666666,
-                      "p3": 0.7609
+                      "p0": 3.9565232,
+                      "p1": 3.9565232,
+                      "p2": 3.04348,
+                      "p3": 3.04348
                     },
-                    "start": 0.4982
+                    "start": 0.49820787
                   }
                 ]
               }
             }
           ],
-          "worldSpace": false
+          "worldSpace": true
         }
       },
       {
         "uuid": "99d1a08d-997e-4185-b773-f4d42169e9c0",
         "type": "ParticleEmitter",
-        "name": "",
+        "name": "Lightning",
         "castShadow": false,
         "receiveShadow": false,
         "visible": true,
@@ -489,9 +486,9 @@
           "duration": 0.25,
           "shape": {
             "type": "sphere",
-            "radius": 2,
+            "radius": 2.0,
             "arc": 6.283185307179586,
-            "thickness": 1,
+            "thickness": 0.5,
             "mode": 0,
             "spread": 0,
             "speed": {
@@ -512,11 +509,11 @@
           "startRotation": {
             "type": "IntervalValue",
             "a": 0,
-            "b": 6.283185307179586
+            "b": 6.283185
           },
           "startSize": {
             "type": "IntervalValue",
-            "a": 1,
+            "a": 1.0,
             "b": 1.2
           },
           "startColor": {
@@ -565,27 +562,35 @@
                 "functions": [
                   {
                     "function": {
-                      "p0": 0,
-                      "p1": 2.6666666666666665,
-                      "p2": 5.333333333333333,
-                      "p3": 8
+                      "p0": 8.1402438942,
+                      "p1": 8.426828929466666,
+                      "p2": 8.713413964733334,
+                      "p3": 8.999999
                     },
                     "start": 0
                   },
                   {
                     "function": {
-                      "p0": 0,
-                      "p1": 2.6666666666666665,
-                      "p2": 5.333333333333333,
-                      "p3": 8
+                      "p0": 0.0,
+                      "p1": 2.9994,
+                      "p2": 5.9988,
+                      "p3": 8.9982
                     },
-                    "start": 0.5
+                    "start": 0.08721443842645604
                   }
                 ]
               }
+            },
+            {
+              "type": "LimitSpeedOverLife",
+              "speed": {
+                "type": "ConstantValue",
+                "value": 0.8
+              },
+              "dampen": 0.5
             }
           ],
-          "worldSpace": false
+          "worldSpace": true
         }
       }
     ]

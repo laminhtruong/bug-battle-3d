@@ -161,7 +161,7 @@
       {
         "uuid": "b13c1a48-7503-4cc8-81c9-f160ed7683df",
         "type": "ParticleEmitter",
-        "name": "",
+        "name": "OrbGlow",
         "castShadow": false,
         "receiveShadow": false,
         "visible": true,
@@ -203,31 +203,28 @@
             "type": "point"
           },
           "startLife": {
-            "type": "IntervalValue",
-            "a": 0.25,
-            "b": 0.25
+            "type": "ConstantValue",
+            "value": 0.25
           },
           "startSpeed": {
-            "type": "IntervalValue",
-            "a": 0,
-            "b": 0
+            "type": "ConstantValue",
+            "value": 0.0
           },
           "startRotation": {
             "type": "IntervalValue",
             "a": 0,
-            "b": 6.283185307179586
+            "b": 6.283185
           },
           "startSize": {
-            "type": "IntervalValue",
-            "a": 0.84,
-            "b": 0.84
+            "type": "ConstantValue",
+            "value": 0.84
           },
           "startColor": {
             "type": "ConstantColor",
             "color": {
-              "r": 1,
+              "r": 0,
               "g": 1,
-              "b": 1,
+              "b": 0,
               "a": 1
             }
           },
@@ -247,7 +244,7 @@
                 "value": 1
               },
               "probability": 1,
-              "interval": 0,
+              "interval": 0.01,
               "cycle": 1
             }
           ],
@@ -283,7 +280,7 @@
                         "g": 1,
                         "b": 1
                       },
-                      "pos": 0
+                      "pos": 0.0
                     },
                     {
                       "value": {
@@ -291,7 +288,7 @@
                         "g": 1,
                         "b": 1
                       },
-                      "pos": 1
+                      "pos": 1.0
                     }
                   ]
                 },
@@ -300,16 +297,16 @@
                   "subType": "Number",
                   "keys": [
                     {
-                      "value": 0.4902,
-                      "pos": 0
+                      "value": 0.49019608,
+                      "pos": 0.0
                     },
                     {
                       "value": 1,
-                      "pos": 0.5321
+                      "pos": 0.5321126115815976
                     },
                     {
-                      "value": 0.4902,
-                      "pos": 1
+                      "value": 0.49019608,
+                      "pos": 1.0
                     }
                   ]
                 }
@@ -322,27 +319,27 @@
                 "functions": [
                   {
                     "function": {
-                      "p0": 0.7609,
-                      "p1": 0.8369666666666666,
-                      "p2": 0.9130333333333334,
-                      "p3": 0.9891
+                      "p0": 3.04348,
+                      "p1": 3.04348,
+                      "p2": 3.9565232,
+                      "p3": 3.9565232
                     },
                     "start": 0
                   },
                   {
                     "function": {
-                      "p0": 0.9891,
-                      "p1": 0.9130333333333334,
-                      "p2": 0.8369666666666666,
-                      "p3": 0.7609
+                      "p0": 3.9565232,
+                      "p1": 3.9565232,
+                      "p2": 3.04348,
+                      "p3": 3.04348
                     },
-                    "start": 0.4982
+                    "start": 0.49820787
                   }
                 ]
               }
             }
           ],
-          "worldSpace": false
+          "worldSpace": true
         }
       }
     ]

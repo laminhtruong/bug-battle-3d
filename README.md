@@ -106,6 +106,9 @@ textures, import/export, and undo/redo. Bundled effects live in
 `src/content/particles`; editor changes are stored as native JSON overrides in
 `src/content/particle-overrides`. Saved ids can be used as projectile visuals.
 
+See [the particle audit](docs/particles-audit.md) for Unity source prefabs,
+corrected settings, and remaining native-library differences.
+
 ## Adding content
 
 A head or a body is a single JSON file under `src/content/heads` or

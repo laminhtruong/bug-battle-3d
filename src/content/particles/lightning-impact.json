@@ -255,6 +255,66 @@
       "wireframeLinecap": "round",
       "wireframeLinejoin": "round",
       "fog": true
+    },
+    {
+      "uuid": "0f4d8488-11ea-4409-9939-620de0787b74",
+      "type": "MeshBasicMaterial",
+      "blending": 1,
+      "side": 2,
+      "shadowSide": null,
+      "vertexColors": false,
+      "opacity": 1,
+      "transparent": true,
+      "blendSrc": 204,
+      "blendDst": 205,
+      "blendEquation": 100,
+      "blendSrcAlpha": null,
+      "blendDstAlpha": null,
+      "blendEquationAlpha": null,
+      "blendColor": 0,
+      "blendAlpha": 0,
+      "depthFunc": 3,
+      "depthTest": true,
+      "depthWrite": false,
+      "colorWrite": true,
+      "clipIntersection": false,
+      "clipShadows": false,
+      "stencilWriteMask": 255,
+      "stencilFunc": 519,
+      "stencilRef": 0,
+      "stencilFuncMask": 255,
+      "stencilFail": 7680,
+      "stencilZFail": 7680,
+      "stencilZPass": 7680,
+      "stencilWrite": false,
+      "polygonOffset": false,
+      "polygonOffsetFactor": 0,
+      "polygonOffsetUnits": 0,
+      "dithering": false,
+      "alphaTest": 0,
+      "alphaHash": false,
+      "alphaToCoverage": false,
+      "premultipliedAlpha": false,
+      "forceSinglePass": false,
+      "allowOverride": true,
+      "visible": true,
+      "toneMapped": true,
+      "name": "",
+      "color": 16777215,
+      "map": "5e56e435-0900-4f01-baeb-898922b90419",
+      "envMapRotation": [
+        0,
+        0,
+        0,
+        "XYZ"
+      ],
+      "reflectivity": 1,
+      "refractionRatio": 0.98,
+      "wireframe": false,
+      "wireframeLinewidth": 1,
+      "wireframeLinecap": "round",
+      "wireframeLinejoin": "round",
+      "fog": true
     }
   ],
   "textures": [
@@ -405,6 +465,43 @@
       "mipmapsAutoUpdate": true,
       "premultiplyAlpha": false,
       "unpackAlignment": 4
+    },
+    {
+      "uuid": "5e56e435-0900-4f01-baeb-898922b90419",
+      "name": "",
+      "image": "167add9b-e504-44f1-98dd-5a86fc5d1489",
+      "mapping": 300,
+      "channel": 0,
+      "repeat": [
+        1,
+        1
+      ],
+      "offset": [
+        0,
+        0
+      ],
+      "center": [
+        0,
+        0
+      ],
+      "rotation": 0,
+      "wrap": [
+        1001,
+        1001
+      ],
+      "format": 1023,
+      "internalFormat": null,
+      "type": 1009,
+      "normalized": false,
+      "colorSpace": "srgb",
+      "minFilter": 1008,
+      "magFilter": 1006,
+      "anisotropy": 1,
+      "flipY": true,
+      "generateMipmaps": true,
+      "mipmapsAutoUpdate": true,
+      "premultiplyAlpha": false,
+      "unpackAlignment": 4
     }
   ],
   "images": [
@@ -423,6 +520,10 @@
     {
       "uuid": "bc69733e-3072-4c2f-a60d-ffe28cdcc68b",
       "url": "assets/textures/fx/glow1.png"
+    },
+    {
+      "uuid": "167add9b-e504-44f1-98dd-5a86fc5d1489",
+      "url": "assets/textures/fx/circle.png"
     }
   ],
   "object": {
@@ -464,7 +565,7 @@
       {
         "uuid": "4b00c549-2ae8-4225-9c2b-94828a0ed0e2",
         "type": "ParticleEmitter",
-        "name": "",
+        "name": "Sparks",
         "castShadow": false,
         "receiveShadow": false,
         "visible": true,
@@ -506,7 +607,7 @@
             "type": "circle",
             "radius": 2.8,
             "arc": 6.283185307179586,
-            "thickness": 1,
+            "thickness": 0,
             "mode": 0,
             "spread": 0,
             "speed": {
@@ -521,23 +622,22 @@
           },
           "startSpeed": {
             "type": "IntervalValue",
-            "a": 0.5,
-            "b": 4
+            "a": 7.0,
+            "b": 30.799999999999997
           },
           "startRotation": {
             "type": "ConstantValue",
             "value": 0
           },
           "startSize": {
-            "type": "IntervalValue",
-            "a": 0.112,
-            "b": 0.112
+            "type": "ConstantValue",
+            "value": 0.11199999999999999
           },
           "startColor": {
             "type": "ConstantColor",
             "color": {
               "r": 1,
-              "g": 1,
+              "g": 0.42745098,
               "b": 1,
               "a": 1
             }
@@ -558,7 +658,7 @@
                 "value": 65
               },
               "probability": 1,
-              "interval": 0,
+              "interval": 0.01,
               "cycle": 1
             }
           ],
@@ -567,8 +667,8 @@
           "renderOrder": 0,
           "renderMode": 1,
           "rendererEmitterSettings": {
-            "speedFactor": 0.02,
-            "lengthFactor": 4
+            "speedFactor": 0.01,
+            "lengthFactor": 2
           },
           "material": "0f118eec-6e90-4fe1-b1f4-3c1519012b79",
           "layers": 1,
@@ -586,50 +686,100 @@
             {
               "type": "ColorOverLife",
               "color": {
-                "type": "Gradient",
-                "color": {
-                  "type": "CLinearFunction",
-                  "subType": "Color",
-                  "keys": [
-                    {
-                      "value": {
-                        "r": 1,
-                        "g": 1,
-                        "b": 1
+                "type": "RandomColorBetweenGradient",
+                "gradient1": {
+                  "type": "Gradient",
+                  "color": {
+                    "type": "CLinearFunction",
+                    "subType": "Color",
+                    "keys": [
+                      {
+                        "value": {
+                          "r": 1,
+                          "g": 1,
+                          "b": 1
+                        },
+                        "pos": 0.0
                       },
-                      "pos": 0
-                    },
-                    {
-                      "value": {
-                        "r": 1,
-                        "g": 1,
-                        "b": 1
+                      {
+                        "value": {
+                          "r": 1,
+                          "g": 1,
+                          "b": 1
+                        },
+                        "pos": 1.0
+                      }
+                    ]
+                  },
+                  "alpha": {
+                    "type": "CLinearFunction",
+                    "subType": "Number",
+                    "keys": [
+                      {
+                        "value": 1,
+                        "pos": 0.0
                       },
-                      "pos": 1
-                    }
-                  ]
+                      {
+                        "value": 0,
+                        "pos": 0.30029755092698557
+                      },
+                      {
+                        "value": 1,
+                        "pos": 0.30473792629892427
+                      },
+                      {
+                        "value": 0,
+                        "pos": 1.0
+                      }
+                    ]
+                  }
                 },
-                "alpha": {
-                  "type": "CLinearFunction",
-                  "subType": "Number",
-                  "keys": [
-                    {
-                      "value": 0,
-                      "pos": 0
-                    },
-                    {
-                      "value": 1,
-                      "pos": 0.2235
-                    },
-                    {
-                      "value": 1,
-                      "pos": 0.8349
-                    },
-                    {
-                      "value": 0,
-                      "pos": 1
-                    }
-                  ]
+                "gradient2": {
+                  "type": "Gradient",
+                  "color": {
+                    "type": "CLinearFunction",
+                    "subType": "Color",
+                    "keys": [
+                      {
+                        "value": {
+                          "r": 1,
+                          "g": 1,
+                          "b": 1
+                        },
+                        "pos": 0.0
+                      },
+                      {
+                        "value": {
+                          "r": 1,
+                          "g": 1,
+                          "b": 1
+                        },
+                        "pos": 1.0
+                      }
+                    ]
+                  },
+                  "alpha": {
+                    "type": "CLinearFunction",
+                    "subType": "Number",
+                    "keys": [
+                      {
+                        "value": 0,
+                        "pos": 0.0
+                      },
+                      {
+                        "value": 1,
+                        "pos": 0.2235294117647059
+                      },
+                      {
+                        "value": 1,
+                        "pos": 0.8348668650339514
+                      },
+                      {
+                        "value": 0,
+                        "pos": 1.0
+                      }
+                    ]
+                  }
                 }
               }
             },
@@ -641,23 +791,31 @@
                   {
                     "function": {
                       "p0": 0.475,
-                      "p1": 0.6461666666666667,
-                      "p2": 0.8173333333333334,
-                      "p3": 0.9885
+                      "p1": 0.862934069181848,
+                      "p2": 1.0311716930059078,
+                      "p3": 0.9884521
                     },
                     "start": 0
                   },
                   {
                     "function": {
-                      "p0": 0.9885,
-                      "p1": 0.659,
-                      "p2": 0.3295,
+                      "p0": 0.9884521,
+                      "p1": 0.903717093005908,
+                      "p2": 0.44321668,
                       "p3": 0
                     },
-                    "start": 0.3352
+                    "start": 0.33517498
                   }
                 ]
               }
+            },
+            {
+              "type": "LimitSpeedOverLife",
+              "speed": {
+                "type": "ConstantValue",
+                "value": 0.0
+              },
+              "dampen": 0.2
             }
           ],
           "worldSpace": true
@@ -666,7 +824,7 @@
       {
         "uuid": "f11d3fb8-e4bc-410d-8129-d61567cbcdac",
         "type": "ParticleEmitter",
-        "name": "",
+        "name": "NovaGlow",
         "castShadow": false,
         "receiveShadow": false,
         "visible": true,
@@ -708,24 +866,21 @@
             "type": "point"
           },
           "startLife": {
-            "type": "IntervalValue",
-            "a": 0.5,
-            "b": 0.5
+            "type": "ConstantValue",
+            "value": 0.5
           },
           "startSpeed": {
-            "type": "IntervalValue",
-            "a": 0,
-            "b": 0
+            "type": "ConstantValue",
+            "value": 0.0
           },
           "startRotation": {
             "type": "IntervalValue",
             "a": 0,
-            "b": 6.283185307179586
+            "b": 6.283185
           },
           "startSize": {
-            "type": "IntervalValue",
-            "a": 9.8,
-            "b": 9.8
+            "type": "ConstantValue",
+            "value": 9.799999999999999
           },
           "startColor": {
             "type": "ConstantColor",
@@ -752,7 +907,7 @@
                 "value": 1
               },
               "probability": 1,
-              "interval": 0,
+              "interval": 0.01,
               "cycle": 1
             }
           ],
@@ -788,15 +943,15 @@
                         "g": 1,
                         "b": 1
                       },
-                      "pos": 0
+                      "pos": 0.0
                     },
                     {
                       "value": {
                         "r": 1,
-                        "g": 1,
-                        "b": 0
+                        "g": 0,
+                        "b": 1
                       },
-                      "pos": 1
+                      "pos": 1.0
                     }
                   ]
                 },
@@ -806,11 +961,11 @@
                   "keys": [
                     {
                       "value": 1,
-                      "pos": 0
+                      "pos": 0.0
                     },
                     {
                       "value": 0,
-                      "pos": 1
+                      "pos": 1.0
                     }
                   ]
                 }
@@ -823,15 +978,23 @@
                 "functions": [
                   {
                     "function": {
-                      "p0": 0.3211,
-                      "p1": 0.5474,
-                      "p2": 0.7737,
+                      "p0": 0.3210756,
+                      "p1": 0.9609445666666667,
+                      "p2": 1.0,
                       "p3": 1
                     },
                     "start": 0
                   }
                 ]
               }
+            },
+            {
+              "type": "LimitSpeedOverLife",
+              "speed": {
+                "type": "ConstantValue",
+                "value": 0.9799999999999999
+              },
+              "dampen": 0.09
             }
           ],
           "worldSpace": true
@@ -840,7 +1003,7 @@
       {
         "uuid": "9044ec83-2637-4b7d-9794-f4d2e3f1f75d",
         "type": "ParticleEmitter",
-        "name": "",
+        "name": "LightningCenter",
         "castShadow": false,
         "receiveShadow": false,
         "visible": true,
@@ -880,7 +1043,7 @@
           "duration": 0.25,
           "shape": {
             "type": "circle",
-            "radius": 0.406,
+            "radius": 0.40599999999999997,
             "arc": 6.283185307179586,
             "thickness": 1,
             "mode": 0,
@@ -903,11 +1066,11 @@
           "startRotation": {
             "type": "IntervalValue",
             "a": 0,
-            "b": 6.283185307179586
+            "b": 6.283185
           },
           "startSize": {
             "type": "IntervalValue",
-            "a": 0.91,
+            "a": 0.9099999999999999,
             "b": 1.19
           },
           "startColor": {
@@ -935,7 +1098,7 @@
                 "value": 11
               },
               "probability": 1,
-              "interval": 0,
+              "interval": 0.01,
               "cycle": 1
             }
           ],
@@ -974,7 +1137,7 @@
                         "g": 1,
                         "b": 1
                       },
-                      "pos": 0
+                      "pos": 0.0
                     },
                     {
                       "value": {
@@ -982,7 +1145,7 @@
                         "g": 0,
                         "b": 1
                       },
-                      "pos": 0.9985
+                      "pos": 0.9985198748760205
                     }
                   ]
                 },
@@ -992,11 +1155,11 @@
                   "keys": [
                     {
                       "value": 1,
-                      "pos": 0
+                      "pos": 0.0
                     },
                     {
                       "value": 1,
-                      "pos": 0.5773
+                      "pos": 0.5772640573739223
                     }
                   ]
                 }
@@ -1009,15 +1172,23 @@
                 "functions": [
                   {
                     "function": {
-                      "p0": 0,
-                      "p1": 2.9997,
-                      "p2": 5.9994,
+                      "p0": 0.0,
+                      "p1": 2.9997000000000003,
+                      "p2": 5.9994000000000005,
                       "p3": 8.9991
                     },
                     "start": 0
                   }
                 ]
               }
+            },
+            {
+              "type": "LimitSpeedOverLife",
+              "speed": {
+                "type": "ConstantValue",
+                "value": 0.27999999999999997
+              },
+              "dampen": 0.5
             }
           ],
           "worldSpace": true
@@ -1026,7 +1197,203 @@
       {
         "uuid": "06f56706-3450-4fca-b4e9-0316e4416f2e",
         "type": "ParticleEmitter",
-        "name": "",
+        "name": "CenterGlow",
+        "castShadow": false,
+        "receiveShadow": false,
+        "visible": true,
+        "frustumCulled": true,
+        "renderOrder": 0,
+        "static": false,
+        "matrixAutoUpdate": true,
+        "layers": 1,
+        "matrix": [
+          1,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ],
+        "ps": {
+          "version": "3.0",
+          "autoDestroy": true,
+          "looping": false,
+          "prewarm": false,
+          "duration": 0.5,
+          "shape": {
+            "type": "point"
+          },
+          "startLife": {
+            "type": "ConstantValue",
+            "value": 0.4
+          },
+          "startSpeed": {
+            "type": "ConstantValue",
+            "value": 0.0
+          },
+          "startRotation": {
+            "type": "IntervalValue",
+            "a": 0,
+            "b": 6.283185
+          },
+          "startSize": {
+            "type": "ConstantValue",
+            "value": 11.2
+          },
+          "startColor": {
+            "type": "ConstantColor",
+            "color": {
+              "r": 1,
+              "g": 0,
+              "b": 1,
+              "a": 1
+            }
+          },
+          "emissionOverTime": {
+            "type": "ConstantValue",
+            "value": 0
+          },
+          "emissionOverDistance": {
+            "type": "ConstantValue",
+            "value": 0
+          },
+          "emissionBursts": [
+            {
+              "time": 0,
+              "count": {
+                "type": "ConstantValue",
+                "value": 1
+              },
+              "probability": 1,
+              "interval": 0.01,
+              "cycle": 1
+            }
+          ],
+          "onlyUsedByOther": false,
+          "instancingGeometry": "f537d93b-ed7c-4d7c-b9f3-0cda1b08f2a8",
+          "renderOrder": 0,
+          "renderMode": 4,
+          "rendererEmitterSettings": {},
+          "material": "5bd0f444-bf56-4f90-8e3d-9a532aa695d6",
+          "layers": 1,
+          "startTileIndex": {
+            "type": "ConstantValue",
+            "value": 0
+          },
+          "uTileCount": 1,
+          "vTileCount": 1,
+          "blendTiles": false,
+          "softParticles": false,
+          "softFarFade": 0,
+          "softNearFade": 0,
+          "behaviors": [
+            {
+              "type": "ColorOverLife",
+              "color": {
+                "type": "Gradient",
+                "color": {
+                  "type": "CLinearFunction",
+                  "subType": "Color",
+                  "keys": [
+                    {
+                      "value": {
+                        "r": 1,
+                        "g": 1,
+                        "b": 1
+                      },
+                      "pos": 0.0
+                    },
+                    {
+                      "value": {
+                        "r": 1,
+                        "g": 1,
+                        "b": 1
+                      },
+                      "pos": 1.0
+                    }
+                  ]
+                },
+                "alpha": {
+                  "type": "CLinearFunction",
+                  "subType": "Number",
+                  "keys": [
+                    {
+                      "value": 1,
+                      "pos": 0.0
+                    },
+                    {
+                      "value": 0,
+                      "pos": 1.0
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "type": "SizeOverLife",
+              "size": {
+                "type": "PiecewiseBezier",
+                "functions": [
+                  {
+                    "function": {
+                      "p0": 1,
+                      "p1": 1.0,
+                      "p2": 0.9249999,
+                      "p3": 0.6923077
+                    },
+                    "start": 0
+                  }
+                ]
+              }
+            },
+            {
+              "type": "RotationOverLife",
+              "angularVelocity": {
+                "type": "PiecewiseBezier",
+                "functions": [
+                  {
+                    "function": {
+                      "p0": 3.1415925,
+                      "p1": 3.1415925,
+                      "p2": 0.0,
+                      "p3": 0.0
+                    },
+                    "start": 0
+                  }
+                ]
+              }
+            },
+            {
+              "type": "LimitSpeedOverLife",
+              "speed": {
+                "type": "ConstantValue",
+                "value": 0.9799999999999999
+              },
+              "dampen": 0.09
+            }
+          ],
+          "worldSpace": true
+        }
+      },
+      {
+        "uuid": "eb9c1d5b-87fc-4ad1-97ef-87da1cea8765",
+        "type": "ParticleEmitter",
+        "name": "NovaLightningPurple",
         "castShadow": false,
         "receiveShadow": false,
         "visible": true,
@@ -1069,23 +1436,22 @@
           },
           "startLife": {
             "type": "IntervalValue",
-            "a": 0.4,
+            "a": 0.2,
             "b": 0.4
           },
           "startSpeed": {
             "type": "IntervalValue",
-            "a": 0,
-            "b": 0
+            "a": 0.0,
+            "b": 0.0
           },
           "startRotation": {
             "type": "IntervalValue",
-            "a": 0,
-            "b": 6.283185307179586
+            "a": -6.283185,
+            "b": 6.283185
           },
           "startSize": {
-            "type": "IntervalValue",
-            "a": 11.2,
-            "b": 11.2
+            "type": "ConstantValue",
+            "value": 2.0999999999999996
           },
           "startColor": {
             "type": "ConstantColor",
@@ -1112,16 +1478,16 @@
                 "value": 1
               },
               "probability": 1,
-              "interval": 0,
+              "interval": 0.01,
               "cycle": 1
             }
           ],
           "onlyUsedByOther": false,
           "instancingGeometry": "f537d93b-ed7c-4d7c-b9f3-0cda1b08f2a8",
           "renderOrder": 0,
-          "renderMode": 4,
+          "renderMode": 0,
           "rendererEmitterSettings": {},
-          "material": "5bd0f444-bf56-4f90-8e3d-9a532aa695d6",
+          "material": "0f4d8488-11ea-4409-9939-620de0787b74",
           "layers": 1,
           "startTileIndex": {
             "type": "ConstantValue",
@@ -1135,63 +1501,55 @@
           "softNearFade": 0,
           "behaviors": [
             {
-              "type": "ColorOverLife",
-              "color": {
-                "type": "Gradient",
-                "color": {
-                  "type": "CLinearFunction",
-                  "subType": "Color",
-                  "keys": [
-                    {
-                      "value": {
-                        "r": 1,
-                        "g": 1,
-                        "b": 1
-                      },
-                      "pos": 0
-                    },
-                    {
-                      "value": {
-                        "r": 1,
-                        "g": 1,
-                        "b": 1
-                      },
-                      "pos": 1
-                    }
-                  ]
-                },
-                "alpha": {
-                  "type": "CLinearFunction",
-                  "subType": "Number",
-                  "keys": [
-                    {
-                      "value": 1,
-                      "pos": 0
-                    },
-                    {
-                      "value": 0,
-                      "pos": 1
-                    }
-                  ]
-                }
-              }
-            },
-            {
               "type": "SizeOverLife",
               "size": {
                 "type": "PiecewiseBezier",
                 "functions": [
                   {
                     "function": {
+                      "p0": 0.76744187,
+                      "p1": 0.76744187,
+                      "p2": 1.0,
+                      "p3": 1
+                    },
+                    "start": 0
+                  },
+                  {
+                    "function": {
                       "p0": 1,
-                      "p1": 0.8974333333333333,
-                      "p2": 0.7948666666666667,
-                      "p3": 0.6923
+                      "p1": 1.0,
+                      "p2": 0.6341860780675187,
+                      "p3": 0
+                    },
+                    "start": 0.28873238
+                  }
+                ]
+              }
+            },
+            {
+              "type": "RotationOverLife",
+              "angularVelocity": {
+                "type": "PiecewiseBezier",
+                "functions": [
+                  {
+                    "function": {
+                      "p0": 12.56637,
+                      "p1": 12.56637,
+                      "p2": 0.0,
+                      "p3": 0.0
                     },
                     "start": 0
                   }
                 ]
               }
+            },
+            {
+              "type": "LimitSpeedOverLife",
+              "speed": {
+                "type": "ConstantValue",
+                "value": 0.0
+              },
+              "dampen": 0.15
             }
           ],
           "worldSpace": true

@@ -29,7 +29,7 @@ import {
 } from 'three.quarks'
 import { asset } from '@/core/asset'
 import { parseQuarksDocument, type QuarksDocument } from '@/content/particles'
-import { updateParticlePreview } from './particles-preview'
+import { intervalBounds, updateParticlePreview } from './particles-preview'
 import './particles.css'
 
 const root = document.querySelector<HTMLElement>('#particle-editor')
@@ -303,15 +303,6 @@ function renderSystems(): void {
   systemList.innerHTML = `<div class="hierarchy-row"><span>\u{2304}</span><span class="tree-icon">\u{2733}</span><strong>${esc(displayName(effect))}</strong><span class="row-meta">GROUP</span></div>${nodes.map((node, index) => `<button class="hierarchy-row${index === systemIndex ? ' active' : ''}" type="button" data-system="${index}"><span class="tree-indent"></span><span class="tree-icon">\u{25a7}</span><span>${esc(node.name || `Particle System ${index + 1}`)}</span><span class="row-meta">${index + 1}</span></button>`).join('')}`
 }
 
-function intervalBounds(generator: unknown, fallback: [number, number]): [number, number] {
-  if (!generator || typeof generator !== 'object') return fallback
-  const value = generator as { type?: string; a?: number; b?: number; value?: number }
-  if (value.type === 'IntervalValue') return [value.a ?? fallback[0], value.b ?? fallback[1]]
-  if (value.type === 'ConstantValue')
-    return [value.value ?? fallback[0], value.value ?? fallback[1]]
-  return fallback
-}
-
 function colorOf(system: ParticleSystem): [number, number, number, number] {
   const color = (system.startColor as unknown as { color?: QVector4 }).color
   return color ? [color.x, color.y, color.z, color.w] : [1, 1, 1, 1]
@@ -439,6 +430,8 @@ function shapeFields(system: ParticleSystem): string {
 
 function renderColorStops(system: ParticleSystem): string {
   const stops = colorStops(system)
+  if (!stops && system.behaviors.some((behavior) => behavior.type === 'ColorOverLife'))
+    return '<p class="hint">Native random gradients are preserved. Edit them in Native Quarks JSON.</p>'
   if (!stops)
     return '<button class="btn small" type="button" data-action="enable-color">+ Add color over life</button>'
   const colors = stops.colors
@@ -469,6 +462,7 @@ function renderInspector(): void {
   const size = intervalBounds(system.startSize, [1, 1])
   const rotation = intervalBounds(system.startRotation, [0, 0])
   const color = colorOf(system)
+  const constantStartColor = system.startColor instanceof ConstantColor
   const material = materialOf(system)
   const effectRotation = rootRotation(effect)
   const burst = system.emissionBursts[0]
@@ -534,8 +528,8 @@ function renderInspector(): void {
       <div class="field full"><img class="asset-preview" src="${asset(`textures/fx/${material.name}.png`)}" alt="${esc(material.name)} texture"></div>
       <label class="field full"><span>RENDER MODE</span><select data-bind="renderMode">${modes.map(([mode, label]) => `<option value="${mode}" ${system.renderMode === mode ? 'selected' : ''}>${label}</option>`).join('')}</select></label>
       <label class="field"><span>BLENDING</span><select data-bind="additive"><option value="true" ${material.additive ? 'selected' : ''}>Additive</option><option value="false" ${material.additive ? '' : 'selected'}>Alpha</option></select></label>
-      <label class="field"><span>START COLOR</span><input type="color" value="${asHex(color)}" data-bind="startColor"></label>
-      <label class="field"><span>START ALPHA</span><input type="number" min="0" max="1" step="0.05" value="${num(color[3])}" data-bind="startAlpha"></label>
+      <label class="field"><span>START COLOR</span><input type="color" value="${asHex(color)}" data-bind="startColor" ${constantStartColor ? '' : 'disabled title="Edit native random colors in Native Quarks JSON"'}></label>
+      <label class="field"><span>START ALPHA</span><input type="number" min="0" max="1" step="0.05" value="${num(color[3])}" data-bind="startAlpha" ${constantStartColor ? '' : 'disabled title="Edit native random colors in Native Quarks JSON"'}></label>
     </div><p class="hint">These controls update a live Quarks ParticleSystem, not an editor-specific particle schema.</p></section>
     <section class="inspect-section"><h3>Size over lifetime</h3>${curve ? '<div class="curve-box"><svg viewBox="0 0 100 100" preserveAspectRatio="none" data-curve></svg><span class="curve-label">0 \u{2192} LIFE \u{2192} 100%</span></div><div class="curve-tools"><span>Quarks PiecewiseBezier</span><div><button class="btn" type="button" data-action="add-curve-key">+ Key</button> <button class="btn" type="button" data-action="remove-curve-key">- Key</button></div></div>' : '<button class="btn small" type="button" data-action="enable-curve">+ Add SizeOverLife</button>'}</section>
     <section class="inspect-section"><h3>Color over lifetime</h3>${renderColorStops(system)}</section>
@@ -1022,8 +1016,8 @@ function selectEffect(id: string): void {
   updateHistoryButtons()
   renderEffects()
   renderSystems()
-  renderInspector()
   resetPreview()
+  renderInspector()
 }
 
 function addNewEffect(name: string, source?: EffectFile): void {
@@ -1475,8 +1469,8 @@ async function initialize(): Promise<void> {
   setupPreview()
   renderEffects()
   renderSystems()
-  renderInspector()
   resetPreview()
+  renderInspector()
   startAnimation()
 }
 

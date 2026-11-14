@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import { fnv1a } from '@/core/rng'
 import { BALANCE } from '@/data/balance'
 import type { PartDef } from '@/content/define'
-import { createEffects } from './effects'
+import { createParticles } from './particles'
 import {
   getPartModel,
   clonePartModel,
@@ -211,7 +211,7 @@ function startDeath(view: SnakeView): void {
   }
 }
 
-type Effects = ReturnType<typeof createEffects>
+type Effects = ReturnType<typeof createParticles>
 
 /** Advances the remains. Returns true once they have vanished. */
 function updateRemains(view: SnakeView, dt: number, effects: Effects): boolean {
@@ -251,7 +251,7 @@ function updateRemains(view: SnakeView, dt: number, effects: Effects): boolean {
 /** Keeps one object per visible segment, reusing them between ticks. */
 export function createSnakeViewer(scene: THREE.Scene) {
   const views = new Map<string, SnakeView>()
-  const effects = createEffects(scene)
+  const effects = createParticles(scene)
 
   return {
     sync(world: RenderState, dt = 0): void {

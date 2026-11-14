@@ -262,7 +262,7 @@
       {
         "uuid": "513e9f82-152e-4e8d-9080-da278855236e",
         "type": "ParticleEmitter",
-        "name": "",
+        "name": "BulletFireR",
         "castShadow": false,
         "receiveShadow": false,
         "visible": true,
@@ -305,13 +305,13 @@
             "radius": 0.03,
             "arc": 6.283185307179586,
             "thickness": 1,
-            "angle": 0.06981317007977318,
             "mode": 0,
             "spread": 0,
             "speed": {
               "type": "ConstantValue",
               "value": 1
-            }
+            },
+            "angle": 0.06981317007977318
           },
           "startLife": {
             "type": "IntervalValue",
@@ -320,18 +320,18 @@
           },
           "startSpeed": {
             "type": "IntervalValue",
-            "a": 45,
-            "b": 60
+            "a": 22.5,
+            "b": 30
           },
           "startRotation": {
             "type": "IntervalValue",
-            "a": -0.2617993877991494,
-            "b": 0.2617993877991494
+            "a": -0.2617994,
+            "b": 0.2617994
           },
           "startSize": {
             "type": "IntervalValue",
-            "a": 1.7999999999999998,
-            "b": 2.7
+            "a": 1.2000000000000002,
+            "b": 1.7999999999999998
           },
           "startColor": {
             "type": "ConstantColor",
@@ -359,8 +359,9 @@
           "material": "ef7b9121-128c-4714-b68f-b1ae7efd1b05",
           "layers": 1,
           "startTileIndex": {
-            "type": "ConstantValue",
-            "value": 0
+            "type": "IntervalValue",
+            "a": 0,
+            "b": 3.9996
           },
           "uTileCount": 2,
           "vTileCount": 2,
@@ -383,7 +384,7 @@
                         "g": 1,
                         "b": 1
                       },
-                      "pos": 0
+                      "pos": 0.0
                     },
                     {
                       "value": {
@@ -391,7 +392,7 @@
                         "g": 0.6,
                         "b": 0
                       },
-                      "pos": 0.4723
+                      "pos": 0.47229724574654763
                     },
                     {
                       "value": {
@@ -399,7 +400,7 @@
                         "g": 0,
                         "b": 0
                       },
-                      "pos": 1
+                      "pos": 1.0
                     }
                   ]
                 },
@@ -409,19 +410,19 @@
                   "keys": [
                     {
                       "value": 0,
-                      "pos": 0
+                      "pos": 0.0
                     },
                     {
                       "value": 1,
-                      "pos": 0.1149
+                      "pos": 0.11494621194781414
                     },
                     {
                       "value": 1,
-                      "pos": 0.577
+                      "pos": 0.5770046540016784
                     },
                     {
                       "value": 0,
-                      "pos": 0.9971
+                      "pos": 0.997085526817731
                     }
                   ]
                 }
@@ -434,56 +435,12 @@
                 "functions": [
                   {
                     "function": {
-                      "p0": 0.4639,
-                      "p1": 0.6426,
-                      "p2": 0.8212999999999999,
-                      "p3": 1
+                      "p0": 0.37113401600000007,
+                      "p1": 0.9044673493333333,
+                      "p2": 0.8,
+                      "p3": 0.8
                     },
                     "start": 0
-                  }
-                ]
-              }
-            },
-            {
-              "type": "FrameOverLife",
-              "frame": {
-                "type": "PiecewiseBezier",
-                "functions": [
-                  {
-                    "function": {
-                      "p0": 0,
-                      "p1": 1,
-                      "p2": 2,
-                      "p3": 3
-                    },
-                    "start": 0
-                  },
-                  {
-                    "function": {
-                      "p0": 0,
-                      "p1": 1,
-                      "p2": 2,
-                      "p3": 3
-                    },
-                    "start": 0.25
-                  },
-                  {
-                    "function": {
-                      "p0": 0,
-                      "p1": 1,
-                      "p2": 2,
-                      "p3": 3
-                    },
-                    "start": 0.5
-                  },
-                  {
-                    "function": {
-                      "p0": 0,
-                      "p1": 1,
-                      "p2": 2,
-                      "p3": 3
-                    },
-                    "start": 0.75
                   }
                 ]
               }
@@ -497,8 +454,16 @@
               ],
               "magnitude": {
                 "type": "ConstantValue",
-                "value": 39.24
+                "value": 29.43
               }
+            },
+            {
+              "type": "LimitSpeedOverLife",
+              "speed": {
+                "type": "ConstantValue",
+                "value": 0
+              },
+              "dampen": 0.2
             }
           ],
           "worldSpace": false
@@ -507,7 +472,7 @@
       {
         "uuid": "9926ab8f-d073-461e-80a2-fb912f575b18",
         "type": "ParticleEmitter",
-        "name": "",
+        "name": "Smoke",
         "castShadow": false,
         "receiveShadow": false,
         "visible": true,
@@ -550,13 +515,13 @@
             "radius": 0.03,
             "arc": 6.283185307179586,
             "thickness": 1,
-            "angle": 0.06981317007977318,
             "mode": 0,
             "spread": 0,
             "speed": {
               "type": "ConstantValue",
               "value": 1
-            }
+            },
+            "angle": 0.06981317007977318
           },
           "startLife": {
             "type": "IntervalValue",
@@ -565,18 +530,18 @@
           },
           "startSpeed": {
             "type": "IntervalValue",
-            "a": 54,
-            "b": 66
+            "a": 27,
+            "b": 33
           },
           "startRotation": {
             "type": "IntervalValue",
             "a": 0,
-            "b": 6.283185307179586
+            "b": 6.283185
           },
           "startSize": {
             "type": "IntervalValue",
-            "a": 3,
-            "b": 3.75
+            "a": 2.4000000000000004,
+            "b": 3
           },
           "startColor": {
             "type": "ConstantColor",
@@ -584,7 +549,7 @@
               "r": 1,
               "g": 1,
               "b": 1,
-              "a": 1
+              "a": 0.3137255
             }
           },
           "emissionOverTime": {
@@ -604,8 +569,9 @@
           "material": "82a1343c-7f72-46cb-98fe-61bb1266f779",
           "layers": 1,
           "startTileIndex": {
-            "type": "ConstantValue",
-            "value": 0
+            "type": "IntervalValue",
+            "a": 0,
+            "b": 3.9996
           },
           "uTileCount": 2,
           "vTileCount": 2,
@@ -625,26 +591,26 @@
                     {
                       "value": {
                         "r": 1,
-                        "g": 0.8078,
+                        "g": 0.80784315,
                         "b": 0
                       },
-                      "pos": 0
+                      "pos": 0.0
                     },
                     {
                       "value": {
-                        "r": 0.8962,
-                        "g": 0.4239,
-                        "b": 0.1649
+                        "r": 0.8962264,
+                        "g": 0.42389324,
+                        "b": 0.16487186
                       },
-                      "pos": 0.3255
+                      "pos": 0.3255207141222248
                     },
                     {
                       "value": {
-                        "r": 0.1922,
-                        "g": 0.1922,
-                        "b": 0.1922
+                        "r": 0.19215687,
+                        "g": 0.19215687,
+                        "b": 0.19215687
                       },
-                      "pos": 1
+                      "pos": 1.0
                     }
                   ]
                 },
@@ -654,15 +620,15 @@
                   "keys": [
                     {
                       "value": 1,
-                      "pos": 0
+                      "pos": 0.0
                     },
                     {
                       "value": 1,
-                      "pos": 0.5174
+                      "pos": 0.5173876554512856
                     },
                     {
                       "value": 0,
-                      "pos": 1
+                      "pos": 1.0
                     }
                   ]
                 }
@@ -675,36 +641,36 @@
                 "functions": [
                   {
                     "function": {
-                      "p0": 0,
-                      "p1": 0.27976666666666666,
-                      "p2": 0.5595333333333333,
-                      "p3": 0.8393
+                      "p0": 0.0,
+                      "p1": 0.0,
+                      "p2": 0.5484356972948723,
+                      "p3": 0.6294983625
                     },
                     "start": 0
                   },
                   {
                     "function": {
-                      "p0": 0.8393,
-                      "p1": 0.6842666666666667,
-                      "p2": 0.5292333333333333,
-                      "p3": 0.3742
+                      "p0": 0.6294983625,
+                      "p1": 0.7506700847948722,
+                      "p2": 0.32503266298765815,
+                      "p3": 0.2806451625
                     },
-                    "start": 0.4008
+                    "start": 0.40083522
                   }
                 ]
               }
             },
             {
-              "type": "FrameOverLife",
-              "frame": {
+              "type": "RotationOverLife",
+              "angularVelocity": {
                 "type": "PiecewiseBezier",
                 "functions": [
                   {
                     "function": {
-                      "p0": 0,
-                      "p1": 1,
-                      "p2": 2,
-                      "p3": 3
+                      "p0": 3.1415925,
+                      "p1": 3.1415925,
+                      "p2": 0.0,
+                      "p3": 0.0
                     },
                     "start": 0
                   }
@@ -720,8 +686,16 @@
               ],
               "magnitude": {
                 "type": "ConstantValue",
-                "value": 39.24
+                "value": 29.43
               }
+            },
+            {
+              "type": "LimitSpeedOverLife",
+              "speed": {
+                "type": "ConstantValue",
+                "value": 0
+              },
+              "dampen": 0.2
             }
           ],
           "worldSpace": false
@@ -730,7 +704,7 @@
       {
         "uuid": "c9db1f6d-68fe-42c3-99db-9eb736e6cd6f",
         "type": "ParticleEmitter",
-        "name": "",
+        "name": "Long",
         "castShadow": false,
         "receiveShadow": false,
         "visible": true,
@@ -754,7 +728,7 @@
           0,
           0,
           0,
-          0,
+          0.312,
           1
         ],
         "up": [
@@ -773,13 +747,13 @@
             "radius": 0.03,
             "arc": 6.283185307179586,
             "thickness": 1,
-            "angle": 0.06981317007977318,
             "mode": 0,
             "spread": 0,
             "speed": {
               "type": "ConstantValue",
               "value": 1
-            }
+            },
+            "angle": 0.06981317007977318
           },
           "startLife": {
             "type": "IntervalValue",
@@ -788,13 +762,13 @@
           },
           "startSpeed": {
             "type": "IntervalValue",
-            "a": 45,
-            "b": 60
+            "a": 22.5,
+            "b": 30
           },
           "startRotation": {
             "type": "IntervalValue",
-            "a": -0.2617993877991494,
-            "b": 0.2617993877991494
+            "a": -0.2617994,
+            "b": 0.2617994
           },
           "startSize": {
             "type": "IntervalValue",
@@ -830,8 +804,9 @@
           "material": "ef7b9121-128c-4714-b68f-b1ae7efd1b05",
           "layers": 1,
           "startTileIndex": {
-            "type": "ConstantValue",
-            "value": 0
+            "type": "IntervalValue",
+            "a": 0,
+            "b": 3.9996
           },
           "uTileCount": 2,
           "vTileCount": 2,
@@ -854,15 +829,15 @@
                         "g": 1,
                         "b": 1
                       },
-                      "pos": 0
+                      "pos": 0.0
                     },
                     {
                       "value": {
                         "r": 1,
-                        "g": 0.5176,
+                        "g": 0.5176471,
                         "b": 0
                       },
-                      "pos": 1
+                      "pos": 1.0
                     }
                   ]
                 },
@@ -872,19 +847,19 @@
                   "keys": [
                     {
                       "value": 0,
-                      "pos": 0
+                      "pos": 0.0
                     },
                     {
                       "value": 1,
-                      "pos": 0.1149
+                      "pos": 0.11494621194781414
                     },
                     {
                       "value": 1,
-                      "pos": 0.577
+                      "pos": 0.5770046540016784
                     },
                     {
                       "value": 0,
-                      "pos": 0.9971
+                      "pos": 0.997085526817731
                     }
                   ]
                 }
@@ -897,10 +872,10 @@
                 "functions": [
                   {
                     "function": {
-                      "p0": 0.4639,
-                      "p1": 0.6426,
-                      "p2": 0.8212999999999999,
-                      "p3": 1
+                      "p0": 0.34793814,
+                      "p1": 0.8479381399999999,
+                      "p2": 0.75,
+                      "p3": 0.75
                     },
                     "start": 0
                   }
@@ -908,48 +883,12 @@
               }
             },
             {
-              "type": "FrameOverLife",
-              "frame": {
-                "type": "PiecewiseBezier",
-                "functions": [
-                  {
-                    "function": {
-                      "p0": 0,
-                      "p1": 1,
-                      "p2": 2,
-                      "p3": 3
-                    },
-                    "start": 0
-                  },
-                  {
-                    "function": {
-                      "p0": 0,
-                      "p1": 1,
-                      "p2": 2,
-                      "p3": 3
-                    },
-                    "start": 0.25
-                  },
-                  {
-                    "function": {
-                      "p0": 0,
-                      "p1": 1,
-                      "p2": 2,
-                      "p3": 3
-                    },
-                    "start": 0.5
-                  },
-                  {
-                    "function": {
-                      "p0": 0,
-                      "p1": 1,
-                      "p2": 2,
-                      "p3": 3
-                    },
-                    "start": 0.75
-                  }
-                ]
-              }
+              "type": "LimitSpeedOverLife",
+              "speed": {
+                "type": "ConstantValue",
+                "value": 0
+              },
+              "dampen": 0.2
             }
           ],
           "worldSpace": false

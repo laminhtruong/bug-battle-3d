@@ -82,9 +82,13 @@ export function createParticles(scene: Scene) {
   }
 
   return {
+    explode(x: number, z: number): void {
+      spawn('death-explosion', scene, x, 0.5, z)
+    },
+
     flame(parent: Object3D, slot: Slot, x: number, y: number, z: number, angle: number): void {
       const group = spawn(slot === 'head' ? 'flame-head' : 'flame-body', parent, x, y, z)?.group
-      if (group) group.rotation.y = angle
+      if (group) group.rotation.y += angle
     },
 
     shot(id: string, visual: string, x: number, y: number, z: number): void {

@@ -1,4 +1,11 @@
 import type { BatchedRenderer, ParticleSystem } from 'three.quarks'
+import { ConstantValue, IntervalValue } from 'three.quarks'
+
+export function intervalBounds(generator: unknown, fallback: [number, number]): [number, number] {
+  if (generator instanceof IntervalValue) return [generator.a, generator.b]
+  if (generator instanceof ConstantValue) return [generator.value, generator.value]
+  return fallback
+}
 
 export function updateParticlePreview(
   batch: BatchedRenderer,
