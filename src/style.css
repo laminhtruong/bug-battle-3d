@@ -589,4 +589,15 @@ input:focus {
   .hud-top {
     padding: 12px;
   }
+
+  .hud-board {
+    border-color: rgba(255, 255, 255, 0.08);
+    background: rgba(13, 24, 32, 0.2);
+    box-shadow: 0 4px 12px rgba(3, 10, 16, 0.18);
+    backdrop-filter: none;
+  }
+
+  .hud-board li {
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  }
 }
