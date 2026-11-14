@@ -76,6 +76,9 @@ describe('native Quarks particle documents', () => {
           })
           .map((system) => system.renderMode)
       if (file.endsWith('/lightning-impact.json')) {
+        expect((document.object as { matrix: number[] }).matrix).toEqual([
+          1, 0, 0, 0, 0, 0, -1, 0, 0, 1, 0, 0, 0, 0, 0, 1,
+        ])
         expect(modesForTexture('assets/textures/fx/lightning-3x3.png')).toEqual([1])
         expect(modesForTexture('assets/textures/fx/circlestretchy.png')).toEqual([1])
         expect(modesForTexture('assets/textures/fx/ring.png')).toEqual([4])
