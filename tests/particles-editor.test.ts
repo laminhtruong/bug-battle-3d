@@ -8,6 +8,7 @@ const bundled = import.meta.glob('../src/content/particles/*.json', {
 
 interface NativeSystem {
   material: string
+  shape: { type: string; thickness?: number }
   uTileCount: number
   vTileCount: number
   renderMode: number
@@ -93,6 +94,11 @@ describe('native Quarks particle documents', () => {
             .filter((system) => system.rendererEmitterSettings.lengthFactor === 4)
             .map((system) => [system.startSpeed.a, system.startSpeed.b]),
         ).toEqual([[0.5, 4]])
+        expect(
+          systems(document.object)
+            .filter((system) => system.rendererEmitterSettings.lengthFactor === 4)
+            .map((system) => system.shape.thickness),
+        ).toEqual([1])
       }
     }
   })

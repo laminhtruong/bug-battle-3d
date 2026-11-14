@@ -506,7 +506,7 @@
             "type": "circle",
             "radius": 2.8,
             "arc": 6.283185307179586,
-            "thickness": 0,
+            "thickness": 1,
             "mode": 0,
             "spread": 0,
             "speed": {
