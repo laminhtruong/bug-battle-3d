@@ -901,8 +901,9 @@
             "b": 5.6
           },
           "startRotation": {
-            "type": "ConstantValue",
-            "value": 0
+            "type": "IntervalValue",
+            "a": 0,
+            "b": 6.283185307179586
           },
           "startSize": {
             "type": "IntervalValue",
@@ -941,8 +942,11 @@
           "onlyUsedByOther": false,
           "instancingGeometry": "f537d93b-ed7c-4d7c-b9f3-0cda1b08f2a8",
           "renderOrder": 0,
-          "renderMode": 4,
-          "rendererEmitterSettings": {},
+          "renderMode": 1,
+          "rendererEmitterSettings": {
+            "speedFactor": 0,
+            "lengthFactor": -4
+          },
           "material": "448dd2b9-585c-4182-ba69-35a692a2a66d",
           "layers": 1,
           "startTileIndex": {
@@ -1006,9 +1010,9 @@
                   {
                     "function": {
                       "p0": 0,
-                      "p1": 2.6666666666666665,
-                      "p2": 5.333333333333333,
-                      "p3": 8
+                      "p1": 2.9997,
+                      "p2": 5.9994,
+                      "p3": 8.9991
                     },
                     "start": 0
                   }

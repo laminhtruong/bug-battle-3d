@@ -29,6 +29,7 @@ import {
 } from 'three.quarks'
 import { asset } from '@/core/asset'
 import { parseQuarksDocument, type QuarksDocument } from '@/content/particles'
+import { updateParticlePreview } from './particles-preview'
 import './particles.css'
 
 const root = document.querySelector<HTMLElement>('#particle-editor')
@@ -726,7 +727,7 @@ function frame(now: number): void {
   const dt = Math.min((now - previousFrame) / 1000, 0.05)
   previousFrame = now
   if (playing && dt > 0) {
-    batch.update(dt)
+    updateParticlePreview(batch, previewSystems, dt)
     elapsed += dt
     if (elapsed >= previewDuration) {
       if (previewSystems.some((system) => system.looping)) elapsed %= previewDuration
@@ -1198,7 +1199,7 @@ root.addEventListener('click', (event) => {
     drawTransport()
   } else if (action === 'step') {
     playing = false
-    batch.update(1 / 30)
+    updateParticlePreview(batch, previewSystems, 1 / 30)
     elapsed = Math.min(previewDuration, elapsed + 1 / 30)
     drawTransport()
   } else if (action === 'frame') {
@@ -1397,7 +1398,8 @@ root.addEventListener('input', (event) => {
       playing = false
       const next = (Number(target.value) / 1000) * previewDuration
       resetPreview()
-      for (let i = 0; i < Math.ceil(next * 60); i++) batch.update(Math.min(1 / 60, next - i / 60))
+      for (let i = 0; i < Math.ceil(next * 60); i++)
+        updateParticlePreview(batch, previewSystems, Math.min(1 / 60, next - i / 60))
       elapsed = next
       drawTransport()
     } else if (target.matches('[data-search]')) renderEffects()

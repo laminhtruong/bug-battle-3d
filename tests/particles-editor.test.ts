@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest'
+import { Group, MeshBasicMaterial, Scene } from 'three'
+import {
+  BatchedRenderer,
+  ConstantValue,
+  FrameOverLife,
+  ParticleSystem,
+  PiecewiseBezier,
+  SpriteParticle,
+} from 'three.quarks'
 import { quarksDocumentSchema } from '@/content/particles'
+import lightningImpact from '@/content/particles/lightning-impact.json'
+import { updateParticlePreview } from '@/editor/particles-preview'
 
 const bundled = import.meta.glob('../src/content/particles/*.json', {
   eager: true,
@@ -45,7 +56,7 @@ describe('native Quarks particle documents', () => {
     expect(source).not.toMatch(/GroundBolt|TileOverLife|"type":"Curve"/)
   })
 
-  it('keeps sprite-sheet frame curves inside their atlas and lays impact lightning on the ground plane', () => {
+  it('keeps sprite-sheet frame curves inside their atlas and preserves impact render modes', () => {
     for (const [file, raw] of Object.entries(bundled)) {
       const document = raw as {
         object: unknown
@@ -81,14 +92,14 @@ describe('native Quarks particle documents', () => {
         expect((document.object as { matrix: number[] }).matrix).toEqual([
           1, 0, 0, 0, 0, 0, -1, 0, 0, 1, 0, 0, 0, 0, 0, 1,
         ])
-        expect(modesForTexture('assets/textures/fx/lightning-3x3.png')).toEqual([4])
+        expect(modesForTexture('assets/textures/fx/lightning-3x3.png')).toEqual([1])
         expect(modesForTexture('assets/textures/fx/circlestretchy.png')).toEqual([1])
         expect(modesForTexture('assets/textures/fx/ring.png')).toEqual([4])
         expect(
           systems(document.object)
             .filter((system) => system.renderMode === 1)
             .map((system) => system.rendererEmitterSettings.lengthFactor),
-        ).toEqual([4])
+        ).toEqual([4, -4])
         expect(
           systems(document.object)
             .filter((system) => system.rendererEmitterSettings.lengthFactor === 4)
@@ -100,6 +111,37 @@ describe('native Quarks particle documents', () => {
             .map((system) => system.shape.thickness),
         ).toEqual([1])
       }
+    }
+  })
+
+  it('preserves Unity LightningCenter negative stretch and all nine atlas frames', () => {
+    const lightning = systems(lightningImpact.object).find(
+      (system) => system.uTileCount === 3 && system.vTileCount === 3,
+    )!
+    // BulletLightning.prefab: LightningCenter uses Stretch, velocity 0, length -4.
+    expect(lightning.renderMode).toBe(1)
+    expect(lightning.rendererEmitterSettings).toEqual({ speedFactor: 0, lengthFactor: -4 })
+    // shortcut: FrameOverLife cannot sample Unity's two curves; use the max curve until supported.
+    const frame = new FrameOverLife(
+      PiecewiseBezier.fromJSON(
+        lightning.behaviors.find((behavior) => behavior.type === 'FrameOverLife')!.frame!,
+      ),
+    )
+    const particle = new SpriteParticle()
+    particle.life = 1
+    frame.initialize(particle)
+    const samples = [
+      [0, 0],
+      [0.12, 1],
+      [0.5, 4],
+      [0.9, 8],
+      [0.9999, 8],
+    ] as const
+    for (const [age, tile] of samples) {
+      particle.age = age
+      frame.update(particle, 0)
+      expect(particle.uvTile).toBeCloseTo(age * 9 * 0.9999)
+      expect(Math.floor(particle.uvTile)).toBe(tile)
     }
   })
 
@@ -115,5 +157,36 @@ describe('native Quarks particle documents', () => {
     }
     effect.images[0]!.url = 'javascript:alert(1)'
     expect(quarksDocumentSchema.safeParse(effect).success).toBe(false)
+  })
+
+  it('keeps expired preview emitters editable without changing authored autoDestroy flags', () => {
+    const scene = new Scene()
+    const group = new Group()
+    const batch = new BatchedRenderer()
+    const material = new MeshBasicMaterial()
+    const systems = [true, false].map(
+      (autoDestroy) =>
+        new ParticleSystem({
+          material,
+          autoDestroy,
+          looping: false,
+          duration: 0.01,
+          startLife: new ConstantValue(0.01),
+          emissionOverTime: new ConstantValue(0),
+        }),
+    )
+    scene.add(group, batch)
+    for (const system of systems) {
+      group.add(system.emitter)
+      batch.addSystem(system)
+    }
+    for (let i = 0; i < 10; i++) updateParticlePreview(batch, systems, 1 / 60)
+    expect(group.children).toHaveLength(2)
+    expect(systems.map((system) => system.autoDestroy)).toEqual([true, false])
+    for (const system of systems) system.restart()
+    for (let i = 0; i < 10; i++) batch.update(1 / 60)
+    expect(group.children).toEqual([systems[1]!.emitter])
+    for (const system of systems) system.dispose()
+    material.dispose()
   })
 })
