@@ -1,18 +1,37 @@
 import { describe, expect, it } from 'vitest'
-import { particleEffectSchema } from '@/content/particles'
-import { PARTICLE_PRESETS } from '@/render/particles'
+import { quarksDocumentSchema } from '@/content/particles'
 
-describe('particle editor content', () => {
-  it('keeps every shipped effect editable through the save schema', () => {
-    for (const effect of Object.values(PARTICLE_PRESETS)) {
-      expect(particleEffectSchema.parse(effect)).toEqual(effect)
+const bundled = import.meta.glob('../src/content/particles/*.json', {
+  eager: true,
+  import: 'default',
+})
+
+describe('native Quarks particle documents', () => {
+  it('stores every game effect as a Three.js Object3D document with ParticleEmitters', () => {
+    expect(Object.keys(bundled)).toHaveLength(6)
+    for (const document of Object.values(bundled)) {
+      expect(quarksDocumentSchema.parse(document)).toEqual(document)
     }
   })
 
-  it('rejects unsafe ids and invalid particle values before saving', () => {
-    const effect = structuredClone(PARTICLE_PRESETS['lightning-orb']!)
-    expect(particleEffectSchema.safeParse({ ...effect, id: '../outside' }).success).toBe(false)
-    effect.systems[0]!.duration = -1
-    expect(particleEffectSchema.safeParse(effect).success).toBe(false)
+  it('uses Quarks built-in curve and frame behaviors, not game-specific behaviors', () => {
+    const source = JSON.stringify(Object.values(bundled))
+    expect(source).toContain('FrameOverLife')
+    expect(source).toContain('PiecewiseBezier')
+    expect(source).not.toMatch(/GroundBolt|TileOverLife|"type":"Curve"/)
+  })
+
+  it('rejects groups without an emitter and unsafe texture URLs', () => {
+    const empty = {
+      metadata: { version: 4.7, type: 'Object' },
+      object: { type: 'Group', children: [] },
+    }
+    expect(quarksDocumentSchema.safeParse(empty).success).toBe(false)
+
+    const effect = structuredClone(Object.values(bundled)[0]!) as {
+      images: { url: string }[]
+    }
+    effect.images[0]!.url = 'javascript:alert(1)'
+    expect(quarksDocumentSchema.safeParse(effect).success).toBe(false)
   })
 })

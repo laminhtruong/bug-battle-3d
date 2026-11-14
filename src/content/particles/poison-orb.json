@@ -1,0 +1,350 @@
+{
+  "metadata": {
+    "version": 4.7,
+    "type": "Object",
+    "generator": "Object3D.toJSON"
+  },
+  "geometries": [
+    {
+      "uuid": "f537d93b-ed7c-4d7c-b9f3-0cda1b08f2a8",
+      "type": "PlaneGeometry",
+      "name": "",
+      "width": 1,
+      "height": 1,
+      "widthSegments": 1,
+      "heightSegments": 1
+    }
+  ],
+  "materials": [
+    {
+      "uuid": "8f7a4b16-08bc-4883-be7f-772a24d1703b",
+      "type": "MeshBasicMaterial",
+      "blending": 2,
+      "side": 2,
+      "shadowSide": null,
+      "vertexColors": false,
+      "opacity": 1,
+      "transparent": true,
+      "blendSrc": 204,
+      "blendDst": 205,
+      "blendEquation": 100,
+      "blendSrcAlpha": null,
+      "blendDstAlpha": null,
+      "blendEquationAlpha": null,
+      "blendColor": 0,
+      "blendAlpha": 0,
+      "depthFunc": 3,
+      "depthTest": true,
+      "depthWrite": false,
+      "colorWrite": true,
+      "clipIntersection": false,
+      "clipShadows": false,
+      "stencilWriteMask": 255,
+      "stencilFunc": 519,
+      "stencilRef": 0,
+      "stencilFuncMask": 255,
+      "stencilFail": 7680,
+      "stencilZFail": 7680,
+      "stencilZPass": 7680,
+      "stencilWrite": false,
+      "polygonOffset": false,
+      "polygonOffsetFactor": 0,
+      "polygonOffsetUnits": 0,
+      "dithering": false,
+      "alphaTest": 0,
+      "alphaHash": false,
+      "alphaToCoverage": false,
+      "premultipliedAlpha": false,
+      "forceSinglePass": false,
+      "allowOverride": true,
+      "visible": true,
+      "toneMapped": true,
+      "name": "",
+      "color": 16777215,
+      "map": "6c45b87e-2f45-48e4-9578-92d1fa7945c8",
+      "envMapRotation": [
+        0,
+        0,
+        0,
+        "XYZ"
+      ],
+      "reflectivity": 1,
+      "refractionRatio": 0.98,
+      "wireframe": false,
+      "wireframeLinewidth": 1,
+      "wireframeLinecap": "round",
+      "wireframeLinejoin": "round",
+      "fog": true
+    }
+  ],
+  "textures": [
+    {
+      "uuid": "6c45b87e-2f45-48e4-9578-92d1fa7945c8",
+      "name": "",
+      "image": "9d24fd56-264a-408d-b67e-7dc0b7a39691",
+      "mapping": 300,
+      "channel": 0,
+      "repeat": [
+        1,
+        1
+      ],
+      "offset": [
+        0,
+        0
+      ],
+      "center": [
+        0,
+        0
+      ],
+      "rotation": 0,
+      "wrap": [
+        1001,
+        1001
+      ],
+      "format": 1023,
+      "internalFormat": null,
+      "type": 1009,
+      "normalized": false,
+      "colorSpace": "srgb",
+      "minFilter": 1008,
+      "magFilter": 1006,
+      "anisotropy": 1,
+      "flipY": true,
+      "generateMipmaps": true,
+      "mipmapsAutoUpdate": true,
+      "premultiplyAlpha": false,
+      "unpackAlignment": 4
+    }
+  ],
+  "images": [
+    {
+      "uuid": "9d24fd56-264a-408d-b67e-7dc0b7a39691",
+      "url": "assets/textures/fx/glow1.png"
+    }
+  ],
+  "object": {
+    "uuid": "8d80d452-2205-4103-b5a5-ecca9605ef02",
+    "type": "Group",
+    "name": "Poison orb",
+    "castShadow": false,
+    "receiveShadow": false,
+    "visible": true,
+    "frustumCulled": true,
+    "renderOrder": 0,
+    "static": false,
+    "matrixAutoUpdate": true,
+    "layers": 1,
+    "matrix": [
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1
+    ],
+    "up": [
+      0,
+      1,
+      0
+    ],
+    "children": [
+      {
+        "uuid": "b13c1a48-7503-4cc8-81c9-f160ed7683df",
+        "type": "ParticleEmitter",
+        "name": "",
+        "castShadow": false,
+        "receiveShadow": false,
+        "visible": true,
+        "frustumCulled": true,
+        "renderOrder": 0,
+        "static": false,
+        "matrixAutoUpdate": true,
+        "layers": 1,
+        "matrix": [
+          1,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ],
+        "ps": {
+          "version": "3.0",
+          "autoDestroy": true,
+          "looping": true,
+          "prewarm": false,
+          "duration": 0.25,
+          "shape": {
+            "type": "point"
+          },
+          "startLife": {
+            "type": "IntervalValue",
+            "a": 0.25,
+            "b": 0.25
+          },
+          "startSpeed": {
+            "type": "IntervalValue",
+            "a": 0,
+            "b": 0
+          },
+          "startRotation": {
+            "type": "IntervalValue",
+            "a": 0,
+            "b": 6.283185307179586
+          },
+          "startSize": {
+            "type": "IntervalValue",
+            "a": 0.84,
+            "b": 0.84
+          },
+          "startColor": {
+            "type": "ConstantColor",
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1,
+              "a": 1
+            }
+          },
+          "emissionOverTime": {
+            "type": "ConstantValue",
+            "value": 0
+          },
+          "emissionOverDistance": {
+            "type": "ConstantValue",
+            "value": 0
+          },
+          "emissionBursts": [
+            {
+              "time": 0,
+              "count": {
+                "type": "ConstantValue",
+                "value": 1
+              },
+              "probability": 1,
+              "interval": 0,
+              "cycle": 1
+            }
+          ],
+          "onlyUsedByOther": false,
+          "instancingGeometry": "f537d93b-ed7c-4d7c-b9f3-0cda1b08f2a8",
+          "renderOrder": 0,
+          "renderMode": 0,
+          "rendererEmitterSettings": {},
+          "material": "8f7a4b16-08bc-4883-be7f-772a24d1703b",
+          "layers": 1,
+          "startTileIndex": {
+            "type": "ConstantValue",
+            "value": 0
+          },
+          "uTileCount": 1,
+          "vTileCount": 1,
+          "blendTiles": false,
+          "softParticles": false,
+          "softFarFade": 0,
+          "softNearFade": 0,
+          "behaviors": [
+            {
+              "type": "ColorOverLife",
+              "color": {
+                "type": "Gradient",
+                "color": {
+                  "type": "CLinearFunction",
+                  "subType": "Color",
+                  "keys": [
+                    {
+                      "value": {
+                        "r": 1,
+                        "g": 1,
+                        "b": 1
+                      },
+                      "pos": 0
+                    },
+                    {
+                      "value": {
+                        "r": 1,
+                        "g": 1,
+                        "b": 1
+                      },
+                      "pos": 1
+                    }
+                  ]
+                },
+                "alpha": {
+                  "type": "CLinearFunction",
+                  "subType": "Number",
+                  "keys": [
+                    {
+                      "value": 0.4902,
+                      "pos": 0
+                    },
+                    {
+                      "value": 1,
+                      "pos": 0.5321
+                    },
+                    {
+                      "value": 0.4902,
+                      "pos": 1
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "type": "SizeOverLife",
+              "size": {
+                "type": "PiecewiseBezier",
+                "functions": [
+                  {
+                    "function": {
+                      "p0": 0.7609,
+                      "p1": 0.8369666666666666,
+                      "p2": 0.9130333333333334,
+                      "p3": 0.9891
+                    },
+                    "start": 0
+                  },
+                  {
+                    "function": {
+                      "p0": 0.9891,
+                      "p1": 0.9130333333333334,
+                      "p2": 0.8369666666666666,
+                      "p3": 0.7609
+                    },
+                    "start": 0.4982
+                  }
+                ]
+              }
+            }
+          ],
+          "worldSpace": false
+        }
+      }
+    ]
+  }
+}

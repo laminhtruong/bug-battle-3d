@@ -1,892 +1,114 @@
-import * as THREE from 'three'
-import {
-  ApplyForce,
-  BatchedRenderer,
-  CircleEmitter,
-  ColorOverLife,
-  ConeEmitter,
-  ConstantColor,
-  ConstantValue,
-  type Behavior,
-  type FunctionJSON,
-  type FunctionValueGenerator,
-  type GeneratorMemory,
-  Gradient,
-  IntervalValue,
-  type Particle,
-  ParticleSystem,
-  RenderMode,
-  SizeOverLife,
-  SphereEmitter,
-  Vector3 as QuarksVector3,
-  Vector4 as QuarksVector4,
-} from 'three.quarks'
-import { asset } from '@/core/asset'
+import type { Object3D, Scene } from 'three'
+import { BatchedRenderer, QuarksLoader, QuarksUtil } from 'three.quarks'
+import type { ParticleSystem } from 'three.quarks'
 import type { Slot } from '@/content/define'
-import {
-  particleEffectSchema,
-  type ParticleEffect,
-  type ParticleSystemSpec,
-} from '@/content/particles'
+import { parseQuarksDocument } from '@/content/particles'
 
-/**
- * Particle presets. The game renders parts four times the size these presets
- * assume, so speeds, sizes and offsets are scaled by the same factor while
- * lifetimes and emission rates stay in seconds.
- */
-
-function texture(name: string): THREE.Texture {
-  const loaded = new THREE.TextureLoader().load(asset(`textures/fx/${name}.png`))
-  loaded.colorSpace = THREE.SRGBColorSpace
-  return loaded
+interface NativeEffect {
+  metadata: { type: string }
+  object: { type: string }
 }
 
-const materials = new Map<string, THREE.MeshBasicMaterial>()
-
-function material(name: string, additive: boolean): THREE.MeshBasicMaterial {
-  const key = `${name}:${additive}`
-  const cached = materials.get(key)
-  if (cached) {
-    return cached
-  }
-  const created = new THREE.MeshBasicMaterial({
-    map: texture(name),
-    transparent: true,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-    blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
-  })
-  materials.set(key, created)
-  return created
-}
-
-/** Linear copy of an animation curve, sampled on 0..1. */
-class Curve implements FunctionValueGenerator {
-  readonly type = 'function' as const
-
-  constructor(private readonly points: readonly (readonly [number, number])[]) {}
-
-  startGen(): void {}
-
-  genValue(_memory: GeneratorMemory, t = 0): number {
-    const points = this.points
-    if (points.length === 0) {
-      return 0
-    }
-    const first = points[0]!
-    if (t <= first[0]) {
-      return first[1]
-    }
-    for (let index = 1; index < points.length; index += 1) {
-      const a = points[index - 1]!
-      const b = points[index]!
-      if (t <= b[0]) {
-        const span = b[0] - a[0]
-        return span <= 0 ? b[1] : a[1] + ((b[1] - a[1]) * (t - a[0])) / span
-      }
-    }
-    return points[points.length - 1]![1]
-  }
-
-  toJSON(): FunctionJSON {
-    return { type: 'Curve' }
-  }
-
-  clone(): Curve {
-    return new Curve(this.points)
-  }
-}
-
-/**
- * Lays a ground billboard along its own velocity and stretches it, keeping it
- * flat on the floor.
- */
-class GroundBolt implements Behavior {
-  readonly type = 'GroundBolt'
-
-  constructor(
-    private readonly min: number,
-    private readonly max: number,
-  ) {}
-
-  initialize(particle: Particle): void {
-    if (typeof particle.rotation !== 'number') {
-      return
-    }
-    const length = this.min + Math.random() * (this.max - this.min)
-    // startSize is what size-over-life rebuilds from, so stretch both.
-    particle.startSize.x *= length
-    particle.size.x *= length
-    particle.rotation = Math.atan2(-particle.velocity.z, particle.velocity.x)
-  }
-
-  update(): void {}
-
-  frameUpdate(): void {}
-
-  toJSON(): unknown {
-    return { type: this.type }
-  }
-
-  clone(): Behavior {
-    return new GroundBolt(this.min, this.max)
-  }
-
-  reset(): void {}
-}
-
-/** Texture-sheet animation: whole sheet or one row, over particle life. */
-class TileOverLife implements Behavior {
-  readonly type = 'TileOverLife'
-
-  constructor(
-    private readonly start: number,
-    private readonly frames: number,
-    private readonly cycles: number,
-  ) {}
-
-  initialize(particle: Particle): void {
-    particle.uvTile = this.start
-  }
-
-  update(particle: Particle): void {
-    const progress = particle.life > 0 ? particle.age / particle.life : 1
-    const frame = Math.floor(progress * this.frames * this.cycles)
-    particle.uvTile = (this.start + frame) % this.frames
-  }
-
-  frameUpdate(): void {}
-
-  toJSON(): unknown {
-    return { type: this.type }
-  }
-
-  clone(): Behavior {
-    return new TileOverLife(this.start, this.frames, this.cycles)
-  }
-
-  reset(): void {}
-}
-
-export type SystemSpec = ParticleSystemSpec
-
-function shapeOf(shape: ParticleSystemSpec['shape']): ConeEmitter | SphereEmitter | CircleEmitter {
-  if (shape.kind === 'cone') {
-    return new ConeEmitter({
-      angle: (shape.angle * Math.PI) / 180,
-      radius: shape.radius,
-      arc: ((shape.arc ?? 360) * Math.PI) / 180,
-    })
-  }
-  if (shape.kind === 'circle') {
-    return new CircleEmitter({ radius: shape.radius, thickness: shape.thickness ?? 1 })
-  }
-  return new SphereEmitter({ radius: shape.kind === 'sphere' ? shape.radius : 0.001 })
-}
-
-export function createParticleSystem(spec: SystemSpec): ParticleSystem {
-  const behaviors: Behavior[] = []
-  if (spec.colorOverLife) {
-    behaviors.push(
-      new ColorOverLife(
-        new Gradient(
-          spec.colorOverLife.colors.map(
-            ([time, r, g, b]) => [new QuarksVector3(r, g, b), time] as [QuarksVector3, number],
-          ),
-          spec.colorOverLife.alphas.map(([time, alpha]) => [alpha, time] as [number, number]),
-        ),
-      ),
-    )
-  }
-  if (spec.sizeOverLife) {
-    behaviors.push(new SizeOverLife(new Curve(spec.sizeOverLife)))
-  }
-  if (spec.stretch) {
-    behaviors.push(new GroundBolt(spec.stretch[0], spec.stretch[1]))
-  }
-  if (spec.uv) {
-    behaviors.push(new TileOverLife(spec.uv.start, spec.uv.frames, spec.uv.cycles))
-  }
-  if (spec.gravity) {
-    const up = spec.gravity < 0
-    behaviors.push(
-      new ApplyForce(
-        new QuarksVector3(0, up ? 1 : -1, 0),
-        new ConstantValue(Math.abs(spec.gravity)),
-      ),
-    )
-  }
-  const start = spec.startColor ?? [1, 1, 1, 1]
-  return new ParticleSystem({
-    duration: spec.duration,
-    looping: spec.loop ?? false,
-    autoDestroy: true,
-    startLife: new IntervalValue(spec.life[0], spec.life[1]),
-    startSpeed: new IntervalValue(spec.speed[0], spec.speed[1]),
-    startSize: new IntervalValue(spec.size[0], spec.size[1]),
-    ...(spec.rotation
-      ? { startRotation: new IntervalValue(spec.rotation[0], spec.rotation[1]) }
-      : {}),
-    startColor: new ConstantColor(new QuarksVector4(...start)),
-    emissionOverTime: new ConstantValue(spec.rate ?? 0),
-    ...(spec.bursts
-      ? {
-          emissionBursts: spec.bursts.map((burst) => ({
-            time: burst.time,
-            count: new ConstantValue(burst.count),
-            cycle: 1,
-            interval: 0,
-            probability: 1,
-          })),
-        }
-      : {}),
-    shape: shapeOf(spec.shape),
-    material: material(spec.material, spec.additive),
-    renderMode:
-      spec.mode === 'stretched'
-        ? RenderMode.StretchedBillBoard
-        : spec.mode === 'horizontal'
-          ? RenderMode.HorizontalBillBoard
-          : RenderMode.BillBoard,
-    // three.quarks only reads the stretch settings from rendererEmitterSettings.
-    ...(spec.mode === 'stretched'
-      ? {
-          rendererEmitterSettings: {
-            speedFactor: spec.speedFactor ?? 0,
-            lengthFactor: spec.lengthFactor ?? 1,
-          },
-        }
-      : {}),
-    uTileCount: spec.uv?.x ?? 1,
-    vTileCount: spec.uv?.y ?? 1,
-    startTileIndex: new ConstantValue(spec.uv?.start ?? 0),
-    blendTiles: false,
-    worldSpace: spec.worldSpace ?? true,
-    behaviors,
-  })
-}
-
-const DEG = Math.PI / 180
-
-function headFire(): SystemSpec[] {
-  const f = 4
-  return [
-    {
-      duration: 0.35,
-      life: [0.1, 0.2],
-      speed: [15 * f, 20 * f],
-      size: [0.6 * f, 0.9 * f],
-      rotation: [-15 * DEG, 15 * DEG],
-      gravity: -9.81 * f,
-      rate: 80,
-      shape: { kind: 'cone', angle: 4, radius: 0.01 * f },
-      startColor: [1, 1, 1, 1],
-      colorOverLife: {
-        colors: [
-          [0, 1, 1, 1],
-          [0.4723, 1, 0.6, 0],
-          [1, 1, 0, 0],
-        ],
-        alphas: [
-          [0, 0],
-          [0.1149, 1],
-          [0.577, 1],
-          [0.9971, 0],
-        ],
-      },
-      sizeOverLife: [
-        [0, 0.4639],
-        [1, 1],
-      ],
-      uv: { x: 2, y: 2, frames: 4, start: 0, cycles: 4 },
-      material: 'fire-soft-blank',
-      additive: true,
-      mode: 'horizontal',
-      worldSpace: false,
-    },
-    {
-      duration: 0.35,
-      life: [0.1, 0.2],
-      speed: [18 * f, 22 * f],
-      size: [1 * f, 1.25 * f],
-      rotation: [0, Math.PI * 2],
-      gravity: -9.81 * f,
-      rate: 25,
-      shape: { kind: 'cone', angle: 4, radius: 0.01 * f },
-      startColor: [1, 1, 1, 1],
-      colorOverLife: {
-        colors: [
-          [0, 1, 0.8078, 0],
-          [0.3255, 0.8962, 0.4239, 0.1649],
-          [1, 0.1922, 0.1922, 0.1922],
-        ],
-        alphas: [
-          [0, 1],
-          [0.5174, 1],
-          [1, 0],
-        ],
-      },
-      sizeOverLife: [
-        [0, 0],
-        [0.4008, 0.8393],
-        [1, 0.3742],
-      ],
-      uv: { x: 2, y: 2, frames: 4, start: 0, cycles: 1 },
-      material: 'cloud-2x2-soft',
-      additive: false,
-      mode: 'billboard',
-      worldSpace: false,
-    },
-    {
-      duration: 0.35,
-      life: [0.1, 0.15],
-      speed: [15 * f, 20 * f],
-      size: [0.2 * f, 0.4 * f],
-      rotation: [-15 * DEG, 15 * DEG],
-      rate: 125,
-      shape: { kind: 'cone', angle: 4, radius: 0.01 * f },
-      startColor: [1, 1, 1, 1],
-      colorOverLife: {
-        colors: [
-          [0, 1, 1, 1],
-          [1, 1, 0.5176, 0],
-        ],
-        alphas: [
-          [0, 0],
-          [0.1149, 1],
-          [0.577, 1],
-          [0.9971, 0],
-        ],
-      },
-      sizeOverLife: [
-        [0, 0.4639],
-        [1, 1],
-      ],
-      uv: { x: 2, y: 2, frames: 4, start: 0, cycles: 4 },
-      material: 'fire-soft-blank',
-      additive: true,
-      mode: 'stretched',
-      lengthFactor: 3,
-      speedFactor: 0,
-      worldSpace: false,
-    },
-  ]
-}
-
-function bodyFire(): SystemSpec[] {
-  // The side jets use a 0.75 scale; gravity is not hierarchy-scaled.
-  const scale = 0.75
-  return headFire().map((spec) => ({
-    ...spec,
-    speed: [spec.speed[0] * scale, spec.speed[1] * scale] as [number, number],
-    size: [spec.size[0] * scale, spec.size[1] * scale] as [number, number],
-    shape:
-      spec.shape.kind === 'cone'
-        ? { ...spec.shape, radius: spec.shape.radius * scale }
-        : spec.shape,
-  }))
-}
-
-function lightningOrb(): SystemSpec[] {
-  return [
-    {
-      duration: 0.25,
-      loop: true,
-      life: [0.25, 0.25],
-      speed: [0, 0],
-      size: [2.1, 2.1],
-      rotation: [0, Math.PI * 2],
-      rate: 0,
-      bursts: [{ time: 0, count: 1 }],
-      shape: { kind: 'point' },
-      startColor: [1, 1, 1, 1],
-      colorOverLife: {
-        colors: [
-          [0, 1, 1, 1],
-          [1, 1, 1, 1],
-        ],
-        alphas: [
-          [0, 0.4902],
-          [0.5321, 1],
-          [1, 0.4902],
-        ],
-      },
-      sizeOverLife: [
-        [0, 0.7609],
-        [0.4982, 0.9891],
-        [1, 0.7609],
-      ],
-      material: 'glow1',
-      additive: true,
-      mode: 'horizontal',
-      worldSpace: false,
-    },
-    {
-      duration: 0.25,
-      loop: true,
-      life: [0.15, 0.2],
-      speed: [8, 16],
-      size: [1, 1.2],
-      rotation: [0, Math.PI * 2],
-      rate: 70,
-      shape: { kind: 'sphere', radius: 2 },
-      startColor: [1, 1, 1, 1],
-      uv: { x: 3, y: 3, frames: 9, start: 0, cycles: 2 },
-      material: 'lightning-3x3',
-      additive: true,
-      mode: 'stretched',
-      lengthFactor: 2.6,
-      speedFactor: 0,
-      worldSpace: false,
-    },
-  ]
-}
-
-function poisonOrb(): SystemSpec[] {
-  return [
-    {
-      duration: 0.25,
-      loop: true,
-      life: [0.25, 0.25],
-      speed: [0, 0],
-      size: [0.84, 0.84],
-      rotation: [0, Math.PI * 2],
-      rate: 0,
-      bursts: [{ time: 0, count: 1 }],
-      shape: { kind: 'point' },
-      startColor: [1, 1, 1, 1],
-      colorOverLife: {
-        colors: [
-          [0, 1, 1, 1],
-          [1, 1, 1, 1],
-        ],
-        alphas: [
-          [0, 0.4902],
-          [0.5321, 1],
-          [1, 0.4902],
-        ],
-      },
-      sizeOverLife: [
-        [0, 0.7609],
-        [0.4982, 0.9891],
-        [1, 0.7609],
-      ],
-      material: 'glow1',
-      additive: true,
-      mode: 'billboard',
-      worldSpace: false,
-    },
-  ]
-}
-
-function lightningImpact(): SystemSpec[] {
-  return [
-    {
-      duration: 0.5,
-      life: [0.35, 0.45],
-      speed: [7, 30.8],
-      size: [0.112, 0.112],
-      rate: 0,
-      bursts: [{ time: 0, count: 65 }],
-      shape: { kind: 'circle', radius: 2.8, thickness: 0 },
-      startColor: [1, 1, 1, 1],
-      colorOverLife: {
-        colors: [
-          [0, 1, 1, 1],
-          [1, 1, 1, 1],
-        ],
-        alphas: [
-          [0, 0],
-          [0.2235, 1],
-          [0.8349, 1],
-          [1, 0],
-        ],
-      },
-      sizeOverLife: [
-        [0, 0.475],
-        [0.3352, 0.9885],
-        [1, 0],
-      ],
-      material: 'circlestretchy',
-      additive: false,
-      // Sparks are stretched billboards; flat here so the whole nova stays in
-      // the floor plane instead of standing up at the camera.
-      mode: 'horizontal',
-      stretch: [4, 8],
-    },
-    {
-      duration: 0.5,
-      life: [0.5, 0.5],
-      speed: [0, 0],
-      size: [9.8, 9.8],
-      rotation: [0, Math.PI * 2],
-      rate: 0,
-      bursts: [{ time: 0, count: 1 }],
-      shape: { kind: 'point' },
-      startColor: [1, 1, 1, 1],
-      colorOverLife: {
-        colors: [
-          [0, 1, 1, 1],
-          [1, 1, 1, 0],
-        ],
-        alphas: [
-          [0, 1],
-          [1, 0],
-        ],
-      },
-      sizeOverLife: [
-        [0, 0.3211],
-        [1, 1],
-      ],
-      material: 'ring',
-      additive: true,
-      mode: 'horizontal',
-    },
-    {
-      duration: 0.25,
-      life: [0.15, 0.45],
-      speed: [2.8, 5.6],
-      size: [0.91, 1.19],
-      rate: 20,
-      bursts: [{ time: 0, count: 11 }],
-      shape: { kind: 'circle', radius: 0.406, thickness: 1 },
-      startColor: [1, 1, 1, 1],
-      colorOverLife: {
-        colors: [
-          [0, 1, 1, 1],
-          [0.9985, 1, 0, 1],
-        ],
-        alphas: [
-          [0, 1],
-          [0.5773, 1],
-        ],
-      },
-      uv: { x: 3, y: 3, frames: 9, start: 0, cycles: 1 },
-      material: 'lightning-3x3',
-      additive: true,
-      // These bolts stretch along their velocity; a camera-facing stretch would
-      // stand the bolts up, so they are stretched flat along the ground instead.
-      mode: 'horizontal',
-      stretch: [8, 13],
-    },
-    {
-      duration: 0.5,
-      life: [0.4, 0.4],
-      speed: [0, 0],
-      size: [11.2, 11.2],
-      rotation: [0, Math.PI * 2],
-      rate: 0,
-      bursts: [{ time: 0, count: 1 }],
-      shape: { kind: 'point' },
-      startColor: [1, 1, 1, 1],
-      colorOverLife: {
-        colors: [
-          [0, 1, 1, 1],
-          [1, 1, 1, 1],
-        ],
-        alphas: [
-          [0, 1],
-          [1, 0],
-        ],
-      },
-      sizeOverLife: [
-        [0, 1],
-        [1, 0.6923],
-      ],
-      material: 'glow1',
-      additive: true,
-      mode: 'horizontal',
-    },
-  ]
-}
-
-function poisonImpact(): SystemSpec[] {
-  return [
-    {
-      duration: 3,
-      life: [3, 3],
-      speed: [0, 0],
-      size: [8, 8],
-      rotation: [0, Math.PI * 2],
-      rate: 0,
-      bursts: [{ time: 0, count: 1 }],
-      shape: { kind: 'point' },
-      startColor: [0.508, 1, 0.316, 1],
-      colorOverLife: {
-        colors: [
-          [0, 0.3889, 0.8679, 0.4476],
-          [0.9954, 0.4748, 0.8774, 0.1945],
-        ],
-        alphas: [
-          [0, 1],
-          [0.9, 1],
-          [0.9971, 0],
-        ],
-      },
-      material: 'decal-poison',
-      additive: false,
-      mode: 'billboard',
-    },
-    {
-      duration: 2.5,
-      life: [0.3, 0.6],
-      speed: [16, 32],
-      size: [0.4, 0.4],
-      gravity: 9.81 * 1.7 * 4,
-      rate: 40,
-      shape: { kind: 'cone', angle: 5, radius: 0.5 * 4 },
-      startColor: [1, 1, 1, 1],
-      colorOverLife: {
-        colors: [
-          [0, 0.7804, 1, 0.6314],
-          [0.5222, 0, 1, 0.1725],
-        ],
-        alphas: [
-          [0, 0],
-          [0.2235, 1],
-          [0.7, 1],
-          [1, 0],
-        ],
-      },
-      sizeOverLife: [
-        [0, 0],
-        [0.476, 1],
-        [1, 0],
-      ],
-      material: 'circle',
-      additive: false,
-      mode: 'stretched',
-      lengthFactor: 1,
-      speedFactor: 0.02,
-    },
-    {
-      duration: 1,
-      life: [0.4, 1],
-      speed: [18, 23],
-      size: [2.4, 4],
-      rotation: [0, Math.PI * 2],
-      gravity: -9.81 * 0.4 * 4,
-      rate: 0,
-      bursts: [{ time: 0, count: 12 }],
-      shape: { kind: 'sphere', radius: 0.2 * 4 },
-      startColor: [1, 1, 1, 1],
-      colorOverLife: {
-        colors: [
-          [0, 1, 1, 1],
-          [1, 1, 1, 1],
-        ],
-        alphas: [
-          [0, 1],
-          [0.9, 1],
-          [1, 0],
-        ],
-      },
-      sizeOverLife: [
-        [0, 1],
-        [1, 0],
-      ],
-      uv: { x: 2, y: 2, frames: 4, start: 0, cycles: 1 },
-      material: 'cloud-2x2-hard',
-      additive: false,
-      mode: 'billboard',
-    },
-    {
-      duration: 2,
-      life: [1.3, 1.3],
-      speed: [0.4, 0.4],
-      size: [4, 4],
-      gravity: -9.81 * 0.125 * 4,
-      rate: 0,
-      // Twelve identical copies burst on one spot; one sprite reads the same.
-      bursts: [{ time: 0, count: 1 }],
-      shape: { kind: 'point' },
-      startColor: [1, 1, 1, 1],
-      colorOverLife: {
-        colors: [
-          [0, 0.7412, 0.9333, 0.7647],
-          [0.9985, 0.2275, 0.4471, 0.0745],
-        ],
-        alphas: [
-          [0, 1],
-          [0.7953, 1],
-          [1, 0],
-        ],
-      },
-      sizeOverLife: [
-        [0, 0.3865],
-        [0.2561, 0.9234],
-        [0.4359, 0.7628],
-        [0.6887, 0.7956],
-        [1, 0.2875],
-      ],
-      material: 'skull2',
-      additive: false,
-      mode: 'billboard',
-    },
-  ]
-}
-
-const bundledEffects: Record<string, ParticleEffect> = {
-  'flame-head': { id: 'flame-head', name: 'Head flame', systems: headFire() },
-  'flame-body': { id: 'flame-body', name: 'Body flame', systems: bodyFire() },
-  'lightning-orb': { id: 'lightning-orb', name: 'Lightning orb', systems: lightningOrb() },
-  'poison-orb': { id: 'poison-orb', name: 'Poison orb', systems: poisonOrb() },
-  'lightning-impact': {
-    id: 'lightning-impact',
-    name: 'Lightning impact',
-    systems: lightningImpact(),
-  },
-  'poison-impact': { id: 'poison-impact', name: 'Poison impact', systems: poisonImpact() },
-}
-
-export const PARTICLE_PRESETS: Readonly<Record<string, ParticleEffect>> = bundledEffects
-
-const particleOverrides = import.meta.glob('../content/particles/*.json', {
+const presetFiles = import.meta.glob('../content/particles/*.json', {
   eager: true,
   import: 'default',
-}) as Record<string, ParticleEffect>
-
-const particleEffects: Record<string, ParticleEffect> = { ...bundledEffects }
-for (const value of Object.values(particleOverrides)) {
-  const effect = particleEffectSchema.parse(value)
-  particleEffects[effect.id] = effect
+}) as Record<string, NativeEffect>
+const overrideFiles = import.meta.glob('../content/particle-overrides/*.json', {
+  eager: true,
+  import: 'default',
+}) as Record<string, NativeEffect>
+const effects = new Map<string, NativeEffect>()
+for (const [file, effect] of Object.entries(presetFiles)) {
+  effects.set(
+    file
+      .split('/')
+      .at(-1)!
+      .replace(/\.json$/, ''),
+    parseQuarksDocument(effect),
+  )
 }
-
-export function getParticleEffect(id: string): ParticleEffect | undefined {
-  return particleEffects[id]
+for (const [file, effect] of Object.entries(overrideFiles)) {
+  effects.set(
+    file
+      .split('/')
+      .at(-1)!
+      .replace(/\.json$/, ''),
+    parseQuarksDocument(effect),
+  )
 }
+const templates = new Map<string, Object3D>()
 
-interface Trail {
-  group: THREE.Group
+interface Instance {
+  group: Object3D
   systems: ParticleSystem[]
 }
 
-export function createParticles(scene: THREE.Scene) {
+export function createParticles(scene: Scene) {
   const batch = new BatchedRenderer()
   scene.add(batch)
-  const trails = new Map<string, Trail>()
+  const trails = new Map<string, Instance>()
 
-  function add(
-    spec: SystemSpec,
-    parent: THREE.Object3D,
+  function spawn(
+    id: string,
+    parent: Object3D,
     x: number,
     y: number,
     z: number,
-    angle?: number,
-  ): ParticleSystem {
-    const system = createParticleSystem(spec)
-    system.emitter.position.set(x, y, z)
-    if (angle !== undefined) {
-      system.emitter.rotation.y = angle
+  ): Instance | undefined {
+    const source = effects.get(id)
+    if (!source) return undefined
+    let template = templates.get(id)
+    if (!template) {
+      template = new QuarksLoader().parse(structuredClone(source))
+      templates.set(id, template)
     }
-    parent.add(system.emitter)
-    batch.addSystem(system)
-    return system
-  }
-
-  /**
-   * The three fire systems and their offsets. Preset units are scaled by four
-   * to match the art.
-   */
-  const FIRE_OFFSETS: [number, number, number][] = [
-    [0, 0, 0],
-    [0, 0, 0],
-    [0, 0, 0.104 * 4],
-  ]
-
-  /**
-   * Adds one fire system at a local point of the part. The systems stay in
-   * local space, so they ride along when the part moves.
-   */
-  function spawnFire(
-    specs: SystemSpec[],
-    parent: THREE.Object3D,
-    x: number,
-    y: number,
-    z: number,
-    angle: number,
-  ): void {
-    const muzzle = new THREE.Group()
-    muzzle.position.set(x, y, z)
-    muzzle.rotation.y = angle
-    parent.add(muzzle)
-    for (let index = 0; index < specs.length; index += 1) {
-      const [ox, oy, oz] = FIRE_OFFSETS[index] ?? [0, 0, 0]
-      add(specs[index]!, muzzle, ox, oy, oz)
-    }
-  }
-  function spawnImpact(specs: SystemSpec[], x: number, y: number, z: number): void {
-    for (const spec of specs) {
-      const system = add(spec, scene, x, y, z)
-      // The hit effects are laid flat with a -90 degree X rotation.
-      system.emitter.rotation.x = -Math.PI / 2
-    }
-  }
-
-  function createTrail(effectId: string, x: number, y: number, z: number): Trail {
-    const group = new THREE.Group()
+    const group = template.clone(true)
     group.position.set(x, y, z)
-    scene.add(group)
-    const systems = (getParticleEffect(effectId)?.systems ?? []).map((spec) => {
-      const system = createParticleSystem(spec)
-      group.add(system.emitter)
-      batch.addSystem(system)
-      return system
+    parent.add(group)
+    QuarksUtil.addToBatchRenderer(group, batch)
+    const systems: ParticleSystem[] = []
+    group.traverse((object) => {
+      if (object.type === 'ParticleEmitter' && 'system' in object) {
+        systems.push((object as Object3D & { system: ParticleSystem }).system)
+      }
     })
+    if (systems.some((system) => system.autoDestroy)) {
+      const removeWhenDone = () => {
+        if (systems.every((system) => !system.emitter.parent)) group.parent?.remove(group)
+      }
+      for (const system of systems) system.addEventListener('destroy', removeWhenDone)
+    }
     return { group, systems }
   }
 
   return {
-    /**
-     * One fire system at a spawn point from the part's JSON: the point carries
-     * the mount position and Y rotation.
-     */
-    flame(
-      parent: THREE.Object3D,
-      slot: Slot,
-      x: number,
-      y: number,
-      z: number,
-      angle: number,
-    ): void {
-      spawnFire(
-        getParticleEffect(slot === 'head' ? 'flame-head' : 'flame-body')?.systems ?? [],
-        parent,
-        x,
-        y,
-        z,
-        angle,
-      )
+    flame(parent: Object3D, slot: Slot, x: number, y: number, z: number, angle: number): void {
+      const group = spawn(slot === 'head' ? 'flame-head' : 'flame-body', parent, x, y, z)?.group
+      if (group) group.rotation.y = angle
     },
 
     shot(id: string, visual: string, x: number, y: number, z: number): void {
       const effectId =
         visual === 'lightning' ? 'lightning-orb' : visual === 'poison' ? 'poison-orb' : visual
-      if (!getParticleEffect(effectId)) {
-        return
-      }
       let trail = trails.get(id)
       if (!trail) {
-        trail = createTrail(effectId, x, y, z)
+        const created = spawn(effectId, scene, x, y, z)
+        if (!created) return
+        trail = created
         trails.set(id, trail)
       }
       trail.group.position.set(x, y, z)
     },
 
     impact(kind: string, x: number, y: number, z: number): void {
-      const effectId = kind === 'lightning' || kind === 'poison' ? `${kind}-impact` : kind
-      spawnImpact(getParticleEffect(effectId)?.systems ?? [], x, y, z)
+      spawn(kind === 'lightning' || kind === 'poison' ? `${kind}-impact` : kind, scene, x, y, z)
     },
 
     dropShot(id: string): void {
       const trail = trails.get(id)
-      if (!trail) {
-        return
-      }
-      for (const system of trail.systems) {
-        system.dispose()
-      }
-      scene.remove(trail.group)
+      if (!trail) return
+      for (const system of trail.systems) system.dispose()
+      trail.group.parent?.remove(trail.group)
       trails.delete(id)
     },
 

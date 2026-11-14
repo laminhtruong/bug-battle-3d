@@ -1,17 +1,35 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-import { BatchedRenderer } from 'three.quarks'
-import type { ParticleSystem } from 'three.quarks'
-import { asset } from '@/core/asset'
 import {
-  particleEffectSchema,
-  type ParticleEffect,
-  type ParticleSystemSpec,
-} from '@/content/particles'
-import { createParticleSystem, PARTICLE_PRESETS } from '@/render/particles'
+  ApplyForce,
+  BatchedRenderer,
+  CircleEmitter,
+  ColorOverLife,
+  ConeEmitter,
+  ConstantColor,
+  ConstantValue,
+  DonutEmitter,
+  FrameOverLife,
+  Gradient,
+  GridEmitter,
+  HemisphereEmitter,
+  IntervalValue,
+  ParticleSystem,
+  PiecewiseBezier,
+  PointEmitter,
+  QuarksLoader,
+  QuarksUtil,
+  RectangleEmitter,
+  RenderMode,
+  SizeOverLife,
+  SphereEmitter,
+  Vector3 as QVector3,
+  Vector4 as QVector4,
+  Bezier,
+} from 'three.quarks'
+import { asset } from '@/core/asset'
+import { parseQuarksDocument, type QuarksDocument } from '@/content/particles'
 import './particles.css'
-
-if (import.meta.hot) import.meta.hot.accept('@/render/particles', () => {})
 
 const root = document.querySelector<HTMLElement>('#particle-editor')
 if (!root) throw new Error('missing #particle-editor')
@@ -19,8 +37,8 @@ if (!root) throw new Error('missing #particle-editor')
 root.innerHTML = `
   <div class="studio">
     <header class="topbar">
-      <div class="brand"><div class="brand-mark">\u{2733}</div><div><div class="brand-title">VFX STUDIO</div><div class="brand-subtitle">Bug Battle \u{b7} Particle Authoring</div></div></div>
-      <div class="top-actions"><button class="btn ghost" type="button" data-action="undo" title="Undo (Ctrl+Z)" disabled>Undo</button><button class="btn ghost" type="button" data-action="redo" title="Redo (Ctrl+Shift+Z)" disabled>Redo</button><span class="save-state" data-save-state>All changes saved</span><a class="top-link" href="/editor.html">Part editor \u{2197}</a><button class="btn primary" type="button" data-action="save">Save effect&nbsp; <span>Ctrl+S</span></button></div>
+      <div class="brand"><div class="brand-mark">\u{2733}</div><div><div class="brand-title">QUARKS STUDIO</div><div class="brand-subtitle">Native ParticleEmitter JSON</div></div></div>
+      <div class="top-actions"><button class="btn ghost" type="button" data-action="undo" title="Undo (Ctrl+Z)" disabled>Undo</button><button class="btn ghost" type="button" data-action="redo" title="Redo (Ctrl+Shift+Z)" disabled>Redo</button><span class="save-state" data-save-state>All changes saved</span><a class="top-link" href="/editor.html">Part editor \u{2197}</a><button class="btn" type="button" data-action="import">Import JSON</button><button class="btn" type="button" data-action="export">Export JSON</button><button class="btn primary" type="button" data-action="save">Save effect&nbsp; <span>Ctrl+S</span></button></div>
     </header>
     <main class="workspace">
       <aside class="left-panel">
@@ -28,32 +46,48 @@ root.innerHTML = `
           <div class="section-title"><span>Effects library</span><span class="count" data-effect-count>00</span></div>
           <input class="search" type="search" placeholder="Search effects\u{2026}" aria-label="Search effects" data-search>
           <div class="effect-list" data-effect-list></div>
-          <div class="system-actions"><button class="btn small" type="button" data-action="new">\u{ff0b} New effect</button><button class="btn small" type="button" data-action="duplicate" title="Duplicate selected effect">\u{29c9}</button></div>
+          <div class="system-actions"><button class="btn small" type="button" data-action="new">+ New effect</button><button class="btn small" type="button" data-action="duplicate" title="Duplicate selected effect">Copy</button></div>
         </section>
         <section class="panel-block">
           <div class="section-title"><span>Hierarchy</span><span class="count" data-system-count>00</span></div>
           <div data-system-list></div>
-          <div class="system-actions"><button class="btn small" type="button" data-action="add-system">\u{ff0b} Add</button><button class="btn small" type="button" data-action="duplicate-system" title="Duplicate selected system">\u{29c9}</button><button class="btn small" type="button" data-action="move-system-up" title="Move system up">\u{2191}</button><button class="btn small" type="button" data-action="move-system-down" title="Move system down">\u{2193}</button><button class="btn small danger" type="button" data-action="remove-system" title="Remove selected system">\u{2212}</button></div>
+          <div class="system-actions"><button class="btn small" type="button" data-action="add-system">+ Add</button><button class="btn small" type="button" data-action="duplicate-system" title="Duplicate selected system">Copy</button><button class="btn small" type="button" data-action="move-system-up" title="Move system up">Up</button><button class="btn small" type="button" data-action="move-system-down" title="Move system down">Down</button><button class="btn small danger" type="button" data-action="remove-system" title="Remove selected system">-</button></div>
         </section>
-        <section class="panel-block"><div class="section-title"><span>Shortcuts</span></div><div class="hint">Space \u{b7} Play / pause<br>Ctrl+Z / Ctrl+Shift+Z \u{b7} Undo / redo<br>Ctrl+S \u{b7} Save effect<br>Ctrl+D \u{b7} Duplicate system<br>Drag \u{b7} Orbit camera&nbsp; \u{b7} &nbsp;Scroll \u{b7} Zoom</div></section>
+        <section class="panel-block"><div class="section-title"><span>Shortcuts</span></div><div class="hint">Space \u{b7} Play / pause<br>Ctrl+Z / Ctrl+Shift+Z \u{b7} Undo / redo<br>Ctrl+S \u{b7} Save native JSON<br>Drag \u{b7} Orbit camera&nbsp; \u{b7} &nbsp;Scroll \u{b7} Zoom</div></section>
       </aside>
       <section class="stage">
         <div class="viewport">
           <canvas id="vfx-canvas" aria-label="Particle effect preview"></canvas>
-          <div class="viewport-label"><strong>Scene view</strong><span data-viewport-subtitle>Perspective \u{b7} Studio lighting</span></div>
+          <div class="viewport-label"><strong>Scene view</strong><span>Quarks runtime \u{b7} Perspective</span></div>
           <div class="view-badge">REAL-TIME PREVIEW</div>
-          <div class="viewport-actions"><button class="btn" type="button" data-action="frame">\u{2316} Frame</button><button class="btn" type="button" data-action="grid">\u{25a6} Grid</button></div>
+          <div class="viewport-actions"><button class="btn" type="button" data-action="frame">Frame</button><button class="btn" type="button" data-action="grid">Grid</button></div>
         </div>
         <div class="timeline">
-          <div class="transport"><button class="btn" type="button" data-action="restart" title="Restart (R)">\u{21ba}</button><button class="btn primary" type="button" data-action="play" title="Play / pause (Space)" data-play>\u{25b6}</button><button class="btn" type="button" data-action="step" title="Step frame">\u{25b8}\u{2502}</button><div class="time-readout"><span data-time>0.00</span> <span>/</span> <span data-duration>0.00 s</span></div></div>
+          <div class="transport"><button class="btn" type="button" data-action="restart" title="Restart (R)">Restart</button><button class="btn primary" type="button" data-action="play" title="Play / pause (Space)" data-play>Play</button><button class="btn" type="button" data-action="step" title="Step frame">Step</button><div class="time-readout"><span data-time>0.00</span> <span>/</span> <span data-duration>0.00 s</span></div></div>
           <div class="timeline-track"><div class="timeline-progress" data-progress></div><div class="timeline-knob" data-knob></div><div class="timeline-ticks"><span>0s</span><span>25%</span><span>50%</span><span>75%</span><span data-end-tick>1s</span></div><input class="timeline-input" type="range" min="0" max="1000" value="0" aria-label="Preview timeline" data-timeline></div>
         </div>
       </section>
       <aside class="right-panel" data-inspector></aside>
     </main>
   </div>
+  <input type="file" accept="application/json,.json" hidden data-file-input>
   <div class="toast" hidden></div>
 `
+
+type NativeNode = {
+  type: string
+  name?: string
+  children?: NativeNode[]
+  ps?: Record<string, unknown>
+  [key: string]: unknown
+}
+interface EffectFile {
+  id: string
+  json: QuarksDocument
+}
+interface EmitterObject extends THREE.Object3D {
+  system: ParticleSystem
+}
 
 const $ = <T extends Element>(selector: string): T => {
   const element = root!.querySelector<T>(selector)
@@ -67,9 +101,18 @@ const effectList = $<HTMLElement>('[data-effect-list]')
 const systemList = $<HTMLElement>('[data-system-list]')
 const saveState = $<HTMLElement>('[data-save-state]')
 const textures = new Set<string>()
-let effects = Object.values(PARTICLE_PRESETS).map((effect) => structuredClone(effect))
+const bundled = Object.entries(
+  import.meta.glob('../content/particles/*.json', { eager: true, import: 'default' }),
+).map(([file, json]) => ({
+  id: file
+    .split('/')
+    .at(-1)!
+    .replace(/\.json$/, ''),
+  json: parseQuarksDocument(json),
+}))
+const bundledById = new Map(bundled.map((effect) => [effect.id, effect]))
+let effects = bundled.map((effect) => structuredClone(effect))
 const savedIds = new Set<string>()
-const savedEffects = new Map(effects.map((effect) => [effect.id, structuredClone(effect)]))
 let currentId = effects[0]?.id ?? ''
 let systemIndex = 0
 let dirty = false
@@ -79,7 +122,9 @@ let elapsed = 0
 let previousFrame = 0
 let frameRequest = 0
 let toastTimer = 0
+let previewTimer = 0
 let previewDuration = 1
+let currentGroup: THREE.Object3D | undefined
 let previewSystems: ParticleSystem[] = []
 let renderer: THREE.WebGLRenderer
 let scene: THREE.Scene
@@ -87,13 +132,11 @@ let camera: THREE.PerspectiveCamera
 let controls: OrbitControls
 let batch: BatchedRenderer
 let grid: THREE.GridHelper
-let previewTimer = 0
-const undoStack: ParticleEffect[] = []
-const redoStack: ParticleEffect[] = []
+const undoStack: EffectFile[] = []
+const redoStack: EffectFile[] = []
 
-const currentEffect = (): ParticleEffect | undefined =>
+const currentEffect = (): EffectFile | undefined =>
   effects.find((effect) => effect.id === currentId)
-const currentSystem = (): ParticleSystemSpec | undefined => currentEffect()?.systems[systemIndex]
 const esc = (value: string): string =>
   value
     .replaceAll('&', '&amp;')
@@ -101,7 +144,7 @@ const esc = (value: string): string =>
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;')
-const n = (value: number, digits = 2): string =>
+const num = (value: number, digits = 2): string =>
   Number.isFinite(value) ? Number(value.toFixed(digits)).toString() : '0'
 const asHex = (rgb: readonly number[]): string =>
   `#${rgb
@@ -118,6 +161,37 @@ const fromHex = (hex: string): [number, number, number] =>
     number,
     number,
   ]
+
+function emitterNodes(rootNode: NativeNode): NativeNode[] {
+  const found: NativeNode[] = []
+  const visit = (node: NativeNode) => {
+    if (node.type === 'ParticleEmitter') found.push(node)
+    for (const child of node.children ?? []) visit(child)
+  }
+  visit(rootNode)
+  return found
+}
+
+function nativeRoot(json: QuarksDocument): NativeNode {
+  return json.object as unknown as NativeNode
+}
+
+function displayName(effect: EffectFile): string {
+  return String(nativeRoot(effect.json).name || effect.id)
+}
+
+function emitters(group = currentGroup): EmitterObject[] {
+  const result: EmitterObject[] = []
+  group?.traverse((object) => {
+    if (object.type === 'ParticleEmitter' && 'system' in object)
+      result.push(object as EmitterObject)
+  })
+  return result
+}
+
+function currentEmitter(): EmitterObject | undefined {
+  return emitters()[systemIndex]
+}
 
 function flash(message: string, error = false): void {
   toast.textContent = message
@@ -155,7 +229,15 @@ function updateHistoryButtons(): void {
   $<HTMLButtonElement>('[data-action="redo"]').disabled = redoStack.length === 0
 }
 
+function syncEffect(): void {
+  const effect = currentEffect()
+  if (!effect || !currentGroup) return
+  nativeRoot(effect.json).name = currentGroup.name || effect.id
+  effect.json = serializeGroup(currentGroup)
+}
+
 function recordHistory(): void {
+  syncEffect()
   const effect = currentEffect()
   if (!effect) return
   undoStack.push(structuredClone(effect))
@@ -164,39 +246,38 @@ function recordHistory(): void {
   updateHistoryButtons()
 }
 
-function travelHistory(from: ParticleEffect[], to: ParticleEffect[]): void {
+function travelHistory(from: EffectFile[], to: EffectFile[]): void {
+  syncEffect()
   const effect = currentEffect()
   const snapshot = from.pop()
   if (!effect || !snapshot) return
   to.push(structuredClone(effect))
+  releasePreview()
   effects = effects.map((item) => (item.id === currentId ? snapshot : item))
-  systemIndex = Math.min(systemIndex, snapshot.systems.length - 1)
+  systemIndex = Math.min(systemIndex, emitterNodes(nativeRoot(snapshot.json)).length - 1)
   markDirty()
   renderEffects()
   renderSystems()
   renderInspector()
-  resetSystems()
+  resetPreview()
   updateHistoryButtons()
 }
 
 function isBuiltIn(id: string): boolean {
-  return Object.hasOwn(PARTICLE_PRESETS, id)
+  return bundledById.has(id)
 }
 
 function renderEffects(): void {
   const query = $<HTMLInputElement>('[data-search]').value.trim().toLowerCase()
   const visible = effects.filter((effect) =>
-    `${effect.name} ${effect.id}`.toLowerCase().includes(query),
+    `${displayName(effect)} ${effect.id}`.toLowerCase().includes(query),
   )
   $('[data-effect-count]').textContent = String(effects.length).padStart(2, '0')
   effectList.innerHTML = visible.length
     ? visible
         .map(
           (effect) => `
-    <button class="effect-item${effect.id === currentId ? ' active' : ''}" type="button" data-effect="${esc(effect.id)}">
-      <span class="effect-icon">\u{2733}</span><span><span class="effect-name">${esc(effect.name)}</span><span class="effect-meta">${esc(effect.id)} \u{b7} ${effect.systems.length} system${effect.systems.length === 1 ? '' : 's'}</span></span>
-      ${savedIds.has(effect.id) ? '<span class="saved-dot" title="Saved to project"></span>' : ''}
-    </button>`,
+    <button class="effect-item${effect.id === currentId ? ' active' : ''}" type="button" data-effect="${esc(effect.id)}"><span class="effect-icon">\u{2733}</span><span><span class="effect-name">${esc(displayName(effect))}</span><span class="effect-meta">${esc(effect.id)} \u{b7} ${emitterNodes(nativeRoot(effect.json)).length} systems</span></span>${savedIds.has(effect.id) ? '<span class="saved-dot" title="Saved to project"></span>' : ''}</button>`,
         )
         .join('')
     : '<div class="empty-list">No matching effects</div>'
@@ -204,30 +285,249 @@ function renderEffects(): void {
 
 function renderSystems(): void {
   const effect = currentEffect()
-  $('[data-system-count]').textContent = String(effect?.systems.length ?? 0).padStart(2, '0')
+  const nodes = effect ? emitterNodes(nativeRoot(effect.json)) : []
+  $('[data-system-count]').textContent = String(nodes.length).padStart(2, '0')
   if (!effect) {
-    systemList.innerHTML = '<div class="empty-list">Create an effect to begin.</div>'
+    systemList.innerHTML = '<div class="empty-list">Create or import an effect.</div>'
     return
   }
-  systemList.innerHTML = `<div class="hierarchy-row"><span>\u{2304}</span><span class="tree-icon">\u{2733}</span><strong>${esc(effect.name)}</strong><span class="row-meta">FX</span></div>${effect.systems.map((spec, index) => `<button class="hierarchy-row${index === systemIndex ? ' active' : ''}" type="button" data-system="${index}"><span class="tree-indent"></span><span class="tree-icon">\u{25a7}</span><span>${esc(spec.material)}</span><span class="row-meta">${index + 1}</span></button>`).join('')}`
+  systemList.innerHTML = `<div class="hierarchy-row"><span>\u{2304}</span><span class="tree-icon">\u{2733}</span><strong>${esc(displayName(effect))}</strong><span class="row-meta">GROUP</span></div>${nodes.map((node, index) => `<button class="hierarchy-row${index === systemIndex ? ' active' : ''}" type="button" data-system="${index}"><span class="tree-indent"></span><span class="tree-icon">\u{25a7}</span><span>${esc(node.name || `Particle System ${index + 1}`)}</span><span class="row-meta">${index + 1}</span></button>`).join('')}`
 }
 
-function colorStops(spec: ParticleSystemSpec): string {
-  if (!spec.colorOverLife)
-    return `<button class="btn small" type="button" data-action="enable-color">\u{ff0b} Add color over life</button>`
-  const stops = spec.colorOverLife.colors
+function intervalBounds(generator: unknown, fallback: [number, number]): [number, number] {
+  if (!generator || typeof generator !== 'object') return fallback
+  const value = generator as { type?: string; a?: number; b?: number; value?: number }
+  if (value.type === 'IntervalValue') return [value.a ?? fallback[0], value.b ?? fallback[1]]
+  if (value.type === 'ConstantValue')
+    return [value.value ?? fallback[0], value.value ?? fallback[1]]
+  return fallback
+}
+
+function colorOf(system: ParticleSystem): [number, number, number, number] {
+  const color = (system.startColor as unknown as { color?: QVector4 }).color
+  return color ? [color.x, color.y, color.z, color.w] : [1, 1, 1, 1]
+}
+
+function colorStops(
+  system: ParticleSystem,
+): { colors: [number, number, number, number][]; alphas: [number, number][] } | undefined {
+  const behavior = system.behaviors.find((item) => item.type === 'ColorOverLife') as
+    ColorOverLife | undefined
+  if (!behavior || !(behavior.color instanceof Gradient)) return undefined
+  return {
+    colors: behavior.color.color.keys.map(([value, time]) => [time, value.x, value.y, value.z]),
+    alphas: behavior.color.alpha.keys.map(([value, time]) => [time, value]),
+  }
+}
+
+function sizeCurve(system: ParticleSystem): [number, number][] | undefined {
+  const behavior = system.behaviors.find((item) => item.type === 'SizeOverLife') as
+    SizeOverLife | undefined
+  const curve = behavior?.size as unknown as
+    { functions?: Array<[{ p: number[] }, number]> } | undefined
+  const segments = curve?.functions
+  if (!segments?.length) return undefined
+  const points = segments.map(([bezier, time]) => [time, bezier.p[0] ?? 1] as [number, number])
+  const last = segments.at(-1)?.[0]
+  points.push([1, last?.p[3] ?? 1])
+  return points
+}
+
+function frameRange(system: ParticleSystem): [number, number] | undefined {
+  const behavior = system.behaviors.find((item) => item.type === 'FrameOverLife') as
+    FrameOverLife | undefined
+  const data = behavior?.frame as unknown as
+    { functions?: Array<[{ p: number[] }, number]> } | undefined
+  const segment = data?.functions?.[0]
+  const curve = segment?.[0]
+  return curve ? [curve.p[0] ?? 0, data!.functions!.at(-1)?.[0].p[3] ?? 0] : undefined
+}
+
+function setFrameRange(system: ParticleSystem, start: number, end: number): void {
+  const frame = new FrameOverLife(
+    linearCurve([
+      [0, start],
+      [1, end],
+    ]),
+  )
+  const current = system.behaviors.findIndex((item) => item.type === 'FrameOverLife')
+  if (current >= 0) system.behaviors[current] = frame
+  else system.behaviors.push(frame)
+}
+
+function gravityOf(system: ParticleSystem): number {
+  const behavior = system.behaviors.find((item) => item.type === 'ApplyForce') as
+    ApplyForce | undefined
+  if (!behavior) return 0
+  const strength = behavior.magnitude as unknown as { value?: number }
+  return behavior.direction.y * (strength.value ?? 0)
+}
+
+function materialOf(system: ParticleSystem): { name: string; additive: boolean } {
+  const material = system.material as THREE.MeshBasicMaterial
+  const image = material.map?.image as { src?: string } | undefined
+  const src = image?.src ?? ''
+  const filename = typeof src === 'string' ? (src.split(/[/?#]/).at(-1) ?? '') : ''
+  return {
+    name: textures.has(filename.replace(/\.png$/i, ''))
+      ? filename.replace(/\.png$/i, '')
+      : ([...textures][0] ?? 'circle'),
+    additive: material.blending === THREE.AdditiveBlending,
+  }
+}
+
+function shapeFields(system: ParticleSystem): string {
+  const shape = system.emitterShape
+  const data = shape as unknown as Record<string, unknown>
+  const fields: { key: string; title: string; value: number; step: number }[] = []
+  for (const key of ['radius', 'width', 'height', 'row', 'column', 'donutRadius', 'thickness']) {
+    if (key in shape)
+      fields.push({
+        key,
+        title: key.toUpperCase(),
+        value: Number(data[key]),
+        step: key === 'row' || key === 'column' ? 1 : 0.05,
+      })
+  }
+  if (shape.type === 'cone' || shape.type === 'sphere' || shape.type === 'hemisphere')
+    fields.push({
+      key: 'angle',
+      title: 'ANGLE \u{b7} DEG',
+      value: ((data.angle as number) * 180) / Math.PI,
+      step: 1,
+    })
+  if ('arc' in shape)
+    fields.push({
+      key: 'arc',
+      title: 'ARC \u{b7} DEG',
+      value: ((data.arc as number) * 180) / Math.PI,
+      step: 1,
+    })
+  if ('spread' in shape)
+    fields.push({ key: 'spread', title: 'SPREAD', value: Number(data.spread), step: 0.05 })
+  const controls = fields.map(
+    ({ key, title, value, step }) =>
+      `<label class="field"><span>${title}</span><input type="number" min="0" step="${step}" value="${num(value)}" data-bind="shape.${key}"></label>`,
+  )
+  if ('mode' in shape)
+    controls.push(
+      `<label class="field"><span>EMITTER MODE</span><select data-bind="shape.mode">${[
+        ['0', 'Random'],
+        ['1', 'Loop'],
+        ['2', 'Ping-pong'],
+        ['3', 'Burst'],
+      ]
+        .map(
+          ([value, label]) =>
+            `<option value="${value}" ${String(data.mode) === value ? 'selected' : ''}>${label}</option>`,
+        )
+        .join('')}</select></label>`,
+    )
+  return (
+    controls.join('') || '<p class="hint">This native emitter shape has no scalar parameters.</p>'
+  )
+}
+
+function renderColorStops(system: ParticleSystem): string {
+  const stops = colorStops(system)
+  if (!stops)
+    return '<button class="btn small" type="button" data-action="enable-color">+ Add color over life</button>'
+  const colors = stops.colors
     .map(
       ([time, r, g, b], index) =>
-        `<div class="color-stop"><input type="number" min="0" max="1" step="0.01" value="${n(time, 3)}" aria-label="Color stop time" data-color-stop="${index}" data-color-part="time"><input type="color" value="${asHex([r, g, b])}" aria-label="Color stop color" data-color-stop="${index}" data-color-part="color"><button class="btn small danger" type="button" data-action="remove-color" data-index="${index}" title="Remove color stop">\u{d7}</button></div>`,
+        `<div class="color-stop"><input type="number" min="0" max="1" step="0.01" value="${num(time, 3)}" aria-label="Color stop time" data-color-stop="${index}" data-color-part="time"><input type="color" value="${asHex([r, g, b])}" aria-label="Color stop color" data-color-stop="${index}" data-color-part="color"><button class="btn small danger" type="button" data-action="remove-color" data-index="${index}" title="Remove key">&times;</button></div>`,
     )
     .join('')
-  const alpha = spec.colorOverLife.alphas
+  const alphas = stops.alphas
     .map(
       ([time, value], index) =>
-        `<div class="color-stop"><input type="number" min="0" max="1" step="0.01" value="${n(time, 3)}" aria-label="Opacity stop time" data-alpha-stop="${index}" data-alpha-part="time"><input type="number" min="0" max="1" step="0.01" value="${n(value, 3)}" aria-label="Opacity" data-alpha-stop="${index}" data-alpha-part="value"><button class="btn small danger" type="button" data-action="remove-alpha" data-index="${index}" title="Remove opacity stop">\u{d7}</button></div>`,
+        `<div class="color-stop"><input type="number" min="0" max="1" step="0.01" value="${num(time, 3)}" aria-label="Alpha stop time" data-alpha-stop="${index}" data-alpha-part="time"><input type="number" min="0" max="1" step="0.01" value="${num(value, 3)}" aria-label="Alpha" data-alpha-stop="${index}" data-alpha-part="value"><button class="btn small danger" type="button" data-action="remove-alpha" data-index="${index}" title="Remove key">&times;</button></div>`,
     )
     .join('')
-  return `<div class="asset-heading"><span>COLOR KEYS \u{b7} T / RGB</span><button class="btn small" type="button" data-action="add-color">\u{ff0b} Key</button></div>${stops}<div class="asset-heading" style="margin-top:12px"><span>ALPHA KEYS \u{b7} T / OPACITY</span><button class="btn small" type="button" data-action="add-alpha">\u{ff0b} Key</button></div>${alpha}`
+  return `<div class="asset-heading"><span>COLOR KEYS \u{b7} T / RGB</span><button class="btn small" type="button" data-action="add-color">+ Key</button></div>${colors}<div class="asset-heading" style="margin-top:12px"><span>ALPHA KEYS \u{b7} T / VALUE</span><button class="btn small" type="button" data-action="add-alpha">+ Key</button></div>${alphas}`
+}
+
+function renderInspector(): void {
+  const effect = currentEffect()
+  const emitter = currentEmitter()
+  const system = emitter?.system
+  if (!effect || !system) {
+    inspector.innerHTML = '<div class="empty-list">Select or create a Quarks effect.</div>'
+    return
+  }
+  const life = intervalBounds(system.startLife, [1, 1])
+  const speed = intervalBounds(system.startSpeed, [0, 0])
+  const size = intervalBounds(system.startSize, [1, 1])
+  const rotation = intervalBounds(system.startRotation, [0, 0])
+  const color = colorOf(system)
+  const material = materialOf(system)
+  const burst = system.emissionBursts[0]
+  const burstCount = burst ? intervalBounds(burst.count, [0, 0])[1] : 0
+  const curve = sizeCurve(system)
+  const modes = [
+    [RenderMode.BillBoard, 'Billboard'],
+    [RenderMode.StretchedBillBoard, 'Stretched Billboard'],
+    [RenderMode.HorizontalBillBoard, 'Horizontal Billboard'],
+    [RenderMode.VerticalBillBoard, 'Vertical Billboard'],
+    [RenderMode.Trail, 'Trail'],
+    [RenderMode.Mesh, 'Mesh'],
+  ] as const
+  const textureOptions = [...textures]
+    .map(
+      (name) =>
+        `<option value="${esc(name)}" ${name === material.name ? 'selected' : ''}>${esc(name)}</option>`,
+    )
+    .join('')
+  const shapeKinds = [
+    'point',
+    'cone',
+    'sphere',
+    'hemisphere',
+    'circle',
+    'donut',
+    'rectangle',
+    'grid',
+  ]
+  inspector.innerHTML = `
+    <header class="inspector-head"><div class="inspector-kicker">${isBuiltIn(effect.id) ? 'QUARKS PRESET' : 'NATIVE QUARKS EFFECT'} \u{b7} SYSTEM ${String(systemIndex + 1).padStart(2, '0')}</div><input class="inspector-title" value="${esc(displayName(effect))}" aria-label="Effect name" data-bind="effect.name"><div class="inspector-sub">${esc(effect.id)} <span>\u{b7}</span> ${emitters().length} ParticleEmitter${emitters().length === 1 ? '' : 's'}</div></header>
+    <section class="inspect-section"><h3>Emission</h3><div class="field-grid">
+      <label class="field"><span>DURATION \u{b7} S</span><input type="number" min="0.01" step="0.05" value="${num(system.duration)}" data-bind="duration"></label>
+      <label class="field"><span>RATE \u{b7} /SEC</span><input type="number" min="0" step="1" value="${num(intervalBounds(system.emissionOverTime, [0, 0])[1])}" data-bind="rate"></label>
+      <label class="field"><span>RATE \u{b7} DISTANCE</span><input type="number" min="0" step="0.1" value="${num(intervalBounds(system.emissionOverDistance, [0, 0])[1])}" data-bind="distanceRate"></label>
+      <label class="field"><span>LIFETIME \u{b7} MIN</span><input type="number" min="0.01" step="0.05" value="${num(life[0])}" data-bind="life.0"></label>
+      <label class="field"><span>LIFETIME \u{b7} MAX</span><input type="number" min="0.01" step="0.05" value="${num(life[1])}" data-bind="life.1"></label>
+      <label class="field"><span>BURST COUNT</span><input type="number" min="0" step="1" value="${num(burstCount)}" data-bind="burst.count"></label>
+      <label class="field"><span>BURST TIME \u{b7} S</span><input type="number" min="0" step="0.05" value="${num(burst?.time ?? 0)}" data-bind="burst.time"></label>
+      <label class="check-field"><input type="checkbox" ${system.looping ? 'checked' : ''} data-bind="looping"> Loop system</label>
+      <label class="check-field"><input type="checkbox" ${system.worldSpace ? 'checked' : ''} data-bind="worldSpace"> World space</label>
+      <label class="check-field"><input type="checkbox" ${system.prewarm ? 'checked' : ''} data-bind="prewarm"> Prewarm</label>
+      <label class="check-field"><input type="checkbox" ${system.autoDestroy ? 'checked' : ''} data-bind="autoDestroy"> Auto destroy</label>
+    </div><p class="hint">Rate and bursts map to native Quarks emissionOverTime/emissionBursts.</p></section>
+    <section class="inspect-section"><h3>Initial properties & shape</h3><div class="field-grid">
+      <label class="field"><span>SPEED \u{b7} MIN</span><input type="number" min="0" step="0.5" value="${num(speed[0])}" data-bind="speed.0"></label>
+      <label class="field"><span>SPEED \u{b7} MAX</span><input type="number" min="0" step="0.5" value="${num(speed[1])}" data-bind="speed.1"></label>
+      <label class="field"><span>SIZE \u{b7} MIN</span><input type="number" min="0.01" step="0.05" value="${num(size[0])}" data-bind="size.0"></label>
+      <label class="field"><span>SIZE \u{b7} MAX</span><input type="number" min="0.01" step="0.05" value="${num(size[1])}" data-bind="size.1"></label>
+      <label class="field"><span>ROTATION \u{b7} MIN DEG</span><input type="number" step="5" value="${num((rotation[0] * 180) / Math.PI)}" data-bind="rotation.0"></label>
+      <label class="field"><span>ROTATION \u{b7} MAX DEG</span><input type="number" step="5" value="${num((rotation[1] * 180) / Math.PI)}" data-bind="rotation.1"></label>
+      <label class="field"><span>EMITTER SHAPE</span><select data-bind="shape.kind">${shapeKinds.map((kind) => `<option value="${kind}" ${system.emitterShape.type === kind ? 'selected' : ''}>${kind}</option>`).join('')}</select></label>
+      ${shapeFields(system)}
+      <label class="field"><span>GRAVITY Y</span><input type="number" step="0.5" value="${num(gravityOf(system))}" data-bind="gravity"></label>
+    </div></section>
+    <section class="inspect-section"><h3>Renderer & material</h3><div class="field-grid">
+      <label class="field full"><span>TEXTURE</span><select data-bind="material">${textureOptions}</select></label>
+      <div class="field full"><img class="asset-preview" src="${asset(`textures/fx/${material.name}.png`)}" alt="${esc(material.name)} texture"></div>
+      <label class="field full"><span>RENDER MODE</span><select data-bind="renderMode">${modes.map(([mode, label]) => `<option value="${mode}" ${system.renderMode === mode ? 'selected' : ''}>${label}</option>`).join('')}</select></label>
+      <label class="field"><span>BLENDING</span><select data-bind="additive"><option value="true" ${material.additive ? 'selected' : ''}>Additive</option><option value="false" ${material.additive ? '' : 'selected'}>Alpha</option></select></label>
+      <label class="field"><span>START COLOR</span><input type="color" value="${asHex(color)}" data-bind="startColor"></label>
+      <label class="field"><span>START ALPHA</span><input type="number" min="0" max="1" step="0.05" value="${num(color[3])}" data-bind="startAlpha"></label>
+    </div><p class="hint">These controls update a live Quarks ParticleSystem, not an editor-specific particle schema.</p></section>
+    <section class="inspect-section"><h3>Size over lifetime</h3>${curve ? '<div class="curve-box"><svg viewBox="0 0 100 100" preserveAspectRatio="none" data-curve></svg><span class="curve-label">0 \u{2192} LIFE \u{2192} 100%</span></div><div class="curve-tools"><span>Quarks PiecewiseBezier</span><div><button class="btn" type="button" data-action="add-curve-key">+ Key</button> <button class="btn" type="button" data-action="remove-curve-key">- Key</button></div></div>' : '<button class="btn small" type="button" data-action="enable-curve">+ Add SizeOverLife</button>'}</section>
+    <section class="inspect-section"><h3>Color over lifetime</h3>${renderColorStops(system)}</section>
+    <section class="inspect-section"><h3>Texture sheet</h3><div class="field-grid"><label class="field"><span>TILE X</span><input type="number" min="1" step="1" value="${system.uTileCount}" data-bind="uTileCount"></label><label class="field"><span>TILE Y</span><input type="number" min="1" step="1" value="${system.vTileCount}" data-bind="vTileCount"></label><label class="field"><span>START TILE</span><input type="number" min="0" step="1" value="${intervalBounds(system.startTileIndex, [0, 0])[1]}" data-bind="startTileIndex"></label><label class="check-field"><input type="checkbox" ${system.blendTiles ? 'checked' : ''} data-bind="blendTiles"> Blend frames</label>${frameRange(system) ? `<label class="field"><span>FRAME START</span><input type="number" step="1" value="${num(frameRange(system)![0])}" data-bind="frame.start"></label><label class="field"><span>FRAME END</span><input type="number" step="1" value="${num(frameRange(system)![1])}" data-bind="frame.end"></label>` : '<button class="btn small" type="button" data-action="enable-frame">+ Add FrameOverLife</button>'}</div><p class="hint">Animation uses Quarks' native FrameOverLife behavior.</p></section>
+    <section class="inspect-section"><details class="native-json"><summary>Native Quarks JSON</summary><textarea spellcheck="false" aria-label="Native Quarks JSON" data-native-json>${esc(JSON.stringify(effect.json, null, 2))}</textarea><button class="btn small" type="button" data-action="apply-json">Apply document</button></details></section>
+    <section class="inspect-section"><button class="btn danger small" type="button" data-action="delete-effect" ${isBuiltIn(effect.id) ? 'disabled title="Bundled Quarks documents cannot be deleted"' : ''}>Delete custom effect</button>${isBuiltIn(effect.id) && savedIds.has(effect.id) ? '<button class="btn small" type="button" data-action="reset-effect">Reset preset</button>' : ''}</section>`
+  if (curve) drawCurve($<SVGSVGElement>('[data-curve]'), curve)
 }
 
 function drawCurve(svg: SVGSVGElement, points: readonly (readonly [number, number])[]): void {
@@ -240,74 +540,123 @@ function drawCurve(svg: SVGSVGElement, points: readonly (readonly [number, numbe
   svg.innerHTML = `<path class="curve-path" d="${d}"/>${points.map(([time, value], index) => `<circle class="curve-point" cx="${(time * 100).toFixed(2)}" cy="${(90 - value * 45).toFixed(2)}" r="${index === 0 || index === points.length - 1 ? 3.2 : 4}" data-curve-index="${index}"/>`).join('')}`
 }
 
-function renderInspector(): void {
-  const effect = currentEffect()
-  const spec = currentSystem()
-  if (!effect || !spec) {
-    inspector.innerHTML = '<div class="empty-list">Select or create an effect.</div>'
-    return
-  }
-  const shapeFields =
-    spec.shape.kind === 'cone'
-      ? `<label class="field"><span>CONE ANGLE \u{b7} DEG</span><input type="number" min="0" max="180" step="1" value="${n(spec.shape.angle)}" data-bind="shape.angle"></label><label class="field"><span>RADIUS</span><input type="number" min="0" step="0.05" value="${n(spec.shape.radius)}" data-bind="shape.radius"></label><label class="field full"><span>ARC \u{b7} DEG</span><input type="number" min="0" max="360" step="1" value="${n(spec.shape.arc ?? 360)}" data-bind="shape.arc"></label>`
-      : spec.shape.kind === 'sphere' || spec.shape.kind === 'circle'
-        ? `<label class="field"><span>RADIUS</span><input type="number" min="0" step="0.05" value="${n(spec.shape.radius)}" data-bind="shape.radius"></label>${spec.shape.kind === 'circle' ? `<label class="field"><span>THICKNESS</span><input type="number" min="0" max="1" step="0.05" value="${n(spec.shape.thickness ?? 1)}" data-bind="shape.thickness"></label>` : ''}`
-        : '<p class="hint">Point emission spawns particles from the emitter origin.</p>'
-  const burst = spec.bursts?.[0]
-  const texture = spec.material
-  const curve = spec.sizeOverLife
-  const textureOptions = [...textures]
-    .map(
-      (name) =>
-        `<option value="${esc(name)}" ${name === texture ? 'selected' : ''}>${esc(name)}</option>`,
-    )
-    .join('')
-  inspector.innerHTML = `
-    <header class="inspector-head"><div class="inspector-kicker">${isBuiltIn(effect.id) ? 'BUILT-IN PRESET' : 'CUSTOM EFFECT'} \u{b7} SYSTEM ${String(systemIndex + 1).padStart(2, '0')}</div><input class="inspector-title" value="${esc(effect.name)}" aria-label="Effect name" data-bind="effect.name"><div class="inspector-sub">${esc(effect.id)} <span>\u{b7}</span> ${effect.systems.length} layered system${effect.systems.length === 1 ? '' : 's'}</div></header>
-    <section class="inspect-section"><h3>Emission</h3><div class="field-grid">
-      <label class="field"><span>DURATION \u{b7} S</span><input type="number" min="0.01" step="0.05" value="${n(spec.duration)}" data-bind="system.duration"></label>
-      <label class="field"><span>RATE \u{b7} /SEC</span><input type="number" min="0" step="1" value="${n(spec.rate ?? 0)}" data-bind="system.rate"></label>
-      <label class="field"><span>LIFETIME \u{b7} MIN</span><input type="number" min="0.01" step="0.05" value="${n(spec.life[0])}" data-bind="system.life.0"></label>
-      <label class="field"><span>LIFETIME \u{b7} MAX</span><input type="number" min="0.01" step="0.05" value="${n(spec.life[1])}" data-bind="system.life.1"></label>
-      <label class="field"><span>BURST COUNT</span><input type="number" min="0" step="1" value="${burst?.count ?? 0}" data-bind="burst.count"></label>
-      <label class="field"><span>BURST TIME \u{b7} S</span><input type="number" min="0" step="0.05" value="${n(burst?.time ?? 0)}" data-bind="burst.time"></label>
-      <label class="check-field"><input type="checkbox" ${spec.loop ? 'checked' : ''} data-bind="system.loop"> Loop system</label>
-      <label class="check-field"><input type="checkbox" ${spec.worldSpace === false ? '' : 'checked'} data-bind="system.worldSpace"> World space</label>
-    </div><p class="hint">Rate emits continuously; burst adds an instantaneous pulse.</p></section>
-    <section class="inspect-section"><h3>Motion & shape</h3><div class="field-grid">
-      <label class="field"><span>SPEED \u{b7} MIN</span><input type="number" min="0" step="0.5" value="${n(spec.speed[0])}" data-bind="system.speed.0"></label>
-      <label class="field"><span>SPEED \u{b7} MAX</span><input type="number" min="0" step="0.5" value="${n(spec.speed[1])}" data-bind="system.speed.1"></label>
-      <label class="field"><span>SIZE \u{b7} MIN</span><input type="number" min="0.01" step="0.05" value="${n(spec.size[0])}" data-bind="system.size.0"></label>
-      <label class="field"><span>SIZE \u{b7} MAX</span><input type="number" min="0.01" step="0.05" value="${n(spec.size[1])}" data-bind="system.size.1"></label>
-      ${spec.rotation ? `<label class="field"><span>ROTATION \u{b7} MIN \u{b0}</span><input type="number" step="5" value="${n((spec.rotation[0] * 180) / Math.PI)}" data-bind="system.rotation.0"></label><label class="field"><span>ROTATION \u{b7} MAX \u{b0}</span><input type="number" step="5" value="${n((spec.rotation[1] * 180) / Math.PI)}" data-bind="system.rotation.1"></label>` : '<button class="btn small" type="button" data-action="enable-rotation">\u{ff0b} Random rotation</button>'}
-      <label class="field"><span>GRAVITY</span><input type="number" step="0.5" value="${n(spec.gravity ?? 0)}" data-bind="system.gravity"></label>
-      <label class="field"><span>EMITTER SHAPE</span><select data-bind="shape.kind">${(['point', 'cone', 'sphere', 'circle'] as const).map((kind) => `<option value="${kind}" ${spec.shape.kind === kind ? 'selected' : ''}>${kind}</option>`).join('')}</select></label>
-      ${shapeFields}
-    </div></section>
-    <section class="inspect-section"><h3>Renderer & material</h3><div class="field-grid">
-      <label class="field full"><span>SPRITE TEXTURE</span><select data-bind="system.material">${textureOptions}</select></label>
-      <div class="field full"><img class="asset-preview" src="${asset(`textures/fx/${texture}.png`)}" alt="${esc(texture)} texture" data-texture-preview></div>
-      <label class="field"><span>RENDER MODE</span><select data-bind="system.mode">${(['billboard', 'stretched', 'horizontal'] as const).map((mode) => `<option value="${mode}" ${spec.mode === mode ? 'selected' : ''}>${mode}</option>`).join('')}</select></label>
-      <label class="field"><span>BLENDING</span><select data-bind="system.additive"><option value="true" ${spec.additive ? 'selected' : ''}>Additive</option><option value="false" ${spec.additive ? '' : 'selected'}>Alpha</option></select></label>
-      <label class="field"><span>START COLOR</span><input type="color" value="${asHex(spec.startColor ?? [1, 1, 1, 1])}" data-bind="system.startColor"></label>
-      <label class="field"><span>START ALPHA</span><input type="number" min="0" max="1" step="0.05" value="${n(spec.startColor?.[3] ?? 1)}" data-bind="system.startAlpha"></label>
-    </div><p class="hint">Sprite-sheet settings stay in the selected texture preset; custom atlases can be added in the advanced pass.</p></section>
-    <section class="inspect-section"><h3>Size over lifetime</h3>${curve ? '<div class="curve-box"><svg viewBox="0 0 100 100" preserveAspectRatio="none" data-curve></svg><span class="curve-label">0 \u{2192} LIFE \u{2192} 100%</span></div><div class="curve-tools"><span>Drag keys \u{b7} linear interpolation</span><div><button class="btn" type="button" data-action="add-curve-key">\u{ff0b} Key</button> <button class="btn" type="button" data-action="remove-curve-key">\u{2212} Key</button></div></div>' : '<button class="btn small" type="button" data-action="enable-curve">\u{ff0b} Add size curve</button>'}</section>
-    <section class="inspect-section"><h3>Color over lifetime</h3>${colorStops(spec)}</section>
-    <section class="inspect-section"><h3>Advanced</h3><div class="field-grid"><label class="field"><span>TILE X</span><input type="number" min="1" step="1" value="${spec.uv?.x ?? 1}" data-bind="uv.x"></label><label class="field"><span>TILE Y</span><input type="number" min="1" step="1" value="${spec.uv?.y ?? 1}" data-bind="uv.y"></label><label class="field"><span>FRAMES</span><input type="number" min="1" step="1" value="${spec.uv?.frames ?? 1}" data-bind="uv.frames"></label><label class="field"><span>START TILE</span><input type="number" min="0" step="1" value="${spec.uv?.start ?? 0}" data-bind="uv.start"></label><label class="field"><span>CYCLES</span><input type="number" min="0.1" step="0.1" value="${n(spec.uv?.cycles ?? 1)}" data-bind="uv.cycles"></label>${spec.mode === 'stretched' ? `<label class="field"><span>LENGTH FACTOR</span><input type="number" min="0" step="0.1" value="${n(spec.lengthFactor ?? 1)}" data-bind="system.lengthFactor"></label><label class="field"><span>SPEED FACTOR</span><input type="number" min="0" step="0.05" value="${n(spec.speedFactor ?? 0)}" data-bind="system.speedFactor"></label>` : ''}${spec.stretch ? `<label class="field"><span>GROUND STRETCH \u{b7} MIN</span><input type="number" min="0" step="0.5" value="${n(spec.stretch[0])}" data-bind="stretch.0"></label><label class="field"><span>GROUND STRETCH \u{b7} MAX</span><input type="number" min="0" step="0.5" value="${n(spec.stretch[1])}" data-bind="stretch.1"></label>` : '<button class="btn small" type="button" data-action="enable-stretch">\u{ff0b} Ground stretch behavior</button>'}</div><p class="hint">UV animation requires a sprite sheet. Ground stretch is for horizontal sprites.</p></section>
-    <section class="inspect-section"><button class="btn danger small" type="button" data-action="delete-effect" ${isBuiltIn(effect.id) ? 'disabled title="Built-in presets cannot be deleted"' : ''}>Delete custom effect</button>${isBuiltIn(effect.id) && savedIds.has(effect.id) ? '<button class="btn small" type="button" data-action="reset-effect">Reset preset</button>' : ''}</section>`
-  if (curve) drawCurve($<SVGSVGElement>('[data-curve]'), curve)
+function curveFromSystem(system: ParticleSystem): [number, number][] | undefined {
+  const behavior = system.behaviors.find((item) => item.type === 'SizeOverLife') as
+    SizeOverLife | undefined
+  const data = behavior?.size as unknown as
+    { functions?: Array<[{ p: number[] }, number]> } | undefined
+  const segments = data?.functions
+  if (!segments?.length) return undefined
+  const points = segments.map(([bezier, time]) => [time, bezier.p[0] ?? 1] as [number, number])
+  points.push([1, segments.at(-1)?.[0].p[3] ?? 1])
+  return points
 }
 
-function drawTransport(): void {
+function linearCurve(points: readonly (readonly [number, number])[]): PiecewiseBezier {
+  const first = points[0] ?? [0, 1]
+  const last = points.at(-1) ?? [1, 1]
+  const keys = [
+    [0, first[1]] as const,
+    ...points.filter(([time]) => time > 0 && time < 1),
+    [1, last[1]] as const,
+  ]
+  return new PiecewiseBezier(
+    keys.slice(0, -1).map(([time, value], index) => {
+      const nextValue = keys[index + 1]![1]
+      const delta = nextValue - value
+      return [new Bezier(value, value + delta / 3, value + (delta * 2) / 3, nextValue), time]
+    }),
+  )
+}
+
+function setSizeCurve(
+  system: ParticleSystem,
+  points: readonly (readonly [number, number])[],
+): void {
+  const current = system.behaviors.find((item) => item.type === 'SizeOverLife') as
+    SizeOverLife | undefined
+  if (current) current.size = linearCurve(points)
+  else system.behaviors.push(new SizeOverLife(linearCurve(points)))
+}
+
+function setColorGradient(
+  system: ParticleSystem,
+  colors: readonly (readonly [number, number, number, number])[],
+  alphas: readonly (readonly [number, number])[],
+): void {
+  const gradient = new Gradient(
+    colors.map(([time, r, g, b]) => [new QVector3(r, g, b), time]),
+    alphas.map(([time, alpha]) => [alpha, time]),
+  )
+  const current = system.behaviors.find((item) => item.type === 'ColorOverLife') as
+    ColorOverLife | undefined
+  if (current) current.color = gradient
+  else system.behaviors.push(new ColorOverLife(gradient))
+}
+
+function serializeGroup(group: THREE.Object3D): QuarksDocument {
+  const json = group.toJSON() as unknown as QuarksDocument
+  const urls = new Map<string, string>()
+  group.traverse((object) => {
+    if (object.type !== 'ParticleEmitter' || !('system' in object)) return
+    const material = (object as EmitterObject).system.material as THREE.MeshBasicMaterial
+    const texture = material.map
+    const source = texture?.image as { src?: string } | undefined
+    if (!texture) return
+    if (source?.src) {
+      const marker = source.src.lastIndexOf('/assets/')
+      urls.set(texture.uuid, marker >= 0 ? source.src.slice(marker + 1) : source.src)
+    } else if (texture.name) urls.set(texture.uuid, `assets/textures/fx/${texture.name}.png`)
+  })
+  const parsed = json as unknown as {
+    textures?: { uuid: string; image: string }[]
+    images?: { uuid: string; url: unknown }[]
+  }
+  const urlsByImage = new Map(
+    (parsed.textures ?? []).map((texture) => [texture.image, urls.get(texture.uuid)]),
+  )
+  for (const image of parsed.images ?? []) {
+    const url = urlsByImage.get(image.uuid)
+    if (url) image.url = url
+  }
+  return parseQuarksDocument(json)
+}
+
+function renderTransport(): void {
   const fraction = Math.max(0, Math.min(1, elapsed / previewDuration))
   $('[data-progress]').setAttribute('style', `width:${fraction * 100}%`)
   $('[data-knob]').setAttribute('style', `left:${fraction * 100}%`)
   $('[data-time]').textContent = elapsed.toFixed(2)
   $('[data-duration]').textContent = `${previewDuration.toFixed(2)} s`
   $('[data-end-tick]').textContent = `${previewDuration.toFixed(1)}s`
-  $<HTMLButtonElement>('[data-play]').textContent = playing ? '\u{2161}' : '\u{25b6}'
+  $<HTMLButtonElement>('[data-play]').textContent = playing ? 'Pause' : 'Play'
   $<HTMLInputElement>('[data-timeline]').value = String(Math.round(fraction * 1000))
+}
+
+function resetPreview(): void {
+  syncEffect()
+  releasePreview()
+  scene.remove(batch)
+  batch = new BatchedRenderer()
+  scene.add(batch)
+  const effect = currentEffect()
+  if (effect) {
+    currentGroup = new QuarksLoader().parse(structuredClone(effect.json))
+    currentGroup.name = displayName(effect)
+    scene.add(currentGroup)
+    QuarksUtil.addToBatchRenderer(currentGroup, batch)
+    previewSystems = emitters(currentGroup).map((emitter) => emitter.system)
+    previewDuration = Math.max(0.25, ...previewSystems.map((system) => system.duration))
+  }
+  elapsed = 0
+  renderTransport()
+}
+
+function releasePreview(): void {
+  for (const system of previewSystems) system.dispose()
+  previewSystems = []
+  if (currentGroup) scene.remove(currentGroup)
+  currentGroup = undefined
 }
 
 function setupPreview(): void {
@@ -358,42 +707,21 @@ function setupPreview(): void {
   )
 }
 
-function resetSystems(): void {
-  for (const system of previewSystems) system.dispose()
-  previewSystems = []
-  scene.remove(batch)
-  batch = new BatchedRenderer()
-  scene.add(batch)
-  const effect = currentEffect()
-  previewDuration = Math.max(0.25, ...(effect?.systems.map((spec) => spec.duration) ?? [1]))
-  effect?.systems.forEach((spec, index) => {
-    const system = createParticleSystem(spec)
-    if (effect.id === 'flame-head' || effect.id === 'flame-body')
-      system.emitter.position.z = index === 2 ? 0.416 : 0
-    system.emitter.position.y = 0.15
-    scene.add(system.emitter)
-    batch.addSystem(system)
-    previewSystems.push(system)
-  })
-  elapsed = 0
-  drawTransport()
-}
-
 function frame(now: number): void {
   if (!frameRequest) return
   const dt = Math.min((now - previousFrame) / 1000, 0.05)
   previousFrame = now
-  if (playing && Number.isFinite(dt) && dt > 0) {
+  if (playing && dt > 0) {
     batch.update(dt)
     elapsed += dt
     if (elapsed >= previewDuration) {
-      if (currentEffect()?.systems.some((spec) => spec.loop)) elapsed %= previewDuration
+      if (previewSystems.some((system) => system.looping)) elapsed %= previewDuration
       else {
         elapsed = previewDuration
         playing = false
       }
     }
-    drawTransport()
+    renderTransport()
   }
   controls.update()
   renderer.render(scene, camera)
@@ -410,176 +738,201 @@ function startAnimation(): void {
 function schedulePreview(): void {
   window.clearTimeout(previewTimer)
   previewTimer = window.setTimeout(() => {
-    resetSystems()
-    drawTransport()
+    resetPreview()
+    renderTransport()
   }, 120)
+}
+
+function markEdit(): void {
+  syncEffect()
+  markDirty()
+  renderEffects()
+  renderSystems()
+  schedulePreview()
+}
+
+function setRange(
+  system: ParticleSystem,
+  key: 'life' | 'speed' | 'size' | 'rotation',
+  index: 0 | 1,
+  value: number,
+): void {
+  const property =
+    key === 'life'
+      ? 'startLife'
+      : key === 'speed'
+        ? 'startSpeed'
+        : key === 'size'
+          ? 'startSize'
+          : 'startRotation'
+  const bounds = intervalBounds(system[property], [0, 0])
+  bounds[index] = key === 'rotation' ? (value * Math.PI) / 180 : value
+  system[property] = new IntervalValue(bounds[0], bounds[1])
 }
 
 function writeBound(target: HTMLInputElement | HTMLSelectElement): void {
   const bind = target.dataset.bind
-  if (!bind) return
+  const system = currentEmitter()?.system
   const effect = currentEffect()
-  const spec = currentSystem()
-  if (!effect || !spec) return
-  let value: unknown
-  if (target instanceof HTMLInputElement && target.type === 'checkbox') value = target.checked
-  else if (target instanceof HTMLInputElement && target.type === 'color')
-    value = fromHex(target.value)
-  else if (target instanceof HTMLSelectElement && bind === 'system.additive')
-    value = target.value === 'true'
-  else if (target instanceof HTMLInputElement && target.type === 'number')
-    value = Number(target.value)
-  else value = target.value
+  if (!bind || !system || !effect) return
+  const value =
+    target instanceof HTMLInputElement && target.type === 'checkbox'
+      ? target.checked
+      : target instanceof HTMLInputElement && target.type === 'color'
+        ? fromHex(target.value)
+        : target instanceof HTMLSelectElement &&
+            (bind === 'additive' ||
+              bind === 'looping' ||
+              bind === 'worldSpace' ||
+              bind === 'blendTiles')
+          ? target.value === 'true'
+          : target instanceof HTMLInputElement && target.type === 'number'
+            ? Number(target.value)
+            : target.value
   if (bind === 'effect.name') {
-    effect.name = String(value).slice(0, 80)
-    renderEffects()
-    renderSystems()
+    const name = String(value).trim() || effect.id
+    currentGroup!.name = name
+    nativeRoot(effect.json).name = name
+  } else if (bind === 'duration') system.duration = Number(value)
+  else if (bind === 'looping') system.looping = Boolean(value)
+  else if (bind === 'worldSpace') system.worldSpace = Boolean(value)
+  else if (bind === 'prewarm') system.prewarm = Boolean(value)
+  else if (bind === 'autoDestroy') system.autoDestroy = Boolean(value)
+  else if (bind === 'rate') system.emissionOverTime = new ConstantValue(Number(value))
+  else if (bind === 'distanceRate') system.emissionOverDistance = new ConstantValue(Number(value))
+  else if (bind === 'life.0' || bind === 'life.1')
+    setRange(system, 'life', Number(bind.at(-1)) as 0 | 1, Number(value))
+  else if (bind === 'speed.0' || bind === 'speed.1')
+    setRange(system, 'speed', Number(bind.at(-1)) as 0 | 1, Number(value))
+  else if (bind === 'size.0' || bind === 'size.1')
+    setRange(system, 'size', Number(bind.at(-1)) as 0 | 1, Number(value))
+  else if (bind === 'rotation.0' || bind === 'rotation.1')
+    setRange(system, 'rotation', Number(bind.at(-1)) as 0 | 1, Number(value))
+  else if (bind === 'burst.count' || bind === 'burst.time') {
+    const burst = system.emissionBursts[0]
+    const count = burst ? intervalBounds(burst.count, [0, 0])[1] : 0
+    const time = burst?.time ?? 0
+    const nextCount = bind === 'burst.count' ? Number(value) : count
+    const nextTime = bind === 'burst.time' ? Number(value) : time
+    system.emissionBursts =
+      nextCount > 0
+        ? [
+            {
+              time: nextTime,
+              count: new ConstantValue(nextCount),
+              cycle: 1,
+              interval: 0,
+              probability: 1,
+            },
+          ]
+        : []
   } else if (bind === 'shape.kind') {
-    const kind = String(value) as ParticleSystemSpec['shape']['kind']
-    spec.shape =
-      kind === 'cone'
-        ? { kind, angle: 20, radius: 0.5 }
-        : kind === 'sphere'
-          ? { kind, radius: 1 }
-          : kind === 'circle'
-            ? { kind, radius: 1, thickness: 1 }
-            : { kind: 'point' }
+    const shape = String(value)
+    system.emitterShape =
+      shape === 'cone'
+        ? new ConeEmitter({ angle: Math.PI / 6, radius: 0.5 })
+        : shape === 'sphere'
+          ? new SphereEmitter({ radius: 1 })
+          : shape === 'hemisphere'
+            ? new HemisphereEmitter({ radius: 1 })
+            : shape === 'circle'
+              ? new CircleEmitter({ radius: 1 })
+              : shape === 'donut'
+                ? new DonutEmitter({ radius: 1, donutRadius: 0.2 })
+                : shape === 'rectangle'
+                  ? new RectangleEmitter({ width: 1, height: 1 })
+                  : shape === 'grid'
+                    ? new GridEmitter({ width: 1, height: 1, row: 2, column: 2 })
+                    : new PointEmitter()
     renderInspector()
+  } else if (bind === 'shape.angle' || bind === 'shape.arc') {
+    const property = bind.slice('shape.'.length) as 'angle' | 'arc'
+    if (property in system.emitterShape)
+      (system.emitterShape as unknown as Record<string, unknown>)[property] =
+        (Number(value) * Math.PI) / 180
   } else if (bind.startsWith('shape.')) {
-    ;(spec.shape as unknown as Record<string, unknown>)[bind.slice(6)] = value
-  } else if (bind.startsWith('system.')) {
-    const key = bind.slice(7)
-    const range = ['life', 'speed', 'size'].find((field) => key.startsWith(`${field}.`))
-    if (range) {
-      ;(spec[range as 'life' | 'speed' | 'size'] as number[])[Number(key.slice(range.length + 1))] =
-        Number(value)
-    } else if (key.startsWith('rotation.')) {
-      spec.rotation ??= [0, 0]
-      spec.rotation[Number(key.slice('rotation.'.length))] = (Number(value) * Math.PI) / 180
-    } else if (key === 'startColor') {
-      const rgba = spec.startColor ?? [1, 1, 1, 1]
-      spec.startColor = [...(value as number[]), rgba[3]] as [number, number, number, number]
-    } else if (key === 'startAlpha') {
-      const rgba = spec.startColor ?? [1, 1, 1, 1]
-      spec.startColor = [rgba[0], rgba[1], rgba[2], Number(value)]
-    } else if (key === 'gravity' && Number(value) === 0) {
-      delete spec.gravity
+    const key = bind.slice('shape.'.length)
+    ;(system.emitterShape as unknown as Record<string, unknown>)[key] = Number(value)
+  } else if (bind === 'gravity') {
+    const force = system.behaviors.find((item) => item.type === 'ApplyForce') as
+      ApplyForce | undefined
+    if (Number(value) === 0) {
+      if (force) system.behaviors.splice(system.behaviors.indexOf(force), 1)
+    } else if (force) {
+      force.direction.set(0, Math.sign(Number(value)), 0)
+      force.magnitude = new ConstantValue(Math.abs(Number(value)))
     } else {
-      ;(spec as unknown as Record<string, unknown>)[key] = value
+      system.behaviors.push(
+        new ApplyForce(
+          new QVector3(0, Math.sign(Number(value)), 0),
+          new ConstantValue(Math.abs(Number(value))),
+        ),
+      )
     }
-  } else if (bind.startsWith('burst.')) {
-    const key = bind.slice(6) as 'time' | 'count'
-    if (!spec.bursts?.length) spec.bursts = [{ time: 0, count: 0 }]
-    const burst = spec.bursts[0]!
-    burst[key] = Number(value)
-    if (!burst.count) spec.bursts = undefined
-  } else if (bind.startsWith('uv.')) {
-    const key = bind.slice(3)
-    if (!spec.uv) spec.uv = { x: 1, y: 1, frames: 1, start: 0, cycles: 1 }
-    ;(spec.uv as unknown as Record<string, unknown>)[key] = Number(value)
-    if (
-      spec.uv.x === 1 &&
-      spec.uv.y === 1 &&
-      spec.uv.frames === 1 &&
-      spec.uv.start === 0 &&
-      spec.uv.cycles === 1
+  } else if (bind === 'renderMode') system.renderMode = Number(value) as RenderMode
+  else if (bind === 'additive' || bind === 'material') {
+    const old = system.material as THREE.MeshBasicMaterial
+    const textureName = bind === 'material' ? String(value) : materialOf(system).name
+    const additive = bind === 'additive' ? Boolean(value) : old.blending === THREE.AdditiveBlending
+    system.material = createMaterial(textureName, additive)
+  } else if (bind === 'startColor' || bind === 'startAlpha') {
+    const color = colorOf(system)
+    const rgb = bind === 'startColor' ? (value as number[]) : color.slice(0, 3)
+    const alpha = bind === 'startAlpha' ? Number(value) : color[3]
+    system.startColor = new ConstantColor(new QVector4(rgb[0]!, rgb[1]!, rgb[2]!, alpha))
+  } else if (bind === 'uTileCount') system.uTileCount = Number(value)
+  else if (bind === 'vTileCount') system.vTileCount = Number(value)
+  else if (bind === 'startTileIndex') system.startTileIndex = new ConstantValue(Number(value))
+  else if (bind === 'blendTiles') system.blendTiles = Boolean(value)
+  else if (bind === 'frame.start' || bind === 'frame.end') {
+    const [start, end] = frameRange(system) ?? [0, system.uTileCount * system.vTileCount]
+    setFrameRange(
+      system,
+      bind === 'frame.start' ? Number(value) : start,
+      bind === 'frame.end' ? Number(value) : end,
     )
-      spec.uv = undefined
-  } else if (bind.startsWith('stretch.')) {
-    spec.stretch ??= [4, 8]
-    spec.stretch[Number(bind.slice('stretch.'.length))] = Number(value)
   }
-  markDirty()
-  schedulePreview()
+  markEdit()
 }
 
-function editColorStop(target: HTMLInputElement): void {
-  const spec = currentSystem()
-  const index = Number(target.dataset.colorStop)
-  if (!spec?.colorOverLife || !Number.isInteger(index)) return
-  const stop = spec.colorOverLife.colors[index]
-  if (!stop) return
-  if (target.dataset.colorPart === 'time') stop[0] = Number(target.value)
-  else stop.splice(1, 3, ...fromHex(target.value))
-  markDirty()
-  schedulePreview()
+function createMaterial(name: string, additive = true): THREE.MeshBasicMaterial {
+  const map = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1)
+  map.name = name
+  map.colorSpace = THREE.SRGBColorSpace
+  map.needsUpdate = true
+  return new THREE.MeshBasicMaterial({
+    map,
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
+    name,
+  })
 }
 
-function editAlphaStop(target: HTMLInputElement): void {
-  const stops = currentSystem()?.colorOverLife?.alphas
-  const stop = stops?.[Number(target.dataset.alphaStop)]
-  if (!stop) return
-  if (target.dataset.alphaPart === 'time') stop[0] = Number(target.value)
-  else stop[1] = Number(target.value)
-  markDirty()
-  schedulePreview()
-}
-
-function beginCurveDrag(event: PointerEvent, svg: SVGSVGElement): void {
-  const point = (event.target as HTMLElement).closest<SVGCircleElement>('[data-curve-index]')
-  const points = currentSystem()?.sizeOverLife
-  if (!point || !points) return
-  event.preventDefault()
-  const index = Number(point.dataset.curveIndex)
-  svg.setPointerCapture(event.pointerId)
-  const move = (pointer: PointerEvent) => {
-    const rect = svg.getBoundingClientRect()
-    const time = Math.max(0, Math.min(1, (pointer.clientX - rect.left) / rect.width))
-    const value = Math.max(0, Math.min(2, 2 * (1 - (pointer.clientY - rect.top) / rect.height)))
-    const current = currentSystem()?.sizeOverLife
-    const key = current?.[index]
-    if (!current || !key) return
-    key[0] =
-      index === 0
-        ? 0
-        : index === current.length - 1
-          ? 1
-          : Math.max(current[index - 1]![0] + 0.015, Math.min(current[index + 1]![0] - 0.015, time))
-    key[1] = value
-    drawCurve(svg, current)
-    markDirty()
-    schedulePreview()
-  }
-  const finish = () => {
-    svg.removeEventListener('pointermove', move)
-    svg.removeEventListener('pointerup', finish)
-    svg.removeEventListener('pointercancel', finish)
-  }
-  svg.addEventListener('pointermove', move)
-  svg.addEventListener('pointerup', finish)
-  svg.addEventListener('pointercancel', finish)
-}
-
-function newSystem(): ParticleSystemSpec {
-  return {
+function newNativeSystem(): ParticleSystem {
+  return new ParticleSystem({
     duration: 1,
-    life: [0.4, 0.8],
-    speed: [1, 3],
-    size: [0.25, 0.6],
-    rate: 20,
-    bursts: [{ time: 0, count: 12 }],
-    shape: { kind: 'cone', angle: 25, radius: 0.12 },
-    startColor: [1, 0.55, 0.15, 1],
-    colorOverLife: {
-      colors: [
-        [0, 1, 0.8, 0.3],
-        [1, 0.45, 0.06, 0.03],
-      ],
-      alphas: [
-        [0, 0],
-        [0.1, 1],
-        [1, 0],
-      ],
-    },
-    sizeOverLife: [
-      [0, 0.2],
-      [0.35, 1],
-      [1, 0],
+    looping: false,
+    autoDestroy: false,
+    shape: new ConeEmitter({ angle: Math.PI / 6, radius: 0.1 }),
+    startLife: new IntervalValue(0.4, 0.8),
+    startSpeed: new IntervalValue(1, 3),
+    startSize: new IntervalValue(0.25, 0.6),
+    startColor: new ConstantColor(new QVector4(1, 0.6, 0.2, 1)),
+    emissionOverTime: new ConstantValue(20),
+    emissionBursts: [],
+    material: createMaterial([...textures][0] ?? 'circle'),
+    behaviors: [
+      new SizeOverLife(
+        linearCurve([
+          [0, 0.2],
+          [0.4, 1],
+          [1, 0],
+        ]),
+      ),
     ],
-    material: textures.has('fire-soft-blank') ? 'fire-soft-blank' : ([...textures][0] ?? 'circle'),
-    additive: true,
-    mode: 'billboard',
-  }
+  })
 }
 
 function slug(value: string): string {
@@ -597,7 +950,7 @@ function slug(value: string): string {
 function openNameModal(title: string, initial: string, callback: (name: string) => void): void {
   const backdrop = document.createElement('div')
   backdrop.className = 'modal-backdrop'
-  backdrop.innerHTML = `<form class="modal"><h2>${esc(title)}</h2><p>Use a short name. The effect id is generated as a kebab-case filename.</p><input name="name" value="${esc(initial)}" maxlength="80" autocomplete="off" aria-label="Effect name"><div class="modal-actions"><button class="btn" type="button" data-cancel>Cancel</button><button class="btn primary" type="submit">Create effect</button></div></form>`
+  backdrop.innerHTML = `<form class="modal"><h2>${esc(title)}</h2><p>Effects are stored as Three.js Object3D JSON with Quarks ParticleEmitter data.</p><input name="name" value="${esc(initial)}" maxlength="80" autocomplete="off" aria-label="Effect name"><div class="modal-actions"><button class="btn" type="button" data-cancel>Cancel</button><button class="btn primary" type="submit">Create effect</button></div></form>`
   document.body.append(backdrop)
   const form = backdrop.querySelector('form')!
   const input = form.querySelector('input')!
@@ -609,35 +962,26 @@ function openNameModal(title: string, initial: string, callback: (name: string) 
     backdrop.remove()
   })
   form.querySelector('[data-cancel]')!.addEventListener('click', () => backdrop.remove())
-  backdrop.addEventListener('pointerdown', (event) => {
-    if (event.target === backdrop) backdrop.remove()
-  })
 }
 
 async function saveCurrent(): Promise<void> {
   const effect = currentEffect()
-  if (!effect) return
+  if (!effect || !currentGroup) return
   try {
-    const candidate = structuredClone(effect)
-    for (const spec of candidate.systems) {
-      spec.sizeOverLife?.sort((a, b) => a[0] - b[0])
-      spec.colorOverLife?.colors.sort((a, b) => a[0] - b[0])
-      spec.colorOverLife?.alphas.sort((a, b) => a[0] - b[0])
-    }
-    const checked = particleEffectSchema.parse(candidate)
+    syncEffect()
+    effect.json = parseQuarksDocument(serializeGroup(currentGroup))
     await request('/particles', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(checked),
+      body: JSON.stringify({ id: effect.id, json: effect.json }),
     })
     savedIds.add(effect.id)
-    savedEffects.set(effect.id, structuredClone(checked))
     setSaved()
     renderEffects()
     renderInspector()
-    flash(`Saved \u{201c}${effect.name}\u{201d} \u{b7} available to projectile visuals`)
+    flash(`Saved native Quarks JSON: ${effect.id}.json`)
   } catch (error) {
-    flash(error instanceof Error ? error.message : 'Could not save particle effect', true)
+    flash(error instanceof Error ? error.message : 'Could not save Quarks document', true)
   }
 }
 
@@ -645,14 +989,13 @@ function selectEffect(id: string): void {
   if (id === currentId) return
   if (dirty) {
     if (!window.confirm('Discard unsaved changes and switch effect?')) return
-    const baseline = savedEffects.get(currentId)
-    if (baseline)
-      effects = effects.map((effect) =>
-        effect.id === currentId ? structuredClone(baseline) : effect,
-      )
+    const saved = bundledById.get(currentId)
+    if (saved)
+      effects = effects.map((effect) => (effect.id === currentId ? structuredClone(saved) : effect))
     else effects = effects.filter((effect) => effect.id !== currentId)
   }
   if (!effects.some((effect) => effect.id === id)) return
+  releasePreview()
   currentId = id
   systemIndex = 0
   undoStack.length = 0
@@ -662,19 +1005,28 @@ function selectEffect(id: string): void {
   renderEffects()
   renderSystems()
   renderInspector()
-  resetSystems()
+  resetPreview()
 }
 
-function addNewEffect(name: string, source?: ParticleEffect): void {
+function addNewEffect(name: string, source?: EffectFile): void {
   const id = slug(name)
   if (effects.some((effect) => effect.id === id)) {
-    flash(`An effect named \u{201c}${id}\u{201d} already exists.`, true)
+    flash(`An effect named "${id}" already exists.`, true)
     return
   }
-  const effect = source ? structuredClone(source) : { id, name, systems: [newSystem()] }
-  effect.id = id
-  effect.name = name
-  effects.push(effect)
+  releasePreview()
+  const group = new THREE.Group()
+  group.name = name
+  const json = source
+    ? structuredClone(source.json)
+    : (() => {
+        const emitter = newNativeSystem().emitter
+        emitter.name = 'Particle System'
+        group.add(emitter)
+        return serializeGroup(group)
+      })()
+  nativeRoot(json).name = name
+  effects.push({ id, json })
   currentId = id
   systemIndex = 0
   undoStack.length = 0
@@ -683,7 +1035,58 @@ function addNewEffect(name: string, source?: ParticleEffect): void {
   renderEffects()
   renderSystems()
   renderInspector()
-  resetSystems()
+  resetPreview()
+}
+
+function drawTransport(): void {
+  const fraction = Math.max(0, Math.min(1, elapsed / previewDuration))
+  $('[data-progress]').setAttribute('style', `width:${fraction * 100}%`)
+  $('[data-knob]').setAttribute('style', `left:${fraction * 100}%`)
+  $('[data-time]').textContent = elapsed.toFixed(2)
+  $('[data-duration]').textContent = `${previewDuration.toFixed(2)} s`
+  $('[data-end-tick]').textContent = `${previewDuration.toFixed(1)}s`
+  $<HTMLButtonElement>('[data-play]').textContent = playing ? 'Pause' : 'Play'
+  $<HTMLInputElement>('[data-timeline]').value = String(Math.round(fraction * 1000))
+}
+
+function importFile(file: File): void {
+  void file
+    .text()
+    .then((text) => {
+      const json = parseQuarksDocument(JSON.parse(text))
+      const name = String(nativeRoot(json).name || file.name.replace(/\.json$/i, ''))
+      const id = slug(name)
+      const imported = { id, json }
+      if (effects.some((effect) => effect.id === id)) {
+        if (!window.confirm(`Replace the current "${id}" document with this file?`)) return
+        releasePreview()
+        effects = effects.map((effect) => (effect.id === id ? imported : effect))
+        currentId = id
+        systemIndex = 0
+        markDirty()
+        renderEffects()
+        renderSystems()
+        renderInspector()
+        resetPreview()
+      } else addNewEffect(name, imported)
+    })
+    .catch((error: unknown) =>
+      flash(error instanceof Error ? error.message : 'Invalid Quarks JSON', true),
+    )
+}
+
+function exportCurrent(): void {
+  const effect = currentEffect()
+  if (!effect || !currentGroup) return
+  const json = serializeGroup(currentGroup)
+  const url = URL.createObjectURL(
+    new Blob([JSON.stringify(json, null, 2)], { type: 'application/json' }),
+  )
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `${effect.id}.json`
+  link.click()
+  URL.revokeObjectURL(url)
 }
 
 root.addEventListener('click', (event) => {
@@ -711,68 +1114,69 @@ root.addEventListener('click', (event) => {
     return
   }
   if (action === 'save') void saveCurrent()
+  else if (action === 'import') $<HTMLInputElement>('[data-file-input]').click()
+  else if (action === 'export') exportCurrent()
   else if (action === 'new')
-    openNameModal('Create particle effect', 'New Effect', (name) => name && addNewEffect(name))
+    openNameModal('Create Quarks effect', 'New Effect', (name) => name && addNewEffect(name))
   else if (action === 'duplicate') {
     const effect = currentEffect()
     if (effect)
       openNameModal(
         'Duplicate effect',
-        `${effect.name} Copy`,
+        `${displayName(effect)} Copy`,
         (name) => name && addNewEffect(name, effect),
       )
-  } else if (action === 'add-system') {
+  } else if (action === 'add-system' || action === 'duplicate-system') {
+    const group = currentGroup
+    if (!group) return
     recordHistory()
-    currentEffect()?.systems.push(newSystem())
-    systemIndex = (currentEffect()?.systems.length ?? 1) - 1
+    const emitter =
+      action === 'add-system'
+        ? newNativeSystem().emitter
+        : (currentEmitter()?.clone() as EmitterObject | undefined)
+    if (emitter) {
+      emitter.name = 'Particle System'
+      group.add(emitter)
+      systemIndex = emitters(group).length - 1
+      syncEffect()
+      markDirty()
+      renderSystems()
+      renderInspector()
+      resetPreview()
+    }
+  } else if (action === 'remove-system') {
+    const emitter = currentEmitter()
+    if (!emitter || emitters().length <= 1) return
+    recordHistory()
+    emitter.system.dispose()
+    emitter.parent?.remove(emitter)
+    systemIndex = Math.max(0, systemIndex - 1)
+    syncEffect()
     markDirty()
     renderSystems()
     renderInspector()
-    resetSystems()
-  } else if (action === 'duplicate-system') {
-    const effect = currentEffect()
-    const spec = currentSystem()
-    if (effect && spec) {
-      recordHistory()
-      effect.systems.splice(systemIndex + 1, 0, structuredClone(spec))
-      systemIndex++
-      markDirty()
-      renderSystems()
-      renderInspector()
-      resetSystems()
-    }
+    resetPreview()
   } else if (action === 'move-system-up' || action === 'move-system-down') {
-    const effect = currentEffect()
-    const nextIndex = systemIndex + (action === 'move-system-up' ? -1 : 1)
-    if (effect && nextIndex >= 0 && nextIndex < effect.systems.length) {
-      recordHistory()
-      ;[effect.systems[systemIndex], effect.systems[nextIndex]] = [
-        effect.systems[nextIndex]!,
-        effect.systems[systemIndex]!,
-      ]
-      systemIndex = nextIndex
-      markDirty()
-      renderSystems()
-      renderInspector()
-      resetSystems()
-    }
-  } else if (action === 'remove-system') {
-    const effect = currentEffect()
-    if (effect && effect.systems.length > 1) {
-      recordHistory()
-      effect.systems.splice(systemIndex, 1)
-      systemIndex = Math.min(systemIndex, effect.systems.length - 1)
-      markDirty()
-      renderSystems()
-      renderInspector()
-      resetSystems()
-    }
+    const emitter = currentEmitter()
+    const parent = emitter?.parent
+    if (!emitter || !parent) return
+    const index = parent.children.indexOf(emitter)
+    const next = index + (action === 'move-system-up' ? -1 : 1)
+    if (next < 0 || next >= parent.children.length) return
+    recordHistory()
+    parent.children.splice(index, 1)
+    parent.children.splice(next, 0, emitter)
+    systemIndex = emitters().indexOf(emitter)
+    syncEffect()
+    markDirty()
+    renderSystems()
+    renderInspector()
   } else if (action === 'play') {
-    if (elapsed >= previewDuration) resetSystems()
+    if (elapsed >= previewDuration) resetPreview()
     playing = !playing
     drawTransport()
   } else if (action === 'restart') {
-    resetSystems()
+    resetPreview()
     playing = true
     drawTransport()
   } else if (action === 'step') {
@@ -787,157 +1191,196 @@ root.addEventListener('click', (event) => {
   } else if (action === 'grid') {
     showGrid = !showGrid
     grid.visible = showGrid
-  } else if (action === 'delete-effect') {
-    const effect = currentEffect()
-    if (
-      effect &&
-      !isBuiltIn(effect.id) &&
-      window.confirm(`Delete \u{201c}${effect.name}\u{201d}?`)
-    ) {
-      const id = effect.id
-      effects = effects.filter((item) => item.id !== id)
-      if (savedIds.has(id))
-        void request(`/particles?id=${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(
-          (error: unknown) => flash(error instanceof Error ? error.message : 'Delete failed', true),
-        )
-      savedIds.delete(id)
-      savedEffects.delete(id)
-      currentId = effects[0]?.id ?? ''
-      systemIndex = 0
-      setSaved()
-      renderEffects()
-      renderSystems()
-      renderInspector()
-      resetSystems()
-    }
-  } else if (action === 'reset-effect') {
-    const effect = currentEffect()
-    const preset = effect && PARTICLE_PRESETS[effect.id]
-    if (
-      effect &&
-      preset &&
-      window.confirm(`Reset \u{201c}${effect.name}\u{201d} to its original preset?`)
-    ) {
-      void request(`/particles?id=${encodeURIComponent(effect.id)}`, { method: 'DELETE' })
-        .then(() => {
-          effects = effects.map((item) => (item.id === effect.id ? structuredClone(preset) : item))
-          savedIds.delete(effect.id)
-          savedEffects.set(effect.id, structuredClone(preset))
-          setSaved()
-          renderEffects()
-          renderSystems()
-          renderInspector()
-          resetSystems()
-          flash('Preset restored')
-        })
-        .catch((error: unknown) =>
-          flash(error instanceof Error ? error.message : 'Reset failed', true),
-        )
-    }
   } else if (action === 'enable-curve') {
-    const spec = currentSystem()
-    if (spec) {
+    const system = currentEmitter()?.system
+    if (system) {
       recordHistory()
-      spec.sizeOverLife = [
+      setSizeCurve(system, [
         [0, 0.2],
         [0.4, 1],
         [1, 0],
-      ]
-      markDirty()
+      ])
+      markEdit()
       renderInspector()
-      resetSystems()
     }
   } else if (action === 'add-curve-key' || action === 'remove-curve-key') {
-    const spec = currentSystem()
-    if (spec?.sizeOverLife) {
-      recordHistory()
-      if (action === 'add-curve-key') {
-        const time = 0.5
-        spec.sizeOverLife.push([time, 0.8])
-        spec.sizeOverLife.sort((a, b) => a[0] - b[0])
-      } else if (spec.sizeOverLife.length > 2)
-        spec.sizeOverLife.splice(spec.sizeOverLife.length - 2, 1)
-      markDirty()
-      renderInspector()
-      schedulePreview()
-    }
+    const system = currentEmitter()?.system
+    const points = system && curveFromSystem(system)
+    if (!system || !points) return
+    recordHistory()
+    if (action === 'add-curve-key') {
+      points.push([0.5, 0.8])
+      points.sort((a, b) => a[0] - b[0])
+    } else if (points.length > 2) points.splice(points.length - 2, 1)
+    setSizeCurve(system, points)
+    markEdit()
+    renderInspector()
   } else if (action === 'enable-color') {
-    const spec = currentSystem()
-    if (spec) {
+    const system = currentEmitter()?.system
+    if (!system) return
+    recordHistory()
+    const color = colorOf(system)
+    setColorGradient(
+      system,
+      [
+        [0, color[0], color[1], color[2]],
+        [1, color[0], color[1], color[2]],
+      ],
+      [
+        [0, color[3]],
+        [1, 0],
+      ],
+    )
+    markEdit()
+    renderInspector()
+  } else if (action === 'enable-frame') {
+    const system = currentEmitter()?.system
+    if (!system) return
+    recordHistory()
+    setFrameRange(system, 0, system.uTileCount * system.vTileCount)
+    markEdit()
+    renderInspector()
+  } else if (action === 'apply-json') {
+    const effect = currentEffect()
+    const input = $<HTMLTextAreaElement>('[data-native-json]')
+    if (!effect) return
+    try {
+      const json = parseQuarksDocument(JSON.parse(input.value))
       recordHistory()
-      const c = spec.startColor ?? [1, 1, 1, 1]
-      spec.colorOverLife = {
-        colors: [
-          [0, c[0], c[1], c[2]],
-          [1, c[0], c[1], c[2]],
-        ],
-        alphas: [
-          [0, c[3]],
-          [1, 0],
-        ],
-      }
+      releasePreview()
+      effect.json = json
+      systemIndex = Math.min(systemIndex, emitterNodes(nativeRoot(json)).length - 1)
       markDirty()
+      renderEffects()
+      renderSystems()
       renderInspector()
-      resetSystems()
+      resetPreview()
+    } catch (error) {
+      flash(error instanceof Error ? error.message : 'Invalid Quarks JSON', true)
     }
-  } else if (action === 'enable-rotation') {
-    const spec = currentSystem()
-    if (spec) {
-      recordHistory()
-      spec.rotation = [0, Math.PI * 2]
-      markDirty()
-      renderInspector()
-      resetSystems()
-    }
-  } else if (action === 'enable-stretch') {
-    const spec = currentSystem()
-    if (spec) {
-      recordHistory()
-      spec.stretch = [4, 8]
-      spec.mode = 'horizontal'
-      markDirty()
-      renderInspector()
-      resetSystems()
-    }
-  } else if (action === 'add-color' || action === 'remove-color') {
-    const stops = currentSystem()?.colorOverLife?.colors
-    if (stops) {
-      recordHistory()
-      if (action === 'add-color') stops.push([0.5, 1, 1, 1])
-      else if (stops.length > 2) stops.splice(Number(target.dataset.index), 1)
-      stops.sort((a, b) => a[0] - b[0])
-      markDirty()
-      renderInspector()
-      schedulePreview()
-    }
-  } else if (action === 'add-alpha' || action === 'remove-alpha') {
-    const stops = currentSystem()?.colorOverLife?.alphas
-    if (stops) {
-      recordHistory()
-      if (action === 'add-alpha') stops.push([0.5, 1])
-      else if (stops.length > 2) stops.splice(Number(target.dataset.index), 1)
-      stops.sort((a, b) => a[0] - b[0])
-      markDirty()
-      renderInspector()
-      schedulePreview()
-    }
+  } else if (
+    action === 'add-color' ||
+    action === 'remove-color' ||
+    action === 'add-alpha' ||
+    action === 'remove-alpha'
+  ) {
+    const system = currentEmitter()?.system
+    const stops = system && colorStops(system)
+    if (!system || !stops) return
+    recordHistory()
+    if (action === 'add-color') stops.colors.push([0.5, 1, 1, 1])
+    else if (action === 'remove-color' && stops.colors.length > 2)
+      stops.colors.splice(Number(target.dataset.index), 1)
+    else if (action === 'add-alpha') stops.alphas.push([0.5, 1])
+    else if (stops.alphas.length > 2) stops.alphas.splice(Number(target.dataset.index), 1)
+    stops.colors.sort((a, b) => a[0] - b[0])
+    stops.alphas.sort((a, b) => a[0] - b[0])
+    setColorGradient(system, stops.colors, stops.alphas)
+    markEdit()
+    renderInspector()
+  } else if (action === 'delete-effect') {
+    const effect = currentEffect()
+    if (!effect || isBuiltIn(effect.id) || !window.confirm(`Delete "${displayName(effect)}"?`))
+      return
+    releasePreview()
+    effects = effects.filter((item) => item.id !== effect.id)
+    if (savedIds.has(effect.id))
+      void request(`/particles?id=${encodeURIComponent(effect.id)}`, { method: 'DELETE' }).catch(
+        (error: unknown) => flash(error instanceof Error ? error.message : 'Delete failed', true),
+      )
+    savedIds.delete(effect.id)
+    currentId = effects[0]?.id ?? ''
+    systemIndex = 0
+    setSaved()
+    renderEffects()
+    renderSystems()
+    renderInspector()
+    resetPreview()
+  } else if (action === 'reset-effect') {
+    const effect = currentEffect()
+    const preset = effect && bundledById.get(effect.id)
+    if (!effect || !preset) return
+    void request(`/particles?id=${encodeURIComponent(effect.id)}`, { method: 'DELETE' })
+      .then(() => {
+        releasePreview()
+        effects = effects.map((item) => (item.id === effect.id ? structuredClone(preset) : item))
+        savedIds.delete(effect.id)
+        setSaved()
+        renderEffects()
+        renderSystems()
+        renderInspector()
+        resetPreview()
+        flash('Quarks preset restored')
+      })
+      .catch((error: unknown) =>
+        flash(error instanceof Error ? error.message : 'Reset failed', true),
+      )
   }
 })
+
+function editCurvePointer(event: PointerEvent, svg: SVGSVGElement): void {
+  const point = (event.target as HTMLElement).closest<SVGCircleElement>('[data-curve-index]')
+  const system = currentEmitter()?.system
+  const points = system && curveFromSystem(system)
+  if (!point || !system || !points) return
+  event.preventDefault()
+  recordHistory()
+  svg.setPointerCapture(event.pointerId)
+  const index = Number(point.dataset.curveIndex)
+  const move = (pointer: PointerEvent) => {
+    const rect = svg.getBoundingClientRect()
+    const time = Math.max(0, Math.min(1, (pointer.clientX - rect.left) / rect.width))
+    const value = Math.max(0, Math.min(2, 2 * (1 - (pointer.clientY - rect.top) / rect.height)))
+    const next = curveFromSystem(system)
+    if (!next?.[index]) return
+    next[index]![0] =
+      index === 0
+        ? 0
+        : index === next.length - 1
+          ? 1
+          : Math.max(next[index - 1]![0] + 0.015, Math.min(next[index + 1]![0] - 0.015, time))
+    next[index]![1] = value
+    setSizeCurve(system, next)
+    drawCurve(svg, next)
+    markEdit()
+  }
+  const end = () => {
+    svg.removeEventListener('pointermove', move)
+    svg.removeEventListener('pointerup', end)
+    svg.removeEventListener('pointercancel', end)
+  }
+  svg.addEventListener('pointermove', move)
+  svg.addEventListener('pointerup', end)
+  svg.addEventListener('pointercancel', end)
+}
 
 root.addEventListener('input', (event) => {
   const target = event.target
   if (target instanceof HTMLInputElement || target instanceof HTMLSelectElement) {
     if (target.dataset.bind) writeBound(target)
-    else if (target instanceof HTMLInputElement && target.dataset.colorStop !== undefined)
-      editColorStop(target)
-    else if (target instanceof HTMLInputElement && target.dataset.alphaStop !== undefined)
-      editAlphaStop(target)
-    else if (target.matches('[data-timeline]')) {
+    else if (target instanceof HTMLInputElement && target.dataset.colorStop !== undefined) {
+      const system = currentEmitter()?.system
+      const stops = system && colorStops(system)
+      const stop = stops?.colors[Number(target.dataset.colorStop)]
+      if (!system || !stops || !stop) return
+      if (target.dataset.colorPart === 'time') stop[0] = Number(target.value)
+      else stop.splice(1, 3, ...fromHex(target.value))
+      setColorGradient(system, stops.colors, stops.alphas)
+      markEdit()
+    } else if (target instanceof HTMLInputElement && target.dataset.alphaStop !== undefined) {
+      const system = currentEmitter()?.system
+      const stops = system && colorStops(system)
+      const stop = stops?.alphas[Number(target.dataset.alphaStop)]
+      if (!system || !stops || !stop) return
+      if (target.dataset.alphaPart === 'time') stop[0] = Number(target.value)
+      else stop[1] = Number(target.value)
+      setColorGradient(system, stops.colors, stops.alphas)
+      markEdit()
+    } else if (target.matches('[data-timeline]')) {
       playing = false
       const next = (Number(target.value) / 1000) * previewDuration
-      resetSystems()
-      const steps = Math.ceil(next * 60)
-      for (let i = 0; i < steps; i++) batch.update(Math.min(1 / 60, next - i / 60))
+      resetPreview()
+      for (let i = 0; i < Math.ceil(next * 60); i++) batch.update(Math.min(1 / 60, next - i / 60))
       elapsed = next
       drawTransport()
     } else if (target.matches('[data-search]')) renderEffects()
@@ -953,54 +1396,42 @@ root.addEventListener('focusin', (event) => {
     target.dataset.bind ||
     target.dataset.colorStop !== undefined ||
     target.dataset.alphaStop !== undefined
-  ) {
+  )
     recordHistory()
-  }
 })
 root.addEventListener('pointerdown', (event) => {
-  if ((event.target as HTMLElement).closest('[data-curve-index]')) {
-    const svg = (event.target as HTMLElement).closest<SVGSVGElement>('[data-curve]')
-    if (svg) {
-      recordHistory()
-      beginCurveDrag(event as PointerEvent, svg)
-    }
+  const target = event.target as HTMLElement
+  if (target.closest('[data-curve-index]')) {
+    const svg = target.closest<SVGSVGElement>('[data-curve]')
+    if (svg) editCurvePointer(event as PointerEvent, svg)
   }
+})
+$<HTMLInputElement>('[data-file-input]').addEventListener('change', (event) => {
+  const file = (event.target as HTMLInputElement).files?.[0]
+  if (file) importFile(file)
 })
 
 document.addEventListener('keydown', (event) => {
-  const target = event.target
   const typing =
-    target instanceof HTMLInputElement ||
-    target instanceof HTMLTextAreaElement ||
-    target instanceof HTMLSelectElement
-  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
+    event.target instanceof HTMLInputElement ||
+    event.target instanceof HTMLTextAreaElement ||
+    event.target instanceof HTMLSelectElement
+  const key = event.key.toLowerCase()
+  if ((event.metaKey || event.ctrlKey) && key === 's') {
     event.preventDefault()
     void saveCurrent()
-  } else if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z') {
+  } else if ((event.metaKey || event.ctrlKey) && key === 'z') {
     event.preventDefault()
     if (event.shiftKey) travelHistory(redoStack, undoStack)
     else travelHistory(undoStack, redoStack)
-  } else if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'y') {
+  } else if ((event.metaKey || event.ctrlKey) && key === 'y') {
     event.preventDefault()
     travelHistory(redoStack, undoStack)
-  } else if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'd' && !typing) {
-    event.preventDefault()
-    const spec = currentSystem()
-    const effect = currentEffect()
-    if (spec && effect) {
-      recordHistory()
-      effect.systems.splice(systemIndex + 1, 0, structuredClone(spec))
-      systemIndex++
-      markDirty()
-      renderSystems()
-      renderInspector()
-      resetSystems()
-    }
   } else if (event.code === 'Space' && !typing) {
     event.preventDefault()
     $<HTMLButtonElement>('[data-action="play"]').click()
-  } else if (event.key.toLowerCase() === 'r' && !typing) {
-    resetSystems()
+  } else if (key === 'r' && !typing) {
+    resetPreview()
     playing = true
   }
 })
@@ -1008,31 +1439,27 @@ document.addEventListener('keydown', (event) => {
 async function initialize(): Promise<void> {
   try {
     const [stored, textureResponse] = await Promise.all([
-      request<{ effects: ParticleEffect[] }>('/particles'),
+      request<{ effects: EffectFile[] }>('/particles'),
       request<{ textures: string[] }>('/particle-textures'),
     ])
-    textures.clear()
     for (const texture of textureResponse.textures) textures.add(texture)
     for (const saved of stored.effects) {
-      const parsed = particleEffectSchema.parse(saved)
-      const index = effects.findIndex((effect) => effect.id === parsed.id)
-      if (index >= 0) effects[index] = parsed
-      else effects.push(parsed)
-      savedIds.add(parsed.id)
-      savedEffects.set(parsed.id, structuredClone(parsed))
+      const json = parseQuarksDocument(saved.json)
+      const index = effects.findIndex((effect) => effect.id === saved.id)
+      if (index >= 0) effects[index] = { id: saved.id, json }
+      else effects.push({ id: saved.id, json })
+      savedIds.add(saved.id)
     }
   } catch (error) {
-    flash(error instanceof Error ? error.message : 'Could not load particle library', true)
+    flash(error instanceof Error ? error.message : 'Could not load native Quarks documents', true)
   }
   setupPreview()
   renderEffects()
   renderSystems()
   renderInspector()
-  resetSystems()
+  resetPreview()
   startAnimation()
 }
-
-void initialize()
 
 window.addEventListener('beforeunload', (event) => {
   if (dirty) {
@@ -1040,3 +1467,4 @@ window.addEventListener('beforeunload', (event) => {
     event.returnValue = ''
   }
 })
+void initialize()

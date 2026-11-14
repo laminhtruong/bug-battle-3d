@@ -730,6 +730,32 @@ select:focus {
   margin-top: 16px;
 }
 
+.native-json summary {
+  margin-bottom: 10px;
+  color: #aeb9ca;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.native-json textarea {
+  width: 100%;
+  min-height: 210px;
+  margin-bottom: 8px;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #0b111a;
+  color: #c7d0de;
+  font:
+    9px/1.5 'DM Mono',
+    Consolas,
+    monospace;
+  resize: vertical;
+}
+
 @media (max-width: 1000px) {
   .workspace {
     grid-template-columns: 205px minmax(280px, 1fr) 290px;

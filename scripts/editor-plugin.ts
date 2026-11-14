@@ -5,7 +5,7 @@ import { format, resolveConfig } from 'prettier'
 import type { Plugin } from 'vite'
 import { DEFAULT_SPAWN_Y, parsePartInput } from '../src/content/define.ts'
 import type { AttackDef, Slot, SpawnPoint } from '../src/content/define'
-import { particleEffectSchema, type ParticleEffect } from '../src/content/particles.ts'
+import { parseQuarksDocument, type QuarksDocument } from '../src/content/particles.ts'
 
 /**
  * Dev-only API behind the part editor. It reads and writes the same JSON files
@@ -16,7 +16,7 @@ const ROUTE = '/editor/api'
 const SLOTS: readonly Slot[] = ['head', 'body']
 const CONTENT_DIRS: Record<Slot, string> = { head: 'heads', body: 'bodies' }
 const ID_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/
-const PARTICLE_DIR = path.join('src', 'content', 'particles')
+const PARTICLE_DIR = path.join('src', 'content', 'particle-overrides')
 
 /** Set from the Vite config, because `import.meta.url` points at the bundled config. */
 let projectRoot = process.cwd()
@@ -130,13 +130,13 @@ export async function draftToJson(draft: PartDraft, file: string): Promise<strin
   })
 }
 
-function readBody(req: IncomingMessage): Promise<string> {
+function readBody(req: IncomingMessage, maxSize = 1_000_000): Promise<string> {
   return new Promise((resolve, reject) => {
     let data = ''
     req.setEncoding('utf8')
     req.on('data', (chunk: string) => {
       data += chunk
-      if (data.length > 1_000_000) {
+      if (data.length > maxSize) {
         reject(new Error('request body is too large'))
         req.destroy()
       }
@@ -232,39 +232,38 @@ function particleFile(id: string): string {
   return path.join(projectRoot, PARTICLE_DIR, `${id}.json`)
 }
 
-async function listParticleEffects(): Promise<ParticleEffect[]> {
+async function listParticleFiles(): Promise<{ id: string; json: QuarksDocument }[]> {
   const directory = path.join(projectRoot, PARTICLE_DIR)
   const entries = await readdir(directory, { withFileTypes: true }).catch(() => [])
-  const effects: ParticleEffect[] = []
+  const effects: { id: string; json: QuarksDocument }[] = []
   for (const entry of entries) {
     if (!entry.isFile() || !entry.name.endsWith('.json')) {
       continue
     }
     const value: unknown = JSON.parse(await readFile(path.join(directory, entry.name), 'utf8'))
-    effects.push(particleEffectSchema.parse(value))
+    effects.push({ id: entry.name.slice(0, -'.json'.length), json: parseQuarksDocument(value) })
   }
-  return effects.sort((first, second) => first.name.localeCompare(second.name))
+  return effects.sort((first, second) => first.id.localeCompare(second.id))
 }
 
-async function saveParticleEffect(req: IncomingMessage): Promise<ParticleEffect> {
-  const value: unknown = JSON.parse(await readBody(req))
-  const effect = particleEffectSchema.parse(value)
-  const textureEntries = await readdir(path.join(projectRoot, 'public', 'assets', 'textures', 'fx'))
-  const availableTextures = new Set(
-    textureEntries.filter((name) => name.endsWith('.png')).map((name) => name.slice(0, -4)),
-  )
-  if (effect.systems.some((system) => !availableTextures.has(system.material))) {
-    throw new Error('particle system references a missing FX texture')
-  }
-  const file = particleFile(effect.id)
-  await mkdir(path.dirname(file), { recursive: true })
+async function saveParticleFile(
+  req: IncomingMessage,
+): Promise<{ id: string; json: QuarksDocument }> {
+  const value: unknown = JSON.parse(await readBody(req, 12_000_000))
+  if (!value || typeof value !== 'object') throw new Error('expected { id, json }')
+  const body = value as { id?: unknown; json?: unknown }
+  if (typeof body.id !== 'string') throw new Error('expected { id, json }')
+  const json = parseQuarksDocument(body.json)
+  const id = body.id
+  const file = particleFile(id)
   const config = (await resolveConfig(file)) ?? {}
+  await mkdir(path.dirname(file), { recursive: true })
   await writeFile(
     file,
-    await format(JSON.stringify(effect), { ...config, parser: 'json', filepath: file }),
+    await format(JSON.stringify(json), { ...config, parser: 'json', filepath: file }),
     'utf8',
   )
-  return effect
+  return { id, json }
 }
 
 async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -288,11 +287,11 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
       return
     }
     if (url.pathname === '/particles' && req.method === 'GET') {
-      send(res, 200, { effects: await listParticleEffects() })
+      send(res, 200, { effects: await listParticleFiles() })
       return
     }
     if (url.pathname === '/particles' && req.method === 'POST') {
-      send(res, 200, { effect: await saveParticleEffect(req) })
+      send(res, 200, { effect: await saveParticleFile(req) })
       return
     }
     if (url.pathname === '/particles' && req.method === 'DELETE') {
