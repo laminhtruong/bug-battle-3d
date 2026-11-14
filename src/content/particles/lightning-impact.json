@@ -521,8 +521,8 @@
           },
           "startSpeed": {
             "type": "IntervalValue",
-            "a": 7,
-            "b": 30.8
+            "a": 0.5,
+            "b": 4
           },
           "startRotation": {
             "type": "ConstantValue",
@@ -941,11 +941,8 @@
           "onlyUsedByOther": false,
           "instancingGeometry": "f537d93b-ed7c-4d7c-b9f3-0cda1b08f2a8",
           "renderOrder": 0,
-          "renderMode": 1,
-          "rendererEmitterSettings": {
-            "speedFactor": 0.02,
-            "lengthFactor": 2.6
-          },
+          "renderMode": 0,
+          "rendererEmitterSettings": {},
           "material": "448dd2b9-585c-4182-ba69-35a692a2a66d",
           "layers": 1,
           "startTileIndex": {

@@ -180,6 +180,14 @@ function displayName(effect: EffectFile): string {
   return String(nativeRoot(effect.json).name || effect.id)
 }
 
+function rootRotation(effect: EffectFile): THREE.Euler {
+  const matrix = nativeRoot(effect.json).matrix
+  const transform = Array.isArray(matrix)
+    ? new THREE.Matrix4().fromArray(matrix as number[])
+    : new THREE.Matrix4()
+  return new THREE.Euler().setFromRotationMatrix(transform)
+}
+
 function emitters(group = currentGroup): EmitterObject[] {
   const result: EmitterObject[] = []
   group?.traverse((object) => {
@@ -461,6 +469,7 @@ function renderInspector(): void {
   const rotation = intervalBounds(system.startRotation, [0, 0])
   const color = colorOf(system)
   const material = materialOf(system)
+  const effectRotation = rootRotation(effect)
   const burst = system.emissionBursts[0]
   const burstCount = burst ? intervalBounds(burst.count, [0, 0])[1] : 0
   const curve = sizeCurve(system)
@@ -490,6 +499,11 @@ function renderInspector(): void {
   ]
   inspector.innerHTML = `
     <header class="inspector-head"><div class="inspector-kicker">${isBuiltIn(effect.id) ? 'QUARKS PRESET' : 'NATIVE QUARKS EFFECT'} \u{b7} SYSTEM ${String(systemIndex + 1).padStart(2, '0')}</div><input class="inspector-title" value="${esc(displayName(effect))}" aria-label="Effect name" data-bind="effect.name"><div class="inspector-sub">${esc(effect.id)} <span>\u{b7}</span> ${emitters().length} ParticleEmitter${emitters().length === 1 ? '' : 's'}</div></header>
+    <section class="inspect-section"><h3>Effect object rotation</h3><div class="field-grid">
+      <label class="field"><span>ROTATION X \u{b7} DEG</span><input type="number" min="-360" max="360" step="1" value="${num((effectRotation.x * 180) / Math.PI)}" data-bind="effect.rotation.x"></label>
+      <label class="field"><span>ROTATION Y \u{b7} DEG</span><input type="number" min="-360" max="360" step="1" value="${num((effectRotation.y * 180) / Math.PI)}" data-bind="effect.rotation.y"></label>
+      <label class="field"><span>ROTATION Z \u{b7} DEG</span><input type="number" min="-360" max="360" step="1" value="${num((effectRotation.z * 180) / Math.PI)}" data-bind="effect.rotation.z"></label>
+    </div><p class="hint">Rotates the native root Group and all its emitters. Angles are degrees.</p></section>
     <section class="inspect-section"><h3>Emission</h3><div class="field-grid">
       <label class="field"><span>DURATION \u{b7} S</span><input type="number" min="0.01" step="0.05" value="${num(system.duration)}" data-bind="duration"></label>
       <label class="field"><span>RATE \u{b7} /SEC</span><input type="number" min="0" step="1" value="${num(intervalBounds(system.emissionOverTime, [0, 0])[1])}" data-bind="rate"></label>
@@ -793,6 +807,9 @@ function writeBound(target: HTMLInputElement | HTMLSelectElement): void {
     const name = String(value).trim() || effect.id
     currentGroup!.name = name
     nativeRoot(effect.json).name = name
+  } else if (bind.startsWith('effect.rotation.')) {
+    const axis = bind.at(-1) as 'x' | 'y' | 'z'
+    currentGroup!.rotation[axis] = (Number(value) * Math.PI) / 180
   } else if (bind === 'duration') system.duration = Number(value)
   else if (bind === 'looping') system.looping = Boolean(value)
   else if (bind === 'worldSpace') system.worldSpace = Boolean(value)

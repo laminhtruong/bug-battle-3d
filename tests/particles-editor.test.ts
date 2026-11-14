@@ -12,6 +12,7 @@ interface NativeSystem {
   vTileCount: number
   renderMode: number
   rendererEmitterSettings: { speedFactor?: number; lengthFactor?: number }
+  startSpeed: { a?: number; b?: number }
   behaviors: {
     type: string
     frame?: { functions: { function: { p0: number; p1: number; p2: number; p3: number } }[] }
@@ -79,14 +80,19 @@ describe('native Quarks particle documents', () => {
         expect((document.object as { matrix: number[] }).matrix).toEqual([
           1, 0, 0, 0, 0, 0, -1, 0, 0, 1, 0, 0, 0, 0, 0, 1,
         ])
-        expect(modesForTexture('assets/textures/fx/lightning-3x3.png')).toEqual([1])
+        expect(modesForTexture('assets/textures/fx/lightning-3x3.png')).toEqual([0])
         expect(modesForTexture('assets/textures/fx/circlestretchy.png')).toEqual([1])
         expect(modesForTexture('assets/textures/fx/ring.png')).toEqual([4])
         expect(
           systems(document.object)
             .filter((system) => system.renderMode === 1)
             .map((system) => system.rendererEmitterSettings.lengthFactor),
-        ).toEqual([4, 2.6])
+        ).toEqual([4])
+        expect(
+          systems(document.object)
+            .filter((system) => system.rendererEmitterSettings.lengthFactor === 4)
+            .map((system) => [system.startSpeed.a, system.startSpeed.b]),
+        ).toEqual([[0.5, 4]])
       }
     }
   })
