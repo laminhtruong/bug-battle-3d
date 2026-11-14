@@ -604,7 +604,7 @@ input:focus {
 
 @media (max-width: 768px), (pointer: coarse) {
   .hud-board {
-    background: rgba(13, 24, 32, 0.08);
+    background: rgba(13, 24, 32, 0.2);
     border-color: rgba(255, 255, 255, 0.06);
     box-shadow: none;
     backdrop-filter: none;
