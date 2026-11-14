@@ -11,6 +11,7 @@ interface NativeSystem {
   uTileCount: number
   vTileCount: number
   renderMode: number
+  rendererEmitterSettings: { speedFactor?: number; lengthFactor?: number }
   behaviors: {
     type: string
     frame?: { functions: { function: { p0: number; p1: number; p2: number; p3: number } }[] }
@@ -75,9 +76,14 @@ describe('native Quarks particle documents', () => {
           })
           .map((system) => system.renderMode)
       if (file.endsWith('/lightning-impact.json')) {
-        expect(modesForTexture('assets/textures/fx/lightning-3x3.png')).toEqual([0])
-        expect(modesForTexture('assets/textures/fx/circlestretchy.png')).toEqual([0])
+        expect(modesForTexture('assets/textures/fx/lightning-3x3.png')).toEqual([1])
+        expect(modesForTexture('assets/textures/fx/circlestretchy.png')).toEqual([1])
         expect(modesForTexture('assets/textures/fx/ring.png')).toEqual([4])
+        expect(
+          systems(document.object)
+            .filter((system) => system.renderMode === 1)
+            .map((system) => system.rendererEmitterSettings.lengthFactor),
+        ).toEqual([4, 2.6])
       }
     }
   })

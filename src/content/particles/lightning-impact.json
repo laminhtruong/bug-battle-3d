@@ -565,8 +565,11 @@
           "onlyUsedByOther": false,
           "instancingGeometry": "f537d93b-ed7c-4d7c-b9f3-0cda1b08f2a8",
           "renderOrder": 0,
-          "renderMode": 0,
-          "rendererEmitterSettings": {},
+          "renderMode": 1,
+          "rendererEmitterSettings": {
+            "speedFactor": 0.02,
+            "lengthFactor": 4
+          },
           "material": "0f118eec-6e90-4fe1-b1f4-3c1519012b79",
           "layers": 1,
           "startTileIndex": {
@@ -938,8 +941,11 @@
           "onlyUsedByOther": false,
           "instancingGeometry": "f537d93b-ed7c-4d7c-b9f3-0cda1b08f2a8",
           "renderOrder": 0,
-          "renderMode": 0,
-          "rendererEmitterSettings": {},
+          "renderMode": 1,
+          "rendererEmitterSettings": {
+            "speedFactor": 0.02,
+            "lengthFactor": 2.6
+          },
           "material": "448dd2b9-585c-4182-ba69-35a692a2a66d",
           "layers": 1,
           "startTileIndex": {
