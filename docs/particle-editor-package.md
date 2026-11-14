@@ -1,6 +1,8 @@
 # Particle editor package
 
-The UI now lives in the independent `quarks-particle-editor` npm package.
+The UI now lives in the independent
+[`quarks-particle-editor`](https://github.com/laminhtruong/quarks-particle-editor)
+npm package.
 It ships no game presets, textures, hard-coded API routes, or project scanning.
 
 This game's integration is in `src/editor/particle-project.ts`:
@@ -39,4 +41,4 @@ npm run build
 
 Bump the package version for published releases. Once published, replace the
 tarball dependency with the registry version and remove the unused tarball.
-Publishing and GitHub repository creation require the owner's credentials.
+Publishing to npm requires the owner's registry credentials and is a separate release step.
