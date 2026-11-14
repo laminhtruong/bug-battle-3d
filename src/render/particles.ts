@@ -23,6 +23,11 @@ import {
 } from 'three.quarks'
 import { asset } from '@/core/asset'
 import type { Slot } from '@/content/define'
+import {
+  particleEffectSchema,
+  type ParticleEffect,
+  type ParticleSystemSpec,
+} from '@/content/particles'
 
 /**
  * Particle presets. The game renders parts four times the size these presets
@@ -163,43 +168,9 @@ class TileOverLife implements Behavior {
   reset(): void {}
 }
 
-type Shape =
-  | { kind: 'cone'; angle: number; radius: number; arc?: number }
-  | { kind: 'sphere'; radius: number }
-  | { kind: 'circle'; radius: number; thickness?: number }
-  | { kind: 'point' }
+export type SystemSpec = ParticleSystemSpec
 
-interface SystemSpec {
-  duration: number
-  loop?: boolean
-  life: [number, number]
-  speed: [number, number]
-  size: [number, number]
-  rotation?: [number, number]
-  /** Positive pulls down, negative pulls up, in world units per second. */
-  gravity?: number
-  rate?: number
-  bursts?: readonly { time: number; count: number }[]
-  shape: Shape
-  startColor?: readonly [number, number, number, number]
-  colorOverLife?: {
-    colors: readonly (readonly [number, number, number, number])[]
-    alphas: readonly (readonly [number, number])[]
-  }
-  sizeOverLife?: readonly (readonly [number, number])[]
-  /** Horizontal sprites only: stretch along the velocity, min..max times the size. */
-  stretch?: [number, number]
-  uv?: { x: number; y: number; frames: number; start: number; cycles: number }
-  material: string
-  additive: boolean
-  mode: 'billboard' | 'stretched' | 'horizontal'
-  lengthFactor?: number
-  speedFactor?: number
-  /** False only for effects that must follow their emitter, like a projectile. */
-  worldSpace?: boolean
-}
-
-function shapeOf(shape: Shape): ConeEmitter | SphereEmitter | CircleEmitter {
+function shapeOf(shape: ParticleSystemSpec['shape']): ConeEmitter | SphereEmitter | CircleEmitter {
   if (shape.kind === 'cone') {
     return new ConeEmitter({
       angle: (shape.angle * Math.PI) / 180,
@@ -213,7 +184,7 @@ function shapeOf(shape: Shape): ConeEmitter | SphereEmitter | CircleEmitter {
   return new SphereEmitter({ radius: shape.kind === 'sphere' ? shape.radius : 0.001 })
 }
 
-function makesystem(spec: SystemSpec): ParticleSystem {
+export function createParticleSystem(spec: SystemSpec): ParticleSystem {
   const behaviors: Behavior[] = []
   if (spec.colorOverLife) {
     behaviors.push(
@@ -755,6 +726,36 @@ function poisonImpact(): SystemSpec[] {
   ]
 }
 
+const bundledEffects: Record<string, ParticleEffect> = {
+  'flame-head': { id: 'flame-head', name: 'Head flame', systems: headFire() },
+  'flame-body': { id: 'flame-body', name: 'Body flame', systems: bodyFire() },
+  'lightning-orb': { id: 'lightning-orb', name: 'Lightning orb', systems: lightningOrb() },
+  'poison-orb': { id: 'poison-orb', name: 'Poison orb', systems: poisonOrb() },
+  'lightning-impact': {
+    id: 'lightning-impact',
+    name: 'Lightning impact',
+    systems: lightningImpact(),
+  },
+  'poison-impact': { id: 'poison-impact', name: 'Poison impact', systems: poisonImpact() },
+}
+
+export const PARTICLE_PRESETS: Readonly<Record<string, ParticleEffect>> = bundledEffects
+
+const particleOverrides = import.meta.glob('../content/particles/*.json', {
+  eager: true,
+  import: 'default',
+}) as Record<string, ParticleEffect>
+
+const particleEffects: Record<string, ParticleEffect> = { ...bundledEffects }
+for (const value of Object.values(particleOverrides)) {
+  const effect = particleEffectSchema.parse(value)
+  particleEffects[effect.id] = effect
+}
+
+export function getParticleEffect(id: string): ParticleEffect | undefined {
+  return particleEffects[id]
+}
+
 interface Trail {
   group: THREE.Group
   systems: ParticleSystem[]
@@ -773,7 +774,7 @@ export function createParticles(scene: THREE.Scene) {
     z: number,
     angle?: number,
   ): ParticleSystem {
-    const system = makesystem(spec)
+    const system = createParticleSystem(spec)
     system.emitter.position.set(x, y, z)
     if (angle !== undefined) {
       system.emitter.rotation.y = angle
@@ -810,7 +811,7 @@ export function createParticles(scene: THREE.Scene) {
     muzzle.rotation.y = angle
     parent.add(muzzle)
     for (let index = 0; index < specs.length; index += 1) {
-      const [ox, oy, oz] = FIRE_OFFSETS[index]!
+      const [ox, oy, oz] = FIRE_OFFSETS[index] ?? [0, 0, 0]
       add(specs[index]!, muzzle, ox, oy, oz)
     }
   }
@@ -822,12 +823,12 @@ export function createParticles(scene: THREE.Scene) {
     }
   }
 
-  function createTrail(visual: string, x: number, y: number, z: number): Trail {
+  function createTrail(effectId: string, x: number, y: number, z: number): Trail {
     const group = new THREE.Group()
     group.position.set(x, y, z)
     scene.add(group)
-    const systems = (visual === 'lightning' ? lightningOrb() : poisonOrb()).map((spec) => {
-      const system = makesystem(spec)
+    const systems = (getParticleEffect(effectId)?.systems ?? []).map((spec) => {
+      const system = createParticleSystem(spec)
       group.add(system.emitter)
       batch.addSystem(system)
       return system
@@ -848,23 +849,33 @@ export function createParticles(scene: THREE.Scene) {
       z: number,
       angle: number,
     ): void {
-      spawnFire(slot === 'head' ? headFire() : bodyFire(), parent, x, y, z, angle)
+      spawnFire(
+        getParticleEffect(slot === 'head' ? 'flame-head' : 'flame-body')?.systems ?? [],
+        parent,
+        x,
+        y,
+        z,
+        angle,
+      )
     },
 
     shot(id: string, visual: string, x: number, y: number, z: number): void {
-      if (visual !== 'lightning' && visual !== 'poison') {
+      const effectId =
+        visual === 'lightning' ? 'lightning-orb' : visual === 'poison' ? 'poison-orb' : visual
+      if (!getParticleEffect(effectId)) {
         return
       }
       let trail = trails.get(id)
       if (!trail) {
-        trail = createTrail(visual, x, y, z)
+        trail = createTrail(effectId, x, y, z)
         trails.set(id, trail)
       }
       trail.group.position.set(x, y, z)
     },
 
-    impact(kind: 'lightning' | 'poison', x: number, y: number, z: number): void {
-      spawnImpact(kind === 'lightning' ? lightningImpact() : poisonImpact(), x, y, z)
+    impact(kind: string, x: number, y: number, z: number): void {
+      const effectId = kind === 'lightning' || kind === 'poison' ? `${kind}-impact` : kind
+      spawnImpact(getParticleEffect(effectId)?.systems ?? [], x, y, z)
     },
 
     dropShot(id: string): void {

@@ -65,6 +65,19 @@ select {
   font-size: 12px;
 }
 
+.vfx-link {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 9px;
+  padding: 5px 8px;
+  border: 1px solid #604e2b;
+  border-radius: 6px;
+  background: #2a2419;
+  color: var(--accent);
+  font-size: 11px;
+  text-decoration: none;
+}
+
 .slot-block {
   margin-top: 18px;
 }

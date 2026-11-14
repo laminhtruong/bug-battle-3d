@@ -99,6 +99,12 @@ camera to the nearest axis, and undo/redo is available with `Ctrl+Z` /
 `Ctrl+Shift+Z`. It reads and writes the same `src/content` JSON files the game
 loads, so `npm run check` still validates everything afterwards.
 
+Run `npm run editor:particles` to open the VFX Studio. It previews the game's
+three.quarks particle systems in a Three.js scene, supports layered systems,
+live parameter editing, color/size curves, texture selection, and saves effects
+as `src/content/particles/*.json`. Saved effect ids are available as projectile
+visuals in the part editor and game.
+
 ## Adding content
 
 A head or a body is a single JSON file under `src/content/heads` or

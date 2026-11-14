@@ -1,10 +1,11 @@
-import { readFile, readdir, rm, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import path from 'node:path'
 import { format, resolveConfig } from 'prettier'
 import type { Plugin } from 'vite'
 import { DEFAULT_SPAWN_Y, parsePartInput } from '../src/content/define.ts'
 import type { AttackDef, Slot, SpawnPoint } from '../src/content/define'
+import { particleEffectSchema, type ParticleEffect } from '../src/content/particles.ts'
 
 /**
  * Dev-only API behind the part editor. It reads and writes the same JSON files
@@ -15,6 +16,7 @@ const ROUTE = '/editor/api'
 const SLOTS: readonly Slot[] = ['head', 'body']
 const CONTENT_DIRS: Record<Slot, string> = { head: 'heads', body: 'bodies' }
 const ID_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/
+const PARTICLE_DIR = path.join('src', 'content', 'particles')
 
 /** Set from the Vite config, because `import.meta.url` points at the bundled config. */
 let projectRoot = process.cwd()
@@ -223,6 +225,48 @@ async function listModels(url: URL): Promise<string[]> {
     .sort()
 }
 
+function particleFile(id: string): string {
+  if (!ID_PATTERN.test(id)) {
+    throw new Error('particle id must be kebab-case')
+  }
+  return path.join(projectRoot, PARTICLE_DIR, `${id}.json`)
+}
+
+async function listParticleEffects(): Promise<ParticleEffect[]> {
+  const directory = path.join(projectRoot, PARTICLE_DIR)
+  const entries = await readdir(directory, { withFileTypes: true }).catch(() => [])
+  const effects: ParticleEffect[] = []
+  for (const entry of entries) {
+    if (!entry.isFile() || !entry.name.endsWith('.json')) {
+      continue
+    }
+    const value: unknown = JSON.parse(await readFile(path.join(directory, entry.name), 'utf8'))
+    effects.push(particleEffectSchema.parse(value))
+  }
+  return effects.sort((first, second) => first.name.localeCompare(second.name))
+}
+
+async function saveParticleEffect(req: IncomingMessage): Promise<ParticleEffect> {
+  const value: unknown = JSON.parse(await readBody(req))
+  const effect = particleEffectSchema.parse(value)
+  const textureEntries = await readdir(path.join(projectRoot, 'public', 'assets', 'textures', 'fx'))
+  const availableTextures = new Set(
+    textureEntries.filter((name) => name.endsWith('.png')).map((name) => name.slice(0, -4)),
+  )
+  if (effect.systems.some((system) => !availableTextures.has(system.material))) {
+    throw new Error('particle system references a missing FX texture')
+  }
+  const file = particleFile(effect.id)
+  await mkdir(path.dirname(file), { recursive: true })
+  const config = (await resolveConfig(file)) ?? {}
+  await writeFile(
+    file,
+    await format(JSON.stringify(effect), { ...config, parser: 'json', filepath: file }),
+    'utf8',
+  )
+  return effect
+}
+
 async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const url = new URL(req.url ?? '/', 'http://localhost')
   try {
@@ -241,6 +285,31 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
     }
     if (url.pathname === '/models' && req.method === 'GET') {
       send(res, 200, { models: await listModels(url) })
+      return
+    }
+    if (url.pathname === '/particles' && req.method === 'GET') {
+      send(res, 200, { effects: await listParticleEffects() })
+      return
+    }
+    if (url.pathname === '/particles' && req.method === 'POST') {
+      send(res, 200, { effect: await saveParticleEffect(req) })
+      return
+    }
+    if (url.pathname === '/particles' && req.method === 'DELETE') {
+      await rm(particleFile(url.searchParams.get('id') ?? ''))
+      send(res, 200, { ok: true })
+      return
+    }
+    if (url.pathname === '/particle-textures' && req.method === 'GET') {
+      const entries = await readdir(path.join(projectRoot, 'public', 'assets', 'textures', 'fx'), {
+        withFileTypes: true,
+      })
+      send(res, 200, {
+        textures: entries
+          .filter((entry) => entry.isFile() && entry.name.endsWith('.png'))
+          .map((entry) => entry.name.slice(0, -'.png'.length))
+          .sort(),
+      })
       return
     }
     send(res, 404, { error: 'not found' })

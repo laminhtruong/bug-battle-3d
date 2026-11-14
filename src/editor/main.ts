@@ -49,6 +49,7 @@ root.innerHTML = `
     <header class="brand">
       <h1>Bug editor</h1>
       <small>head and body authoring</small>
+      <a class="vfx-link" href="/particles.html">\u{2733} VFX Studio</a>
     </header>
     <section class="slot-block" data-slot="head">
       <header><h2>Heads</h2><button type="button" data-add="head">+</button></header>
@@ -145,6 +146,7 @@ let selectedSpawn = -1
 let dirty = false
 let editColliders = false
 let activeTool: Tool = 'move'
+let particleVisuals: string[] = []
 
 interface HistoryEntry {
   undo: PartDraft[]
@@ -499,7 +501,7 @@ function renderList(): void {
 
 function visualOptions(current: string): string {
   const known = ATTACK_VISUALS as readonly string[]
-  const visuals = known.includes(current) ? known : [...known, current]
+  const visuals = [...new Set([...known, ...particleVisuals, current])]
   return visuals
     .map(
       (visual) =>
@@ -1326,6 +1328,12 @@ async function loadModels(): Promise<void> {
     } catch {
       modelsBySlot[slot] = []
     }
+  }
+  try {
+    const data = await request<{ effects: { id: string }[] }>('/particles')
+    particleVisuals = data.effects.map((effect) => effect.id)
+  } catch {
+    particleVisuals = []
   }
 }
 
