@@ -1162,7 +1162,7 @@ describe('combat', () => {
     expect(target.segments[0]!.hp).toBe(hp)
   })
 
-  it('applies contact damage both ways', () => {
+  it('does not apply contact damage between overlapping claw hitboxes', () => {
     const world = createWorld({ seed: 11, arena: classicArena })
     const first = getSnake(world, 'bot-1')
     const second = getSnake(world, 'bot-2')
@@ -1176,8 +1176,8 @@ describe('combat', () => {
 
     updateContact(world)
 
-    expect(first.segments[0]?.hp).toBeLessThan(firstHp)
-    expect(second.segments[0]?.hp).toBeLessThan(secondHp)
+    expect(first.segments[0]?.hp).toBe(firstHp)
+    expect(second.segments[0]?.hp).toBe(secondHp)
   })
 
   it('reaches with the long claw collider', () => {
@@ -1198,6 +1198,28 @@ describe('combat', () => {
 
     expect(target.segments[0]?.hp).toBe(targetHp - 1)
     expect(attacker.segments[0]?.hp).toBe(attackerHp)
+  })
+
+  it('does not deal contact damage when two claws touch', () => {
+    const world = createWorld({ seed: 16, arena: classicArena })
+    const first = getSnake(world, 'bot-1')
+    const second = getSnake(world, 'bot-2')
+    world.snakes = [first, second]
+    first.segments = [first.segments[0]!]
+    second.segments = [second.segments[0]!]
+    first.segments[0]!.partId = 'claw01'
+    second.segments[0]!.partId = 'claw01'
+    first.segments[0]!.angle = 0
+    second.segments[0]!.angle = Math.PI
+    placeHead(first, 0, 0)
+    placeHead(second, 0, 2.6)
+    const firstHp = first.segments[0]!.hp
+    const secondHp = second.segments[0]!.hp
+
+    updateContact(world)
+
+    expect(first.segments[0]!.hp).toBe(firstHp)
+    expect(second.segments[0]!.hp).toBe(secondHp)
   })
 
   it('does not hurt with a part that has no hitbox', () => {

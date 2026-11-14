@@ -171,7 +171,7 @@ function boxOverlapsBox(
 
 /**
  * True when the two part boxes touch. Set a flag to consider only the boxes
- * that deal contact damage.
+ * that deal contact damage, or only the hurtboxes that can receive contact damage.
  */
 export function collidersOverlap(
   firstPart: PartDef,
@@ -180,6 +180,7 @@ export function collidersOverlap(
   secondSegment: Segment,
   firstHitboxesOnly = false,
   secondHitboxesOnly = false,
+  secondHurtboxesOnly = false,
 ): boolean {
   const firstCos = Math.cos(firstSegment.angle)
   const firstSin = Math.sin(firstSegment.angle)
@@ -191,7 +192,7 @@ export function collidersOverlap(
       continue
     }
     for (const second of secondPart.collider.boxes) {
-      if (secondHitboxesOnly && !second.hitbox) {
+      if ((secondHitboxesOnly && !second.hitbox) || (secondHurtboxesOnly && second.hitbox)) {
         continue
       }
       if (

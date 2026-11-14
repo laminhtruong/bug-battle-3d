@@ -464,10 +464,10 @@ export function updateContact(world: World): void {
           }
           const entryHits =
             entry.part.contact.damage > 0 &&
-            collidersOverlap(entry.part, entry.segment, other.part, other.segment, true, false)
+            collidersOverlap(entry.part, entry.segment, other.part, other.segment, true, false, true)
           const otherHits =
             other.part.contact.damage > 0 &&
-            collidersOverlap(other.part, other.segment, entry.part, entry.segment, true, false)
+            collidersOverlap(other.part, other.segment, entry.part, entry.segment, true, false, true)
           if (entryHits) {
             damageSegment(
               world,
