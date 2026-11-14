@@ -25,7 +25,7 @@ dependency, so server-side validation and game runtime use the same schema.
 ## Dependency snapshot
 
 Until the package is published, `package.json` installs the checked-in npm tarball
-at `vendor/quarks-particle-editor-0.2.1.tgz`. This is a normal distributable npm
+at `vendor/quarks-particle-editor-0.3.0.tgz`. This is a normal distributable npm
 package, not copied editor source or a dependency on a sibling directory. A clean
 clone can use `npm ci` without the editor repository or GitHub credentials.
 
@@ -39,7 +39,7 @@ npm run check
 npm pack --pack-destination ../bug-battle-3d/vendor
 
 # In this repository:
-npm install ./vendor/quarks-particle-editor-0.2.1.tgz
+npm install ./vendor/quarks-particle-editor-0.3.0.tgz
 npm run check
 npm run build
 ```
@@ -47,3 +47,9 @@ npm run build
 Bump the package version for published releases. Once published, replace the
 tarball dependency with the registry version and remove the unused tarball.
 Publishing to npm requires the owner's registry credentials and is a separate release step.
+
+Version 0.3 adds registry-based editing for all stock JSON behaviors, generators,
+shapes, renderer settings, materials, and textures. No Quarks runtime changes or
+dependency upgrade are required. See the editor repository's
+[support matrix](https://github.com/laminhtruong/quarks-particle-editor/blob/main/docs/quarks-support.md)
+for upstream/runtime-only limitations and disabled-module metadata.
