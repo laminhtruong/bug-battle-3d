@@ -603,6 +603,18 @@ input:focus {
 }
 
 @media (max-width: 768px), (pointer: coarse) {
+  .hud-timer {
+    background: rgba(13, 24, 32, 0.2);
+    border-color: rgba(255, 255, 255, 0.06);
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+
+  .hud-timer-label,
+  .hud-timer-value {
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  }
+
   .hud-board {
     background: rgba(13, 24, 32, 0.2);
     border-color: rgba(255, 255, 255, 0.06);

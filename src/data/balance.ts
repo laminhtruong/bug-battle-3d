@@ -41,8 +41,8 @@ export const BALANCE = {
   /** A player never appears closer than this to another living player. */
   playerSpawnMinDistance: 24,
   /** Destructible power-ups scattered around the map. */
-  powerupHpMin: 5,
-  powerupHpMax: 10,
+  powerupHpMin: 3,
+  powerupHpMax: 3,
   /** A broken crate throws this many items out around it. */
   powerupDropCountMin: 3,
   powerupDropCountMax: 5,
