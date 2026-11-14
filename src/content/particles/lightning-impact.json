@@ -565,7 +565,7 @@
           "onlyUsedByOther": false,
           "instancingGeometry": "f537d93b-ed7c-4d7c-b9f3-0cda1b08f2a8",
           "renderOrder": 0,
-          "renderMode": 4,
+          "renderMode": 0,
           "rendererEmitterSettings": {},
           "material": "0f118eec-6e90-4fe1-b1f4-3c1519012b79",
           "layers": 1,
@@ -938,7 +938,7 @@
           "onlyUsedByOther": false,
           "instancingGeometry": "f537d93b-ed7c-4d7c-b9f3-0cda1b08f2a8",
           "renderOrder": 0,
-          "renderMode": 4,
+          "renderMode": 0,
           "rendererEmitterSettings": {},
           "material": "448dd2b9-585c-4182-ba69-35a692a2a66d",
           "layers": 1,
@@ -1003,9 +1003,9 @@
                   {
                     "function": {
                       "p0": 0,
-                      "p1": 3,
-                      "p2": 6,
-                      "p3": 9
+                      "p1": 2.6666666666666665,
+                      "p2": 5.333333333333333,
+                      "p3": 8
                     },
                     "start": 0
                   }
