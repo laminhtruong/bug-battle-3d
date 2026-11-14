@@ -941,7 +941,7 @@
           "onlyUsedByOther": false,
           "instancingGeometry": "f537d93b-ed7c-4d7c-b9f3-0cda1b08f2a8",
           "renderOrder": 0,
-          "renderMode": 0,
+          "renderMode": 4,
           "rendererEmitterSettings": {},
           "material": "448dd2b9-585c-4182-ba69-35a692a2a66d",
           "layers": 1,

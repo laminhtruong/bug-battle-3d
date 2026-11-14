@@ -45,7 +45,7 @@ describe('native Quarks particle documents', () => {
     expect(source).not.toMatch(/GroundBolt|TileOverLife|"type":"Curve"/)
   })
 
-  it('keeps sprite-sheet frame curves inside their atlas and faces lightning sprites toward the camera', () => {
+  it('keeps sprite-sheet frame curves inside their atlas and lays impact lightning on the ground plane', () => {
     for (const [file, raw] of Object.entries(bundled)) {
       const document = raw as {
         object: unknown
@@ -81,7 +81,7 @@ describe('native Quarks particle documents', () => {
         expect((document.object as { matrix: number[] }).matrix).toEqual([
           1, 0, 0, 0, 0, 0, -1, 0, 0, 1, 0, 0, 0, 0, 0, 1,
         ])
-        expect(modesForTexture('assets/textures/fx/lightning-3x3.png')).toEqual([0])
+        expect(modesForTexture('assets/textures/fx/lightning-3x3.png')).toEqual([4])
         expect(modesForTexture('assets/textures/fx/circlestretchy.png')).toEqual([1])
         expect(modesForTexture('assets/textures/fx/ring.png')).toEqual([4])
         expect(
