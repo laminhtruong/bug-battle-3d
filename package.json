@@ -26,7 +26,7 @@
   },
   "dependencies": {
     "peerjs": "^1.5.5",
-    "quarks-particle-editor": "file:vendor/quarks-particle-editor-0.2.0.tgz",
+    "quarks-particle-editor": "file:vendor/quarks-particle-editor-0.2.1.tgz",
     "three": "^0.187.0",
     "three.quarks": "^0.17.1",
     "zod": "^4.6.7"

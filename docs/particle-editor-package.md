@@ -25,7 +25,7 @@ dependency, so server-side validation and game runtime use the same schema.
 ## Dependency snapshot
 
 Until the package is published, `package.json` installs the checked-in npm tarball
-at `vendor/quarks-particle-editor-0.2.0.tgz`. This is a normal distributable npm
+at `vendor/quarks-particle-editor-0.2.1.tgz`. This is a normal distributable npm
 package, not copied editor source or a dependency on a sibling directory. A clean
 clone can use `npm ci` without the editor repository or GitHub credentials.
 
@@ -39,7 +39,7 @@ npm run check
 npm pack --pack-destination ../bug-battle-3d/vendor
 
 # In this repository:
-npm install ./vendor/quarks-particle-editor-0.2.0.tgz
+npm install ./vendor/quarks-particle-editor-0.2.1.tgz
 npm run check
 npm run build
 ```
