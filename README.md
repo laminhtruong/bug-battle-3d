@@ -105,6 +105,9 @@ with `QuarksLoader`, and supports layered systems, live parameters, curves,
 textures, import/export, and undo/redo. Bundled effects live in
 `src/content/particles`; editor changes are stored as native JSON overrides in
 `src/content/particle-overrides`. Saved ids can be used as projectile visuals.
+The editor UI is the independent `quarks-particle-editor` package; this project
+only supplies effects, textures, and persistence through a small adapter. See
+[package integration and updates](docs/particle-editor-package.md).
 
 See [the particle audit](docs/particles-audit.md) for Unity source prefabs,
 corrected settings, and remaining native-library differences.

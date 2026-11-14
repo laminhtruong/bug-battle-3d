@@ -11,7 +11,7 @@ import {
 } from 'three.quarks'
 import { quarksDocumentSchema } from '@/content/particles'
 import lightningImpact from '@/content/particles/lightning-impact.json'
-import { intervalBounds, updateParticlePreview } from '@/editor/particles-preview'
+import { intervalBounds, updateParticlePreview } from 'quarks-particle-editor'
 
 const bundled = import.meta.glob('../src/content/particles/*.json', {
   eager: true,
