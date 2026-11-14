@@ -149,7 +149,7 @@ describe('game particle lifecycle', () => {
     expect(scene.children.filter((node) => node.type === 'Group')).toEqual([anchor])
   })
 
-  it('reuses moving orb groups, leaves world-space particles behind, and disposes dropped shots', () => {
+  it('moves orb glows with shots and disposes dropped shots', () => {
     const scene = new Scene()
     const particles = createParticles(scene)
     particles.shot('lightning', 'lightning', 1, 2, 3)
@@ -157,13 +157,15 @@ describe('game particle lifecycle', () => {
     particles.update(1 / 60)
     const orbs = systems(scene)
     expect(orbs).toHaveLength(3)
-    expect(orbs.every((system) => system.worldSpace)).toBe(true)
+    expect(orbs.every((system) => !system.worldSpace)).toBe(true)
     const glow = orbs[0]!
+    const glowGroup = scene.children.find((node) => node.type === 'Group')!
     const x = glow.particles[0]!.position.x
     particles.shot('lightning', 'lightning', 10, 2, 3)
     particles.update(1 / 60)
     expect(systems(scene)).toHaveLength(3)
     expect(glow.particles[0]!.position.x).toBe(x)
+    expect(glowGroup.position.x).toBe(10)
     particles.dropShot('lightning')
     particles.dropShot('poison')
     expect(systems(scene)).toHaveLength(0)

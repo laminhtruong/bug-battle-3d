@@ -339,7 +339,7 @@
               }
             }
           ],
-          "worldSpace": true
+          "worldSpace": false
         }
       }
     ]

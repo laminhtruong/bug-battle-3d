@@ -440,7 +440,7 @@
               }
             }
           ],
-          "worldSpace": true
+          "worldSpace": false
         }
       },
       {
@@ -590,7 +590,7 @@
               "dampen": 0.5
             }
           ],
-          "worldSpace": true
+          "worldSpace": false
         }
       }
     ]
