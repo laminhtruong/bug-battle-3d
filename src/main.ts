@@ -50,6 +50,7 @@ let playerName = ''
 let resultsShown = false
 let focusX = 0
 let focusZ = 0
+let sessionVersion = 0
 
 const hud = createHud({
   onLocal: startLocal,
@@ -93,6 +94,7 @@ function resetRound(): void {
 }
 
 function resetSession(): void {
+  sessionVersion += 1
   host?.dispose()
   host = undefined
   client?.dispose()
@@ -106,6 +108,7 @@ function resetSession(): void {
 }
 
 function showResults(rows: { name: string; score: number }[], canRestart: boolean): void {
+  rows = [...rows].sort((a, b) => b.score - a.score)
   resultsShown = true
   hud.showResults(rows, canRestart)
   playSound(rows[0]?.name === playerName ? 'win' : 'lose')
@@ -136,31 +139,45 @@ function startLocal(): void {
 
 async function createRoom(name: string): Promise<void> {
   resetSession()
+  const version = sessionVersion
   playerName = name
   try {
     const session = await startHost({
       playerName: name,
       handlers: {
-        onLobby: (code, players) => hud.showLobby(code, players, true),
+        onLobby: (code, players) => {
+          if (version === sessionVersion) hud.showLobby(code, players, true)
+        },
         onStart: () => {
+          if (version !== sessionVersion) return
           resetRound()
           mode = 'host'
           resultsShown = false
           hud.showGame()
         },
-        onResults: (rows) => showResults(rows, true),
-        onError: (message) => hud.flash(message),
+        onResults: (rows) => {
+          if (version === sessionVersion) showResults(rows, true)
+        },
+        onError: (message) => {
+          if (version === sessionVersion) hud.flash(message)
+        },
         onClosed: () => {
+          if (version !== sessionVersion) return
           resetSession()
           hud.showMenu()
         },
       },
     })
+    if (version !== sessionVersion) {
+      session.dispose()
+      return
+    }
     host = session
     playerId = 'host'
     mode = 'host'
     hud.showLobby(session.code, [{ id: 'host', name }], true)
   } catch (error) {
+    if (version !== sessionVersion) return
     hud.flash(toMessage(error))
     hud.showMenu()
   }
@@ -173,10 +190,14 @@ async function joinMatch(code: string, name: string): Promise<void> {
     return
   }
   resetSession()
+  const version = sessionVersion
   playerName = name
   const handlers: ClientHandlers = {
-    onLobby: (players) => hud.showLobby(roomCode, players, false),
+    onLobby: (players) => {
+      if (version === sessionVersion) hud.showLobby(roomCode, players, false)
+    },
     onStart: () => {
+      if (version !== sessionVersion) return
       resetRound()
       renderState = undefined
       mode = 'guest'
@@ -184,16 +205,24 @@ async function joinMatch(code: string, name: string): Promise<void> {
       hud.showGame()
     },
     onSnapshot: (state) => {
+      if (version !== sessionVersion) return
       if (renderState) {
         smoother.capture(renderState)
       }
       renderState = state
       snapshotAge = 0
     },
-    onSound: (name) => playSound(name),
-    onResults: (rows) => showResults(rows, false),
-    onError: (message) => hud.flash(message),
+    onSound: (name) => {
+      if (version === sessionVersion) playSound(name)
+    },
+    onResults: (rows) => {
+      if (version === sessionVersion) showResults(rows, false)
+    },
+    onError: (message) => {
+      if (version === sessionVersion) hud.flash(message)
+    },
     onClosed: (message) => {
+      if (version !== sessionVersion) return
       hud.flash(message)
       resetSession()
       hud.showMenu()
@@ -201,10 +230,15 @@ async function joinMatch(code: string, name: string): Promise<void> {
   }
   try {
     const session = await joinRoom({ roomCode, playerName: name, handlers })
+    if (version !== sessionVersion) {
+      session.dispose()
+      return
+    }
     client = session
     playerId = session.playerId
     mode = 'guest'
   } catch (error) {
+    if (version !== sessionVersion) return
     hud.flash(toMessage(error))
     resetSession()
     hud.showMenu()

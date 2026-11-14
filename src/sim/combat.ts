@@ -290,9 +290,7 @@ function landProjectile(world: World, projectile: Projectile): void {
     damage: projectile.damage,
     duration: onLand.duration,
     age: 0,
-    ...(onLand.interval === undefined
-      ? {}
-      : { interval: onLand.interval, nextTickAge: 0 }),
+    ...(onLand.interval === undefined ? {} : { interval: onLand.interval, nextTickAge: 0 }),
   })
 }
 
@@ -358,9 +356,7 @@ export function updateAreas(world: World, dt: number): void {
     // shortcut: one clock per area, so a segment walking in mid-cycle waits for
     // the next tick instead of keeping its own interval.
     const tickDue =
-      area.interval === undefined ||
-      area.nextTickAge === undefined ||
-      area.age >= area.nextTickAge
+      area.interval === undefined || area.nextTickAge === undefined || area.age >= area.nextTickAge
     if (tickDue) {
       if (area.interval !== undefined) {
         area.nextTickAge = area.age + area.interval
@@ -448,6 +444,14 @@ export function updateContact(world: World): void {
           continue
         }
         for (const other of bucket) {
+          if (
+            !entry.snake.alive ||
+            entry.segment.dead ||
+            !other.snake.alive ||
+            other.segment.dead
+          ) {
+            continue
+          }
           // Each pair is handled once, from the point of view of the lower id.
           if (other.snake.id >= entry.snake.id) {
             continue

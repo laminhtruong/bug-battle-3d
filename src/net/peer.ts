@@ -61,14 +61,29 @@ export function waitForConnection(connection: DataConnection): Promise<void> {
       return
     }
     const onOpen = (): void => {
-      connection.off('close', onClose)
+      cleanup()
       resolve()
     }
     const onClose = (): void => {
-      connection.off('open', onOpen)
+      cleanup()
       reject(new Error('the host did not answer'))
     }
+    const onError = (error: Error): void => {
+      cleanup()
+      reject(error)
+    }
+    const cleanup = (): void => {
+      clearTimeout(timeout)
+      connection.off('open', onOpen)
+      connection.off('close', onClose)
+      connection.off('error', onError)
+    }
+    const timeout = setTimeout(() => {
+      onClose()
+      connection.close()
+    }, 15_000)
     connection.on('open', onOpen)
     connection.on('close', onClose)
+    connection.on('error', onError)
   })
 }

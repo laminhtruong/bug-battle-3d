@@ -195,8 +195,8 @@ async function savePart(req: IncomingMessage): Promise<LoadedPartDraft> {
   if (parsed.contact.damage > 0 && !parsed.boxes.some((box) => box.hitbox)) {
     throw new Error('contact damage requires at least one claw box')
   }
-  await writeFile(file, await draftToJson(draft, file), 'utf8')
-  return { slot: body.slot, file: path.basename(file), draft }
+  await writeFile(file, await draftToJson(parsed, file), 'utf8')
+  return { slot: body.slot, file: path.basename(file), draft: parsed }
 }
 
 async function deletePart(url: URL): Promise<void> {
@@ -269,6 +269,15 @@ async function saveParticleFile(
 async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const url = new URL(req.url ?? '/', 'http://localhost')
   try {
+    const origin = req.headers.origin
+    if (
+      (req.method === 'POST' || req.method === 'DELETE') &&
+      (req.headers['sec-fetch-site'] === 'cross-site' ||
+        (origin !== undefined && new URL(origin).host !== req.headers.host))
+    ) {
+      send(res, 403, { error: 'cross-origin editor writes are not allowed' })
+      return
+    }
     if (url.pathname === '/parts' && req.method === 'GET') {
       send(res, 200, { parts: await listParts() })
       return

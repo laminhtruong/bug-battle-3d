@@ -121,6 +121,10 @@ export async function startHost({ playerName, handlers }: HostOptions): Promise<
           rejectConnection(connection, 'The room is full.')
           return
         }
+        if (remotes.has(connection.peer)) {
+          rejectConnection(connection, 'This player is already connected.')
+          return
+        }
         remote = {
           connection,
           playerId: `player-${nextPlayerId}`,
@@ -154,7 +158,7 @@ export async function startHost({ playerName, handlers }: HostOptions): Promise<
     })
 
     connection.on('close', () => {
-      if (!remote) {
+      if (disposed || !remote || remotes.get(connection.peer) !== remote) {
         return
       }
       remotes.delete(connection.peer)
@@ -196,6 +200,9 @@ export async function startHost({ playerName, handlers }: HostOptions): Promise<
   }
 
   const start = (): void => {
+    if (disposed || (world && !world.ended)) {
+      return
+    }
     const setups: PlayerSetup[] = [
       { id: 'host', name: playerName, control: 'human', slot: 0, headId: DEFAULT_HEAD_ID },
     ]
@@ -217,6 +224,8 @@ export async function startHost({ playerName, handlers }: HostOptions): Promise<
     })
     resultsSent = false
     snapshotClock = 0
+    pendingSounds.length = 0
+    localSounds.length = 0
     sendStart()
     handlers.onStart()
   }
@@ -230,9 +239,7 @@ export async function startHost({ playerName, handlers }: HostOptions): Promise<
       hostSnake.steerX = hostInput.x
       hostSnake.steerZ = hostInput.z
     }
-    if (!world.ended) {
-      tickWorld(world, dt)
-    }
+    tickWorld(world, dt)
     for (const event of world.events) {
       pendingSounds.push(...soundsForEvent(event))
     }

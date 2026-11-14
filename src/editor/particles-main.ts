@@ -117,6 +117,8 @@ const savedIds = new Set<string>()
 let currentId = effects[0]?.id ?? ''
 let systemIndex = 0
 let dirty = false
+let saving = false
+let editRevision = 0
 let playing = true
 let showGrid = true
 let elapsed = 0
@@ -222,6 +224,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 function markDirty(): void {
+  editRevision += 1
   dirty = true
   saveState.textContent = 'Unsaved changes'
   saveState.classList.add('dirty')
@@ -978,22 +981,26 @@ function openNameModal(title: string, initial: string, callback: (name: string) 
 
 async function saveCurrent(): Promise<void> {
   const effect = currentEffect()
-  if (!effect || !currentGroup) return
+  if (!effect || !currentGroup || saving) return
+  saving = true
   try {
     syncEffect()
     effect.json = parseQuarksDocument(serializeGroup(currentGroup))
+    const revision = editRevision
     await request('/particles', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ id: effect.id, json: effect.json }),
     })
     savedIds.add(effect.id)
-    setSaved()
+    if (currentEffect() === effect && editRevision === revision) setSaved()
     renderEffects()
     renderInspector()
     flash(`Saved native Quarks JSON: ${effect.id}.json`)
   } catch (error) {
     flash(error instanceof Error ? error.message : 'Could not save Quarks document', true)
+  } finally {
+    saving = false
   }
 }
 

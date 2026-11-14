@@ -6,6 +6,7 @@ import { SOUND_NAMES } from '@/data/sounds'
  * guests with different versions refuse to start instead of desyncing.
  */
 export const PROTOCOL_VERSION = 9
+export const MAX_SOUND_EVENTS = 64
 
 const MAX_CLIENT_MESSAGE = 4096
 const MAX_HOST_MESSAGE = 200_000
@@ -104,7 +105,7 @@ export const snapshotSchema = z.object({
   /** Sound effects that happened since the previous snapshot, per snake. */
   sfx: z
     .array(z.object({ by: z.string().min(1).max(32), name: z.enum(SOUND_NAMES) }))
-    .max(64)
+    .max(MAX_SOUND_EVENTS)
     .optional(),
 })
 

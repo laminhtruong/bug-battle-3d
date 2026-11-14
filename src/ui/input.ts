@@ -26,10 +26,21 @@ export function createInput(): InputController {
   const stick = { x: 0, z: 0 }
 
   const onKeyDown = (event: KeyboardEvent): void => {
+    if (
+      event.ctrlKey ||
+      event.metaKey ||
+      event.altKey ||
+      (event.target instanceof Element &&
+        event.target.closest(
+          'input, textarea, select, [contenteditable]:not([contenteditable="false"])',
+        ))
+    ) {
+      return
+    }
     if (MOVE_KEYS.has(event.code)) {
       event.preventDefault()
+      keys.add(event.code)
     }
-    keys.add(event.code)
   }
   const onKeyUp = (event: KeyboardEvent): void => {
     keys.delete(event.code)

@@ -1137,6 +1137,31 @@ describe('survival', () => {
 })
 
 describe('combat', () => {
+  it('does not let a destroyed contact part hit another target later in the same tick', () => {
+    const world = createWorld({ seed: 11, arena: classicArena })
+    const attacker = getSnake(world, 'bot-1')
+    const spike = getSnake(world, 'bot-2')
+    const target = getSnake(world, 'bot-3')
+    world.snakes = [attacker, spike, target]
+    attacker.segments = [attacker.segments[0]!]
+    attacker.segments[0]!.partId = 'claw01'
+    attacker.segments[0]!.angle = Math.PI / 2
+    placeHead(attacker, -2, 0)
+    const body = spike.segments[1]!
+    spike.segments = [body]
+    Object.assign(body, { partId: 'spike01', slot: 'body', hp: 1, x: 0, z: 0, angle: 0 })
+    target.segments = [target.segments[0]!]
+    target.segments[0]!.partId = 'gun'
+    target.segments[0]!.angle = 0
+    placeHead(target, 2, 0)
+    const hp = target.segments[0]!.hp
+
+    updateContact(world)
+
+    expect(spike.alive).toBe(false)
+    expect(target.segments[0]!.hp).toBe(hp)
+  })
+
   it('applies contact damage both ways', () => {
     const world = createWorld({ seed: 11, arena: classicArena })
     const first = getSnake(world, 'bot-1')

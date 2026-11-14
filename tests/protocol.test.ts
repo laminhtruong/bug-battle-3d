@@ -82,4 +82,13 @@ describe('protocol', () => {
     const broken = { ...snapshot, sfx: [{ by: 'you', name: 'not-a-sound' }] }
     expect(parseHostMessage(encodeMessage(broken))).toBeUndefined()
   })
+
+  it('keeps a busy fight snapshot within the sound event limit', () => {
+    const world = createWorld({ seed: 21, arena: classicArena })
+    const sounds = Array.from({ length: 100 }, () => ({ by: 'you', name: 'bite' as const }))
+    const snapshot = createSnapshot(world, sounds)
+    expect(parseHostMessage(encodeMessage(snapshot))?.t).toBe('snap')
+    expect(snapshot.sfx).toHaveLength(64)
+    expect(sounds).toHaveLength(100)
+  })
 })

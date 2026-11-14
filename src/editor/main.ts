@@ -144,6 +144,7 @@ let selectedBox = 0
 /** -1 selects the part itself, so only one object shows its arrows. */
 let selectedSpawn = -1
 let dirty = false
+let saving = false
 let editColliders = false
 let activeTool: Tool = 'move'
 let particleVisuals: string[] = []
@@ -1008,7 +1009,7 @@ function validate(draft: PartDraft): string | undefined {
 }
 
 async function save(): Promise<void> {
-  if (!current) {
+  if (!current || saving) {
     return
   }
   const error = validate(current.draft)
@@ -1016,24 +1017,33 @@ async function save(): Promise<void> {
     flash(error, true)
     return
   }
+  const part = current
+  const source = JSON.stringify(part.draft)
+  saving = true
   try {
     const data = await request<{ part: LoadedPart }>('/parts', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ slot: current.slot, draft: current.draft }),
+      body: JSON.stringify({ slot: part.slot, draft: part.draft }),
     })
-    current.isNew = false
-    current.file = data.part.file
-    current.draft = data.part.draft
-    clampSelectedSpawn()
-    pendingHistory = undefined
-    setDirty(false)
+    part.isNew = false
+    part.file = data.part.file
+    if (JSON.stringify(part.draft) === source) {
+      part.draft = data.part.draft
+      if (current === part) {
+        clampSelectedSpawn()
+        pendingHistory = undefined
+        setDirty(false)
+      }
+    }
     renderList()
     renderInspector()
     applyPreview()
-    flash(`Saved ${current.slot} "${current.draft.id}".`)
+    flash(`Saved ${part.slot} "${part.draft.id}".`)
   } catch (errorValue) {
     flash(errorValue instanceof Error ? errorValue.message : 'Save failed.', true)
+  } finally {
+    saving = false
   }
 }
 

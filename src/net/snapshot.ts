@@ -1,4 +1,4 @@
-import { PROTOCOL_VERSION, type Snapshot } from './protocol'
+import { MAX_SOUND_EVENTS, PROTOCOL_VERSION, type Snapshot } from './protocol'
 import type { RenderState } from '@/render/state'
 import type { World } from '@/sim/types'
 import type { SoundEvent } from '@/data/sounds'
@@ -59,7 +59,8 @@ export function createSnapshot(world: World, sfx: SoundEvent[] = []): Snapshot {
       }
       return entry
     }),
-    sfx,
+    // Sound overflow must not make guests reject the entire snapshot.
+    sfx: sfx.slice(-MAX_SOUND_EVENTS),
   }
 }
 
