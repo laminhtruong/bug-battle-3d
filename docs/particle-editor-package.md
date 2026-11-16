@@ -48,8 +48,9 @@ Bump the package version for published releases. Once published, replace the
 tarball dependency with the registry version and remove the unused tarball.
 Publishing to npm requires the owner's registry credentials and is a separate release step.
 
-Version 0.3 adds registry-based editing for all stock JSON behaviors, generators,
-shapes, renderer settings, materials, and textures. No Quarks runtime changes or
-dependency upgrade are required. See the editor repository's
+The current 0.3 snapshot also includes project-folder and ZIP import/export,
+Unity `.unitypackage` particle conversion, local texture/mesh resolution, and
+on-demand project loading. The game's existing adapter API remains compatible;
+no Quarks runtime changes or dependency upgrade are required. See the editor repository's
 [support matrix](https://github.com/laminhtruong/quarks-particle-editor/blob/main/docs/quarks-support.md)
 for upstream/runtime-only limitations and disabled-module metadata.
