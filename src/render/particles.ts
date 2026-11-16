@@ -22,7 +22,7 @@ export function createParticles(scene: Scene) {
     if (!template) {
       const base = typeof document === 'undefined' ? undefined : document.baseURI
       const baseUrl = import.meta.env?.BASE_URL || './'
-      const url = new URL(`${baseUrl}${id}.json`, base || 'http://localhost/').href
+      const url = new URL(`${baseUrl}particles/${id}.json`, base || 'http://localhost/').href
       template = loadProjectEffect(url).catch((error: unknown) => {
         console.error(`Could not load particle effect "${id}".`, error)
         return undefined

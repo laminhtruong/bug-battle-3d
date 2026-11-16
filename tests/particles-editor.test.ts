@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
@@ -12,10 +12,10 @@ import {
   PiecewiseBezier,
   SpriteParticle,
 } from 'three.quarks'
-import { quarksDocumentSchema } from '@/content/particles'
+import { quarksDocumentSchema } from 'quarks-particle-editor/document'
 import { intervalBounds, updateParticlePreview } from 'quarks-particle-editor'
 
-const particleDirectory = fileURLToPath(new URL('../public/', import.meta.url))
+const particleDirectory = fileURLToPath(new URL('../public/particles/', import.meta.url))
 const bundled = Object.fromEntries(
   readdirSync(particleDirectory)
     .filter((file) => file.endsWith('.json'))
@@ -58,6 +58,10 @@ describe('native Quarks particle documents', () => {
     expect(Object.keys(bundled)).toHaveLength(7)
     for (const document of Object.values(bundled)) {
       expect(quarksDocumentSchema.parse(document)).toEqual(document)
+      const images = (document as { images?: { url: string }[] }).images ?? []
+      for (const image of images.filter(({ url }) => url.startsWith('assets/'))) {
+        expect(existsSync(path.join(particleDirectory, image.url))).toBe(true)
+      }
     }
   })
 

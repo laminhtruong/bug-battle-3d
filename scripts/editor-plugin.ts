@@ -1,11 +1,10 @@
-import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises'
+import { readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import path from 'node:path'
 import { format, resolveConfig } from 'prettier'
 import type { Plugin } from 'vite'
 import { DEFAULT_SPAWN_Y, parsePartInput } from '../src/content/define.ts'
 import type { AttackDef, Slot, SpawnPoint } from '../src/content/define'
-import { parseQuarksDocument, type QuarksDocument } from '../src/content/particles.ts'
 
 /**
  * Dev-only API behind the part editor. It reads and writes the same JSON files
@@ -16,8 +15,6 @@ const ROUTE = '/editor/api'
 const SLOTS: readonly Slot[] = ['head', 'body']
 const CONTENT_DIRS: Record<Slot, string> = { head: 'heads', body: 'bodies' }
 const ID_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/
-const PARTICLE_DIR = 'public'
-const PARTICLE_DEFAULTS_DIR = path.join(PARTICLE_DIR, 'particle-defaults')
 
 /** Set from the Vite config, because `import.meta.url` points at the bundled config. */
 let projectRoot = process.cwd()
@@ -226,86 +223,15 @@ async function listModels(url: URL): Promise<string[]> {
     .sort()
 }
 
-function particleFile(id: string): string {
-  if (!ID_PATTERN.test(id)) {
-    throw new Error('particle id must be kebab-case')
-  }
-  return path.join(projectRoot, PARTICLE_DIR, `${id}.json`)
-}
-
-async function listParticleFiles(): Promise<
-  { id: string; json: QuarksDocument; defaultJson?: QuarksDocument }[]
-> {
-  const directory = path.join(projectRoot, PARTICLE_DIR)
+async function listParticleIds(): Promise<{ id: string }[]> {
+  const directory = path.join(projectRoot, 'public', 'particles')
   const entries = await readdir(directory, { withFileTypes: true }).catch(() => [])
-  const defaults = new Map<string, QuarksDocument>()
-  const defaultEntries = await readdir(path.join(projectRoot, PARTICLE_DEFAULTS_DIR), {
-    withFileTypes: true,
-  }).catch(() => [])
-  for (const entry of defaultEntries) {
-    if (!entry.isFile() || !entry.name.endsWith('.json')) continue
-    const id = entry.name.slice(0, -'.json'.length)
-    if (!ID_PATTERN.test(id)) continue
-    const value: unknown = JSON.parse(
-      await readFile(path.join(projectRoot, PARTICLE_DEFAULTS_DIR, entry.name), 'utf8'),
-    )
-    defaults.set(id, parseQuarksDocument(value))
-  }
-  const effects: { id: string; json: QuarksDocument; defaultJson?: QuarksDocument }[] = []
-  for (const entry of entries) {
-    if (!entry.isFile() || !entry.name.endsWith('.json')) {
-      continue
-    }
-    const id = entry.name.slice(0, -'.json'.length)
-    if (!ID_PATTERN.test(id)) continue
-    const value: unknown = JSON.parse(await readFile(path.join(directory, entry.name), 'utf8'))
-    const json = parseQuarksDocument(value)
-    const defaultJson = defaults.get(id)
-    effects.push({ id, json, ...(defaultJson ? { defaultJson } : {}) })
-  }
-  return effects.sort((first, second) => first.id.localeCompare(second.id))
-}
-
-async function saveParticleFile(
-  req: IncomingMessage,
-): Promise<{ id: string; json: QuarksDocument }> {
-  const value: unknown = JSON.parse(await readBody(req, 12_000_000))
-  if (!value || typeof value !== 'object') throw new Error('expected { id, json }')
-  const body = value as { id?: unknown; json?: unknown }
-  if (typeof body.id !== 'string') throw new Error('expected { id, json }')
-  const json = parseQuarksDocument(body.json)
-  const id = body.id
-  const file = particleFile(id)
-  const config = (await resolveConfig(file)) ?? {}
-  await mkdir(path.dirname(file), { recursive: true })
-  await writeFile(
-    file,
-    await format(JSON.stringify(json), { ...config, parser: 'json', filepath: file }),
-    'utf8',
-  )
-  return { id, json }
-}
-
-async function deleteParticleFile(id: string): Promise<void> {
-  const file = particleFile(id)
-  const fallback = path.join(projectRoot, PARTICLE_DEFAULTS_DIR, `${id}.json`)
-  let source: string | undefined
-  try {
-    source = await readFile(fallback, 'utf8')
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
-  }
-  if (source === undefined) {
-    await rm(file)
-    return
-  }
-  const json = parseQuarksDocument(JSON.parse(source))
-  const config = (await resolveConfig(file)) ?? {}
-  await writeFile(
-    file,
-    await format(JSON.stringify(json), { ...config, parser: 'json', filepath: file }),
-    'utf8',
-  )
+  return entries
+    .filter((entry) => entry.isFile() && entry.name.endsWith('.json'))
+    .map((entry) => entry.name.slice(0, -'.json'.length))
+    .filter((id) => ID_PATTERN.test(id))
+    .sort()
+    .map((id) => ({ id }))
 }
 
 async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -337,29 +263,8 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
       send(res, 200, { models: await listModels(url) })
       return
     }
-    if (url.pathname === '/particles' && req.method === 'GET') {
-      send(res, 200, { effects: await listParticleFiles() })
-      return
-    }
-    if (url.pathname === '/particles' && req.method === 'POST') {
-      send(res, 200, { effect: await saveParticleFile(req) })
-      return
-    }
-    if (url.pathname === '/particles' && req.method === 'DELETE') {
-      await deleteParticleFile(url.searchParams.get('id') ?? '')
-      send(res, 200, { ok: true })
-      return
-    }
-    if (url.pathname === '/particle-textures' && req.method === 'GET') {
-      const entries = await readdir(path.join(projectRoot, 'public', 'assets', 'textures', 'fx'), {
-        withFileTypes: true,
-      })
-      send(res, 200, {
-        textures: entries
-          .filter((entry) => entry.isFile() && entry.name.endsWith('.png'))
-          .map((entry) => entry.name.slice(0, -'.png'.length))
-          .sort(),
-      })
+    if (url.pathname === '/particle-ids' && req.method === 'GET') {
+      send(res, 200, { effects: await listParticleIds() })
       return
     }
     send(res, 404, { error: 'not found' })

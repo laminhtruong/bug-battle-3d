@@ -43,7 +43,7 @@ effects of their own snake.
 ## FX textures
 
 The fire, lightning and poison particle textures under
-`public/assets/textures/fx/` come from the particle materials used by the game.
+`public/particles/assets/textures/fx/` come from the particle materials used by the game.
 Most are from the Epic Toon FX pack; `decal-poison.png` is the project author's
 own art. These files are not covered by this repository's MIT license. Keep or
 redistribute them only if you hold the applicable Epic Toon FX license.

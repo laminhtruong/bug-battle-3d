@@ -1340,7 +1340,7 @@ async function loadModels(): Promise<void> {
     }
   }
   try {
-    const data = await request<{ effects: { id: string }[] }>('/particles')
+    const data = await request<{ effects: { id: string }[] }>('/particle-ids')
     particleVisuals = data.effects.map((effect) => effect.id)
   } catch {
     particleVisuals = []

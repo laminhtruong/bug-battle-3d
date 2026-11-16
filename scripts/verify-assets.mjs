@@ -12,6 +12,7 @@ import { fileURLToPath } from 'node:url'
 
 const root = fileURLToPath(new URL('..', import.meta.url))
 const assetsRoot = path.join(root, 'public', 'assets')
+const particleAssetsRoot = path.join(root, 'public', 'particles', 'assets')
 const sourceRoot = path.join(root, 'src')
 const namePattern = /^[a-z0-9]+(-[a-z0-9]+)*\.(glb|webp|png|mp3|woff2)$/
 
@@ -89,12 +90,12 @@ for (const file of assetFiles) {
 }
 
 const sourceFiles = (await listFiles(sourceRoot)).filter((file) => /\.(ts|json)$/.test(file))
-const particleFiles = (await listFiles(path.join(root, 'public'))).filter((file) =>
+const particleJsonFiles = (await listFiles(path.join(root, 'public'))).filter((file) =>
   file.endsWith('.json'),
 )
 const sourceText = await Promise.all([
   ...sourceFiles.map((file) => readFile(path.join(sourceRoot, file), 'utf8')),
-  ...particleFiles.map((file) => readFile(path.join(root, 'public', file), 'utf8')),
+  ...particleJsonFiles.map((file) => readFile(path.join(root, 'public', file), 'utf8')),
 ]).then((files) => files.join('\n'))
 
 for (const model of sourceText.matchAll(/["']?model["']?\s*:\s*["']([a-z0-9-]+)["']/g)) {
@@ -119,9 +120,20 @@ for (const file of assetFiles) {
   }
 }
 
+const particleAssets = await listFiles(particleAssetsRoot)
+for (const file of particleAssets) {
+  const meshJson = file.startsWith('meshes/') && /^[a-f0-9]{16}\.json$/.test(path.basename(file))
+  if (!namePattern.test(path.basename(file)) && !meshJson) {
+    problems.push(`particles/assets/${file}: file name must be lowercase kebab-case`)
+  }
+  if (!sourceText.includes(path.parse(file).name)) {
+    console.warn(`unreferenced particle asset: ${file}`)
+  }
+}
+
 if (problems.length > 0) {
   console.error(problems.join('\n'))
   process.exit(1)
 }
 
-console.log(`checked ${assetFiles.length} asset files`)
+console.log(`checked ${assetFiles.length + particleAssets.length} asset files`)

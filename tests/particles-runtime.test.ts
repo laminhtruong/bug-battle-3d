@@ -7,7 +7,7 @@ import { BatchedRenderer, QuarksLoader } from 'three.quarks'
 import type { ParticleSystem } from 'three.quarks'
 import { createParticles } from '@/render/particles'
 
-const particleDirectory = fileURLToPath(new URL('../public/', import.meta.url))
+const particleDirectory = fileURLToPath(new URL('../public/particles/', import.meta.url))
 const bundled = Object.fromEntries(
   readdirSync(particleDirectory)
     .filter((file) => file.endsWith('.json'))
@@ -16,7 +16,6 @@ const bundled = Object.fromEntries(
 const parse = QuarksLoader.prototype.parse
 
 beforeEach(() => {
-  vi.stubGlobal('window', { location: { href: 'http://localhost/' } })
   vi.stubGlobal('ProgressEvent', Event)
   vi.stubGlobal(
     'fetch',

@@ -102,13 +102,12 @@ loads, so `npm run check` still validates everything afterwards.
 Run `npm run editor:particles` to open Quarks Studio. It edits native Three.js
 `Object3D.toJSON()` documents containing Quarks `ParticleEmitter`s, previews them
 with `QuarksLoader`, and supports layered systems, live parameters, curves,
-textures, import/export, and undo/redo. Bundled effects live in
-`public/*.json`, with reset copies in `public/particle-defaults`. The game loads
-these files with `loadProjectEffect`, including project-relative external meshes.
-Saved ids can be used as projectile visuals. Open `public` as the editor project
-folder to save JSON and assets directly for the game.
+textures, import/export, and undo/redo. Effects and their assets live in
+`public/particles/`; the game loads these files with `loadProjectEffect`, including
+project-relative external meshes. Saved ids can be used as projectile visuals.
+Open `public/particles` as the editor project folder to edit the files in place.
 The editor UI is the independent `quarks-particle-editor` package; this project
-only supplies effects, textures, and persistence through a small adapter. See
+supplies the JSON project files and runtime integration. See
 [package integration and updates](docs/particle-editor-package.md).
 
 See [the particle audit](docs/particles-audit.md) for Unity source prefabs,

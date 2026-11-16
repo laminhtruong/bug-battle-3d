@@ -1,63 +1,45 @@
-# Particle editor package
+# Particle project
 
-The UI now lives in the independent
+The editor UI is the independent
 [`quarks-particle-editor`](https://github.com/laminhtruong/quarks-particle-editor)
-npm package.
-It ships no game presets, textures, hard-coded API routes, or project scanning.
+package. The game stores native Quarks JSON files and their project assets in
+`public/particles/`:
 
-This game's integration is in `src/editor/particle-project.ts`:
+```text
+public/particles/
+  flame-head.json
+  assets/textures/fx/
+  assets/meshes/
+```
 
-- Supplies native defaults from `public/*.json` and reset copies from
-  `public/particle-defaults/`.
-- Loads and saves JSON project files through the existing dev-only `/editor/api`
-  routes.
-- Supplies texture ids and URLs from the project's FX directory.
-- Removes only overrides when resetting a project default.
+Run `npm run editor:particles`, choose **Open project**, and select
+`public/particles`. **Save project** writes JSON, textures, and external mesh data
+to that folder. No game-specific particle API or override layer is used. The
+runtime loads each effect with `quarks-particle-editor/loader`'s
+`loadProjectEffect()`, resolving project-relative textures, meshes, and
+sub-emitter links.
 
-Users can also open JSON and import raster textures directly using the editor's
-file pickers or drag and drop. Local textures are embedded in downloaded JSON.
-Without a local folder selected, **Save project** uses the game adapter and
-**Export JSON** downloads a copy. For external mesh assets, select `public` with
-**Open project** and save there so the mesh JSON is written alongside effects.
-
-`src/editor/particles-main.ts` mounts the editor; `particles.css` only sizes the
-host page. The `public` directory is also a valid project folder for **Open
-project**: effects are root-level JSON files and assets keep their relative
-`assets/` paths. Editor styles are isolated in Shadow DOM. Document validation is
-re-exported from `quarks-particle-editor/document`, which has no engine or DOM
-dependency, so server-side validation and game runtime use the same schema.
+The small `/editor/api/particle-ids` route only lists effect ids for the bug editor's
+projectile-visual dropdown. It does not read, write, or validate particle files.
+Schema validation is provided directly by `quarks-particle-editor/document`.
 
 ## Dependency snapshot
 
 Until the package is published, `package.json` installs the checked-in npm tarball
-at `vendor/quarks-particle-editor-0.3.0.tgz`. This is a normal distributable npm
-package, not copied editor source or a dependency on a sibling directory. A clean
-clone can use `npm ci` without the editor repository or GitHub credentials.
-
-The independent source checkout is `../quarks-particle-editor` during development.
-To update the snapshot after changing that repository:
+at `vendor/quarks-particle-editor-0.3.0.tgz`. To refresh it after changing the
+independent editor repository:
 
 ```sh
-# In the editor repository:
+# In quarks-particle-editor:
 npm ci
 npm run check
 npm pack --pack-destination ../bug-battle-3d/vendor
 
-# In this repository:
+# In bug-battle-3d:
 npm install ./vendor/quarks-particle-editor-0.3.0.tgz
 npm run check
 npm run build
 ```
 
-Bump the package version for published releases. Once published, replace the
-tarball dependency with the registry version and remove the unused tarball.
-Publishing to npm requires the owner's registry credentials and is a separate release step.
-
-The current 0.3 snapshot also includes project-folder and ZIP import/export,
-Unity `.unitypackage` particle conversion, local texture/mesh resolution, and
-on-demand project loading. The game loads these JSON files with
-`quarks-particle-editor/loader`'s `loadProjectEffect()`, so relative textures,
-external mesh JSON, and sub-emitter links resolve at runtime. No Quarks runtime
-dependency upgrade is required. See the editor repository's
-[support matrix](https://github.com/laminhtruong/quarks-particle-editor/blob/main/docs/quarks-support.md)
-for upstream/runtime-only limitations and disabled-module metadata.
+See the editor's [Quarks support matrix](https://github.com/laminhtruong/quarks-particle-editor/blob/main/docs/quarks-support.md)
+for runtime limitations.
