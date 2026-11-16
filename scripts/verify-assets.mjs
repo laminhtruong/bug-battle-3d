@@ -89,9 +89,13 @@ for (const file of assetFiles) {
 }
 
 const sourceFiles = (await listFiles(sourceRoot)).filter((file) => /\.(ts|json)$/.test(file))
-const sourceText = (
-  await Promise.all(sourceFiles.map((file) => readFile(path.join(sourceRoot, file), 'utf8')))
-).join('\n')
+const particleFiles = (await listFiles(path.join(root, 'public'))).filter((file) =>
+  file.endsWith('.json'),
+)
+const sourceText = await Promise.all([
+  ...sourceFiles.map((file) => readFile(path.join(sourceRoot, file), 'utf8')),
+  ...particleFiles.map((file) => readFile(path.join(root, 'public', file), 'utf8')),
+]).then((files) => files.join('\n'))
 
 for (const model of sourceText.matchAll(/["']?model["']?\s*:\s*["']([a-z0-9-]+)["']/g)) {
   const id = model[1]

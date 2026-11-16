@@ -7,18 +7,23 @@ It ships no game presets, textures, hard-coded API routes, or project scanning.
 
 This game's integration is in `src/editor/particle-project.ts`:
 
-- Supplies native defaults from `src/content/particles/*.json`.
-- Loads and saves overrides through the existing dev-only `/editor/api` routes.
+- Supplies native defaults from `public/*.json` and reset copies from
+  `public/particle-defaults/`.
+- Loads and saves JSON project files through the existing dev-only `/editor/api`
+  routes.
 - Supplies texture ids and URLs from the project's FX directory.
 - Removes only overrides when resetting a project default.
 
 Users can also open JSON and import raster textures directly using the editor's
 file pickers or drag and drop. Local textures are embedded in downloaded JSON.
-The standalone editor needs no game adapter or backend; in this game, **Save to
-Project** uses the adapter while **Export JSON** downloads a copy.
+Without a local folder selected, **Save project** uses the game adapter and
+**Export JSON** downloads a copy. For external mesh assets, select `public` with
+**Open project** and save there so the mesh JSON is written alongside effects.
 
 `src/editor/particles-main.ts` mounts the editor; `particles.css` only sizes the
-host page. Editor styles are isolated in Shadow DOM. Document validation is
+host page. The `public` directory is also a valid project folder for **Open
+project**: effects are root-level JSON files and assets keep their relative
+`assets/` paths. Editor styles are isolated in Shadow DOM. Document validation is
 re-exported from `quarks-particle-editor/document`, which has no engine or DOM
 dependency, so server-side validation and game runtime use the same schema.
 
@@ -50,7 +55,9 @@ Publishing to npm requires the owner's registry credentials and is a separate re
 
 The current 0.3 snapshot also includes project-folder and ZIP import/export,
 Unity `.unitypackage` particle conversion, local texture/mesh resolution, and
-on-demand project loading. The game's existing adapter API remains compatible;
-no Quarks runtime changes or dependency upgrade are required. See the editor repository's
+on-demand project loading. The game loads these JSON files with
+`quarks-particle-editor/loader`'s `loadProjectEffect()`, so relative textures,
+external mesh JSON, and sub-emitter links resolve at runtime. No Quarks runtime
+dependency upgrade is required. See the editor repository's
 [support matrix](https://github.com/laminhtruong/quarks-particle-editor/blob/main/docs/quarks-support.md)
 for upstream/runtime-only limitations and disabled-module metadata.

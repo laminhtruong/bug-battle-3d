@@ -1,67 +1,38 @@
+import { Vector3 } from 'three'
 import type { Object3D, Scene } from 'three'
-import { BatchedRenderer, QuarksLoader, QuarksUtil } from 'three.quarks'
+import { BatchedRenderer, QuarksUtil } from 'three.quarks'
 import type { ParticleSystem } from 'three.quarks'
+import { loadProjectEffect } from 'quarks-particle-editor/loader'
 import type { Slot } from '@/content/define'
-import { parseQuarksDocument } from '@/content/particles'
-
-interface NativeEffect {
-  metadata: { type: string }
-  object: { type: string }
-}
-
-const presetFiles = import.meta.glob('../content/particles/*.json', {
-  eager: true,
-  import: 'default',
-}) as Record<string, NativeEffect>
-const overrideFiles = import.meta.glob('../content/particle-overrides/*.json', {
-  eager: true,
-  import: 'default',
-}) as Record<string, NativeEffect>
-const effects = new Map<string, NativeEffect>()
-for (const [file, effect] of Object.entries(presetFiles)) {
-  effects.set(
-    file
-      .split('/')
-      .at(-1)!
-      .replace(/\.json$/, ''),
-    parseQuarksDocument(effect),
-  )
-}
-for (const [file, effect] of Object.entries(overrideFiles)) {
-  effects.set(
-    file
-      .split('/')
-      .at(-1)!
-      .replace(/\.json$/, ''),
-    parseQuarksDocument(effect),
-  )
-}
-const templates = new Map<string, Object3D>()
 
 interface Instance {
   group: Object3D
   systems: ParticleSystem[]
 }
 
+const templates = new Map<string, Promise<Object3D | undefined>>()
+
 export function createParticles(scene: Scene) {
   const batch = new BatchedRenderer()
   scene.add(batch)
-  const trails = new Map<string, Instance>()
+  const trails = new Map<string, { position: Vector3; instance?: Instance }>()
 
-  function spawn(
-    id: string,
-    parent: Object3D,
-    x: number,
-    y: number,
-    z: number,
-  ): Instance | undefined {
-    const source = effects.get(id)
-    if (!source) return undefined
+  function loadTemplate(id: string): Promise<Object3D | undefined> {
     let template = templates.get(id)
     if (!template) {
-      template = new QuarksLoader().parse(structuredClone(source))
+      const base = typeof document === 'undefined' ? undefined : document.baseURI
+      const baseUrl = import.meta.env?.BASE_URL || './'
+      const url = new URL(`${baseUrl}${id}.json`, base || 'http://localhost/').href
+      template = loadProjectEffect(url).catch((error: unknown) => {
+        console.error(`Could not load particle effect "${id}".`, error)
+        return undefined
+      })
       templates.set(id, template)
     }
+    return template
+  }
+
+  function attach(template: Object3D, parent: Object3D, x: number, y: number, z: number): Instance {
     const group = template.clone(true)
     group.position.set(x, y, z)
     parent.add(group)
@@ -81,14 +52,30 @@ export function createParticles(scene: Scene) {
     return { group, systems }
   }
 
+  function spawn(
+    id: string,
+    parent: Object3D,
+    x: number,
+    y: number,
+    z: number,
+  ): Promise<Instance | undefined> {
+    return loadTemplate(id).then((template) => {
+      if (!template || (parent !== scene && !parent.parent)) return undefined
+      return attach(template, parent, x, y, z)
+    })
+  }
+
   return {
     explode(x: number, z: number): void {
-      spawn('death-explosion', scene, x, 0.5, z)
+      void spawn('death-explosion', scene, x, 0.5, z)
     },
 
     flame(parent: Object3D, slot: Slot, x: number, y: number, z: number, angle: number): void {
-      const group = spawn(slot === 'head' ? 'flame-head' : 'flame-body', parent, x, y, z)?.group
-      if (group) group.rotation.y += angle
+      void spawn(slot === 'head' ? 'flame-head' : 'flame-body', parent, x, y, z).then(
+        (instance) => {
+          if (instance) instance.group.rotation.y += angle
+        },
+      )
     },
 
     shot(id: string, visual: string, x: number, y: number, z: number): void {
@@ -96,23 +83,40 @@ export function createParticles(scene: Scene) {
         visual === 'lightning' ? 'lightning-orb' : visual === 'poison' ? 'poison-orb' : visual
       let trail = trails.get(id)
       if (!trail) {
-        const created = spawn(effectId, scene, x, y, z)
-        if (!created) return
-        trail = created
+        trail = { position: new Vector3(x, y, z) }
         trails.set(id, trail)
+        const pending = trail
+        void loadTemplate(effectId).then((template) => {
+          if (!template || trails.get(id) !== pending) return
+          pending.instance = attach(
+            template,
+            scene,
+            pending.position.x,
+            pending.position.y,
+            pending.position.z,
+          )
+        })
+      } else {
+        trail.position.set(x, y, z)
+        trail.instance?.group.position.copy(trail.position)
       }
-      trail.group.position.set(x, y, z)
     },
 
     impact(kind: string, x: number, y: number, z: number): void {
-      spawn(kind === 'lightning' || kind === 'poison' ? `${kind}-impact` : kind, scene, x, y, z)
+      void spawn(
+        kind === 'lightning' || kind === 'poison' ? `${kind}-impact` : kind,
+        scene,
+        x,
+        y,
+        z,
+      )
     },
 
     dropShot(id: string): void {
       const trail = trails.get(id)
       if (!trail) return
-      for (const system of trail.systems) system.dispose()
-      trail.group.parent?.remove(trail.group)
+      for (const system of trail.instance?.systems ?? []) system.dispose()
+      trail.instance?.group.parent?.remove(trail.instance.group)
       trails.delete(id)
     },
 

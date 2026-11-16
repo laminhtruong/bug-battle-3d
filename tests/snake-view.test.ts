@@ -2,6 +2,9 @@ import { vi, describe, it, expect } from 'vitest'
 import * as THREE from 'three'
 import type { RenderSegment, RenderSnake, RenderState } from '@/render/state'
 
+const loadProjectEffectMock = vi.hoisted(() => vi.fn())
+vi.mock('quarks-particle-editor/loader', () => ({ loadProjectEffect: loadProjectEffectMock }))
+
 // The viewer draws through canvas textures, so the module needs a DOM stub
 // before it loads. Nothing renders, but the scene graph is the real one.
 vi.hoisted(() => {
@@ -30,6 +33,7 @@ vi.hoisted(() => {
   }
 })
 
+loadProjectEffectMock.mockResolvedValue(new THREE.Group())
 const { createSnakeViewer } = await import('@/render/snake-view')
 
 function snake(alive: boolean, parts: number, x: number): RenderSnake {

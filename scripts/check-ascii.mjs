@@ -7,6 +7,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const sourceRoot = fileURLToPath(new URL('../src', import.meta.url))
+const publicRoot = fileURLToPath(new URL('../public', import.meta.url))
 const filePattern = /^[a-z0-9]+(-[a-z0-9]+)*\.(ts|json)$/
 const problems = []
 
@@ -40,10 +41,11 @@ async function walk(directory) {
 }
 
 await walk(sourceRoot)
+await walk(publicRoot)
 
 if (problems.length > 0) {
   console.error(problems.join('\n'))
   process.exit(1)
 }
 
-console.log('source is ASCII-only and kebab-cased')
+console.log('source and particle JSON are ASCII-only and kebab-cased')

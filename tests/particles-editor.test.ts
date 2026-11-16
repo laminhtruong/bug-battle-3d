@@ -1,3 +1,6 @@
+import { readFileSync, readdirSync } from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { Group, MeshBasicMaterial, Scene } from 'three'
 import {
@@ -10,13 +13,15 @@ import {
   SpriteParticle,
 } from 'three.quarks'
 import { quarksDocumentSchema } from '@/content/particles'
-import lightningImpact from '@/content/particles/lightning-impact.json'
 import { intervalBounds, updateParticlePreview } from 'quarks-particle-editor'
 
-const bundled = import.meta.glob('../src/content/particles/*.json', {
-  eager: true,
-  import: 'default',
-})
+const particleDirectory = fileURLToPath(new URL('../public/', import.meta.url))
+const bundled = Object.fromEntries(
+  readdirSync(particleDirectory)
+    .filter((file) => file.endsWith('.json'))
+    .map((file) => [file, JSON.parse(readFileSync(path.join(particleDirectory, file), 'utf8'))]),
+) as Record<string, unknown>
+const lightningImpact = bundled['lightning-impact.json'] as { object: unknown }
 
 interface NativeSystem {
   material: string
@@ -95,7 +100,7 @@ describe('native Quarks particle documents', () => {
             return imageId && imageUrls.get(imageId) === url
           })
           .map((system) => system.renderMode)
-      if (file.endsWith('/lightning-impact.json')) {
+      if (file === 'lightning-impact.json') {
         expect((document.object as { matrix: number[] }).matrix).toEqual([
           1, 0, 0, 0, 0, 0, -1, 0, 0, 1, 0, 0, 0, 0, 0, 1,
         ])

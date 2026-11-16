@@ -1,16 +1,40 @@
+import { readFileSync, readdirSync } from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Group, Scene } from 'three'
 import { BatchedRenderer, QuarksLoader } from 'three.quarks'
 import type { ParticleSystem } from 'three.quarks'
 import { createParticles } from '@/render/particles'
 
-const bundled = import.meta.glob('../src/content/particles/*.json', {
-  eager: true,
-  import: 'default',
-})
+const particleDirectory = fileURLToPath(new URL('../public/', import.meta.url))
+const bundled = Object.fromEntries(
+  readdirSync(particleDirectory)
+    .filter((file) => file.endsWith('.json'))
+    .map((file) => [file, JSON.parse(readFileSync(path.join(particleDirectory, file), 'utf8'))]),
+) as Record<string, unknown>
 const parse = QuarksLoader.prototype.parse
 
 beforeEach(() => {
+  vi.stubGlobal('window', { location: { href: 'http://localhost/' } })
+  vi.stubGlobal('ProgressEvent', Event)
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (input: RequestInfo | URL) => {
+      const file = new URL(input instanceof Request ? input.url : String(input)).pathname
+        .split('/')
+        .at(-1)!
+      const document = structuredClone(bundled[file]) as {
+        images?: unknown[]
+        textures?: unknown[]
+        materials: { map?: string }[]
+      }
+      delete document.images
+      delete document.textures
+      for (const material of document.materials) delete material.map
+      return new Response(JSON.stringify(document), { status: 200 })
+    }),
+  )
   // Keep the real Quarks loader/simulation; only image loading needs a browser.
   vi.spyOn(QuarksLoader.prototype, 'parse').mockImplementation(function (this: QuarksLoader, json) {
     const document = structuredClone(json) as {
@@ -25,7 +49,10 @@ beforeEach(() => {
   })
 })
 
-afterEach(() => vi.restoreAllMocks())
+afterEach(() => {
+  vi.restoreAllMocks()
+  vi.unstubAllGlobals()
+})
 
 function systems(group: Group | Scene): ParticleSystem[] {
   const result: ParticleSystem[] = []
@@ -46,7 +73,7 @@ describe('Unity particle presets', () => {
     ['poison-orb', 1],
     ['death-explosion', 3],
   ])('loads and simulates every layer of %s without invalid particles', (id, count) => {
-    const source = bundled[`../src/content/particles/${id}.json`]
+    const source = bundled[`${id}.json`]
     const group = new QuarksLoader().parse(source) as Group
     const scene = new Scene()
     const batch = new BatchedRenderer()
@@ -80,7 +107,9 @@ describe('Unity particle presets', () => {
               particle.uvTile,
             ].every(Number.isFinite),
           ).toBe(true)
-          expect(Math.min(particle.size.x, particle.size.y, particle.size.z)).toBeGreaterThanOrEqual(0)
+          expect(
+            Math.min(particle.size.x, particle.size.y, particle.size.z),
+          ).toBeGreaterThanOrEqual(0)
           expect(particle.uvTile).toBeGreaterThanOrEqual(0)
           expect(particle.uvTile).toBeLessThan(system.uTileCount * system.vTileCount)
         }
@@ -90,8 +119,7 @@ describe('Unity particle presets', () => {
   })
 
   it('uses Unity start colors, smoke opacity, fixed random atlas frames and speed limits', () => {
-    const load = (id: string) =>
-      systems(new QuarksLoader().parse(bundled[`../src/content/particles/${id}.json`]) as Group)
+    const load = (id: string) => systems(new QuarksLoader().parse(bundled[`${id}.json`]) as Group)
     const poison = load('poison-orb')[0]!
     expect(poison.startColor.toJSON()).toEqual({
       type: 'ConstantColor',
@@ -132,7 +160,7 @@ describe('Unity particle presets', () => {
 })
 
 describe('game particle lifecycle', () => {
-  it('removes finished flame, impact and death groups from their parents', () => {
+  it('removes finished flame, impact and death groups from their parents', async () => {
     const scene = new Scene()
     const anchor = new Group()
     scene.add(anchor)
@@ -142,6 +170,7 @@ describe('game particle lifecycle', () => {
     particles.impact('lightning', 0, 0.5, 0)
     particles.impact('poison', 3, 0.5, 0)
     particles.explode(6, 0)
+    await vi.waitFor(() => expect(systems(scene)).toHaveLength(18))
     expect(systems(scene)).toHaveLength(18)
     for (let frame = 0; frame < 420; frame++) particles.update(1 / 60)
     expect(systems(scene)).toHaveLength(0)
@@ -149,11 +178,13 @@ describe('game particle lifecycle', () => {
     expect(scene.children.filter((node) => node.type === 'Group')).toEqual([anchor])
   })
 
-  it('moves orb glows with shots and disposes dropped shots', () => {
+  it('moves orb glows with shots and disposes dropped shots', async () => {
     const scene = new Scene()
     const particles = createParticles(scene)
     particles.shot('lightning', 'lightning', 1, 2, 3)
     particles.shot('poison', 'poison', 4, 2, 3)
+    particles.update(1 / 60)
+    await vi.waitFor(() => expect(systems(scene)).toHaveLength(3))
     particles.update(1 / 60)
     const orbs = systems(scene)
     expect(orbs).toHaveLength(3)
